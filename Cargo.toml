@@ -1,0 +1,6 @@
+[package]
+name = "ReactiveRS2"
+version = "0.1.0"
+authors = ["Thibaut Pérami <thibaut.perami@ens.fr>"]
+
+[dependencies]
