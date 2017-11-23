@@ -3,7 +3,7 @@ use std::vec::Vec;
 
 
 use node::*;
-use process::Process;
+use process::*;
 use take::take;
 
 pub type Graph<'a> = Vec<Option<Box<Node<'a, (), Out = ()>>>>;
@@ -45,29 +45,19 @@ impl<'a> Runtime<'a> {
         r
     }
 
-    pub fn new<P>(p: P) -> Self
+    pub fn new<GF>(gf: GF) -> Self
     where
-        P: Process<'a, (), Out = ()>,
+        GF: Graphfiller<'a>,
     {
         let mut g = vec![];
-        match p.compile(&mut g) {
-            PNode::InOut(nio) => {
-                g.push(Some(Box::new(nio)));
-                let mut r = Self::fromgraph(g);
-                r.tasks.current.push(r.nodes.len() - 1);
-                r
-            }
-            PNode::Halves(ni, val, no) => {
-
-                g[val] = Some(Box::new(no));
-                g.push(Some(Box::new(ni)));
-                let mut r = Self::fromgraph(g);
-                r.tasks.current.push(r.nodes.len() - 1);
-                r
-
-            }
-        }
+        let start = gf.fill_graph(& mut g);
+        let mut r = Runtime::fromgraph(g);
+        r.tasks.current.push(start);
+        r
     }
+
+
+
 
 
     pub fn execute(&mut self) {
@@ -94,9 +84,19 @@ mod tests {
     fn instant_action() {
         let mut i = 0;
         {
-            let mut r = Runtime::new(|_: ()| { i += 1; });
+            let mut r = Runtime::new(mp(|_: ()| { i += 1; }));
             r.execute();
         }
         assert_eq!(i, 1);
+    }
+
+    #[test]
+    fn sequence(){
+        let mut i = 0;
+        {
+            let mut r = Runtime::new(mp((|_: ()| { 42 }).seq(|v|{ i = v})));
+            r.execute();
+        }
+        assert_eq!(i, 42);
     }
 }
