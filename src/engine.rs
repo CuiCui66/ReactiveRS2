@@ -9,8 +9,8 @@ use take::take;
 pub type Graph<'a> = Vec<Option<Box<Node<'a, (), Out = ()>>>>;
 
 pub struct Tasks {
-    current: Vec<usize>,
-    next: Vec<usize>,
+    pub current: Vec<usize>,
+    pub next: Vec<usize>,
 }
 
 /// Runtime for running reactive graph.
@@ -76,27 +76,3 @@ impl<'a> Runtime<'a> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use engine::*;
-
-    #[test]
-    fn instant_action() {
-        let mut i = 0;
-        {
-            let mut r = Runtime::new(mp(|_: ()| { i += 1; }));
-            r.execute();
-        }
-        assert_eq!(i, 1);
-    }
-
-    #[test]
-    fn sequence(){
-        let mut i = 0;
-        {
-            let mut r = Runtime::new(mp((|_: ()| { 42 }).seq(|v|{ i = v})));
-            r.execute();
-        }
-        assert_eq!(i, 42);
-    }
-}

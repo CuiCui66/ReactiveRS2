@@ -1,8 +1,12 @@
 use std::marker::PhantomData;
 
 use engine::*;
+use std::rc::Rc;
+use std::cell::*;
+use std::fmt;
+use std::fmt::Debug;
 
-pub trait Node<'a, In: 'a>: 'a {
+pub trait Node<'a, In: 'a>: 'a + Debug {
     type Out;
     fn call(&mut self, tasks: &mut Tasks, val: In) -> Self::Out;
     fn nseq<N2>(self, n2: N2) -> NSeq<Self, N2>
@@ -12,6 +16,13 @@ pub trait Node<'a, In: 'a>: 'a {
     {
         NSeq { n1: self, n2: n2 }
     }
+}
+#[derive(Debug)]
+pub struct Nothing {}
+
+impl<'a> Node<'a, ()> for Nothing {
+    type Out = ();
+    fn call(&mut self, _tasks: &mut Tasks, _val: ()) -> Self::Out {}
 }
 
 
@@ -35,6 +46,12 @@ pub enum PNode<NI, NO, NIO> {
 pub struct DummyN<Out> {
     dummy: PhantomData<Out>,
 }
+impl<Out> Debug for DummyN<Out> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "DummyN")
+    }
+}
+
 
 impl<'a, In: 'a, Out: 'a> Node<'a, In> for DummyN<Out>
 where
@@ -53,13 +70,23 @@ where
 // |  _|| | | | |  | | |_| | |_
 // |_|  |_| |_|_|  |_|\__,_|\__|
 
-impl<'a, F, In:'a, Out:'a> Node<'a, In> for F
+pub struct FnMutN<F>(pub F);
+
+impl<F> Debug for FnMutN<F>
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Func")
+    }
+}
+
+impl<'a, F, In: 'a, Out: 'a> Node<'a, In> for FnMutN<F>
 where
     F: FnMut(In) -> Out + 'a,
 {
     type Out = Out;
     fn call(&mut self, _: &mut Tasks, val: In) -> Out {
-        self(val)
+        let &mut FnMutN(ref mut f) = self;
+        f(val)
     }
 }
 
@@ -70,6 +97,7 @@ where
 // |____/ \___|\__, |
 //                |_|
 
+#[derive(Debug)]
 pub struct NSeq<N1, N2> {
     n1: N1,
     n2: N2,
@@ -84,5 +112,86 @@ where
     fn call(&mut self, t: &mut Tasks, val: In) -> Out {
         let valm = self.n1.call(t, val);
         self.n2.call(t, valm)
+    }
+}
+
+//  ____        __  __             _
+// |  _ \ ___  |  \/  | __ _ _ __ (_)_ __
+// | |_) / __| | |\/| |/ _` | '_ \| | '_ \
+// |  _ < (__  | |  | | (_| | | | | | |_) |
+// |_| \_\___| |_|  |_|\__,_|_| |_|_| .__/
+//                                  |_|
+pub struct RcStore<T> {
+    p: Rc<Cell<T>>,
+}
+
+impl<Out> Debug for RcStore<Out> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "RcStore")
+    }
+}
+
+
+impl<T> RcStore<T> {
+    pub fn new(rc: Rc<Cell<T>>) -> Self {
+        RcStore { p: rc }
+    }
+}
+
+impl<'a, T: 'a> Node<'a, T> for RcStore<T> {
+    type Out = ();
+    fn call(&mut self, _tasks: &mut Tasks, val: T) {
+        self.p.set(val);
+    }
+}
+
+pub struct RcLoad<T> {
+    p: Rc<Cell<T>>,
+}
+
+impl<Out> Debug for RcLoad<Out> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "RcStore")
+    }
+}
+
+
+impl<T> RcLoad<T> {
+    pub fn new(rc: Rc<Cell<T>>) -> Self {
+        RcLoad { p: rc }
+    }
+}
+
+
+impl<'a, T: 'a> Node<'a, ()> for RcLoad<T>
+where
+    T: Default,
+{
+    type Out = T;
+    fn call(&mut self, _tasks: &mut Tasks, _: ()) -> T {
+        self.p.take()
+    }
+}
+
+//  ____
+// |  _ \ __ _ _   _ ___  ___
+// | |_) / _` | | | / __|/ _ \
+// |  __/ (_| | |_| \__ \  __/
+// |_|   \__,_|\__,_|___/\___|
+
+#[derive(Debug)]
+pub struct NPause {
+    dest: usize,
+}
+impl NPause {
+    pub fn new(rc: usize) -> Self {
+       NPause { dest: rc }
+    }
+}
+
+impl<'a> Node<'a, ()> for NPause {
+    type Out = ();
+    fn call(&mut self, tasks: &mut Tasks, _: ()) {
+        tasks.next.push(self.dest);
     }
 }
