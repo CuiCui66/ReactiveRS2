@@ -1,10 +1,15 @@
 #![allow(non_snake_case)]
 #![feature(specialization)]
+#![feature(log_syntax)]
 
 pub mod engine;
 pub mod node;
 pub mod process;
 mod take;
+#[macro_use] pub mod macros;
+
+
+
 
 #[cfg(test)]
 mod tests {
@@ -44,5 +49,12 @@ mod tests {
         }
         assert_eq!(i, 42);
     }
+    #[test]
+    fn macrot() {
+        let mut i = 0;
+        run!((|_| 42) >> Pause >> (|v| { i = v; }));
+        assert_eq!(i, 42);
 
+    }
 }
+

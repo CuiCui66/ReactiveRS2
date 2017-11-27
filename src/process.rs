@@ -53,7 +53,7 @@ where
     fn fill_graph(self, g: &mut Graph<'a>) -> usize {
         let (pni, pind, pno) = self.p.compile(g);
         if let Some(_) = g[pind] {
-            panic!(" g[pind] != None in Seq pind {} vec {:?}",pind,g)
+            panic!(" g[pind] != None in Seq pind {} vec {:?}", pind, g)
         }
         g[pind] = Some(Box::new(pno));
         g.push(Some(Box::new(pni)));
@@ -231,6 +231,12 @@ where
         let rcin = Rc::new(Cell::new(In::default()));
         let rcout = rcin.clone();
         g.push(None);
-        (RcStore::new(rcin).nseq(NPause::new(g.len() - 1)), g.len()-1,RcLoad::new(rcout))
+        (
+            RcStore::new(rcin).nseq(NPause::new(g.len() - 1)),
+            g.len() - 1,
+            RcLoad::new(rcout),
+        )
     }
 }
+
+
