@@ -7,7 +7,7 @@ use std::fmt;
 use std::fmt::Debug;
 
 pub trait Node<'a, In: 'a>: 'a + Debug {
-    type Out;
+    type Out: 'a;
     fn call(&mut self, tasks: &mut Tasks, val: In) -> Self::Out;
     fn nseq<N2>(self, n2: N2) -> NSeq<Self, N2>
     where
@@ -17,23 +17,15 @@ pub trait Node<'a, In: 'a>: 'a + Debug {
         NSeq { n1: self, n2: n2 }
     }
 }
+
+
+
 #[derive(Debug)]
 pub struct Nothing {}
 
 impl<'a> Node<'a, ()> for Nothing {
     type Out = ();
     fn call(&mut self, _tasks: &mut Tasks, _val: ()) -> Self::Out {}
-}
-
-
-/// Partial nodes during compilation
-/// normally there is a In and Out such that
-/// NI: Node<In,Out=()>
-/// NO: Node<(),Out=Out>
-/// NIO: Node<In,Out=Out>
-pub enum PNode<NI, NO, NIO> {
-    InOut(NIO),
-    Halves(NI, usize, NO),
 }
 
 //  _____                 _
@@ -72,8 +64,7 @@ where
 
 pub struct FnMutN<F>(pub F);
 
-impl<F> Debug for FnMutN<F>
-{
+impl<F> Debug for FnMutN<F> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Func")
     }
@@ -173,6 +164,30 @@ where
     }
 }
 
+//      _
+//     | |_   _ _ __ ___  _ __
+//  _  | | | | | '_ ` _ \| '_ \
+// | |_| | |_| | | | | | | |_) |
+//  \___/ \__,_|_| |_| |_| .__/
+//                       |_|
+#[derive(Debug)]
+pub struct NJump {
+    dest: usize,
+}
+impl NJump {
+    pub fn new(rc: usize) -> Self {
+        Self { dest: rc }
+    }
+}
+
+impl<'a> Node<'a, ()> for NJump {
+    type Out = ();
+    fn call(&mut self, tasks: &mut Tasks, _: ()) {
+        tasks.current.push(self.dest);
+    }
+}
+
+
 //  ____
 // |  _ \ __ _ _   _ ___  ___
 // | |_) / _` | | | / __|/ _ \
@@ -185,7 +200,7 @@ pub struct NPause {
 }
 impl NPause {
     pub fn new(rc: usize) -> Self {
-       NPause { dest: rc }
+        NPause { dest: rc }
     }
 }
 
@@ -195,3 +210,9 @@ impl<'a> Node<'a, ()> for NPause {
         tasks.next.push(self.dest);
     }
 }
+
+// __        ___     _ _
+// \ \      / / |__ (_) | ___
+//  \ \ /\ / /| '_ \| | |/ _ \
+//   \ V  V / | | | | | |  __/
+//    \_/\_/  |_| |_|_|_|\___|

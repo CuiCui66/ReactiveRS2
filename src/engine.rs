@@ -6,7 +6,34 @@ use node::*;
 use process::*;
 use take::take;
 
-pub type Graph<'a> = Vec<Option<Box<Node<'a, (), Out = ()>>>>;
+pub struct Graph<'a>(Vec<Option<Box<Node<'a, (), Out = ()>>>>);
+
+impl<'a> Graph<'a> {
+    pub fn new() -> Self {
+        Graph(vec![])
+    }
+    pub fn reserve(&mut self) -> usize {
+        let &mut Graph(ref mut v) = self;
+        v.push(None);
+        v.len() - 1
+    }
+    pub fn set(&mut self, pos: usize, val: Box<Node<'a, (), Out = ()>>) {
+        let &mut Graph(ref mut v) = self;
+        if let Some(_) = v[pos] {
+            panic!("v[pos] != None in Graph::set")
+        }
+        v[pos] = Some(val);
+    }
+    pub fn add(&mut self, val: Box<Node<'a, (), Out = ()>>) -> usize {
+        let &mut Graph(ref mut v) = self;
+        v.push(Some(val));
+        v.len() - 1
+    }
+    pub fn get(self) -> Vec<Option<Box<Node<'a, (), Out = ()>>>> {
+        let Graph(v) = self;
+        v
+    }
+}
 
 pub struct Tasks {
     pub current: Vec<usize>,
@@ -15,7 +42,6 @@ pub struct Tasks {
 
 /// Runtime for running reactive graph.
 pub struct Runtime<'a> {
-    lifemarker: PhantomData<&'a ()>,
     nodes: Vec<Box<Node<'a, (), Out = ()>>>,
     tasks: Tasks,
 }
@@ -23,7 +49,6 @@ pub struct Runtime<'a> {
 impl<'a> Runtime<'a> {
     fn newtest() -> Self {
         Runtime::<'a> {
-            lifemarker: PhantomData,
             nodes: vec![],
             tasks: Tasks {
                 current: vec![],
@@ -34,23 +59,24 @@ impl<'a> Runtime<'a> {
 
     pub fn fromgraph(g: Graph<'a>) -> Self {
         let mut r = Self::newtest();
-        for n in g {
+        for n in g.get() {
             match n {
                 Some(b) => {
                     r.nodes.push(b);
                 }
-                None => panic!("nope"),
+                None => unreachable!(),
             }
         }
         r
     }
 
+    // Gf is theorically a process.
     pub fn new<GF>(gf: GF) -> Self
     where
         GF: Graphfiller<'a>,
     {
-        let mut g = vec![];
-        let start = gf.fill_graph(& mut g);
+        let mut g = Graph::new();
+        let start = gf.fill_graph(&mut g);
         let mut r = Runtime::fromgraph(g);
         r.tasks.current.push(start);
         r
@@ -75,4 +101,3 @@ impl<'a> Runtime<'a> {
         self.tasks.current.len() > 0
     }
 }
-

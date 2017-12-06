@@ -1,12 +1,16 @@
 #![allow(non_snake_case)]
 #![feature(specialization)]
 #![feature(log_syntax)]
+#![feature(box_syntax, box_patterns)]
+#![feature(plugin)]
+#![plugin(promacros)]
 
+#[macro_use]
+pub mod macros;
 pub mod engine;
 pub mod node;
 pub mod process;
 mod take;
-#[macro_use] pub mod macros;
 
 
 
@@ -54,7 +58,20 @@ mod tests {
         let mut i = 0;
         run!((|_| 42) >> Pause >> (|v| { i = v; }));
         assert_eq!(i, 42);
+    }
+
+    #[test]
+    fn pmacro() {
+        let mut i = 0;
+        {
+            let mut r = Runtime::new(mp(ppro!{
+                    |_| 42;
+                    Pause;
+                    |val| {i = val;}
+                }));
+            r.execute();
+        }
+        assert_eq!(i, 42);
 
     }
 }
-

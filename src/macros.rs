@@ -3,12 +3,12 @@
 macro_rules! pro {
 
     ( $first:tt >> $($x:tt)>>+ ) => {{
-        ($first)
-            $(.seq($x))*
+        (pro!($first))
+            $(.seq(pro!($x)))*
     }};
     ( $first:tt || $($x:tt)||+ ) => {{
-        ($first)
-            $(.join($x))*
+        (pro!($first))
+            $(.join(pro!($x)))*
 
     }};
     ( ( $($x:tt)+ ) ) => {{
@@ -18,6 +18,31 @@ macro_rules! pro {
         $x
     }}
 }
+
+#[macro_export]
+macro_rules! node {
+
+    ( $first:tt >> $($x:tt)>>+ ) => {{
+        (node!($first))
+            $(.nseq(node!($x)))*
+    }};
+       ( ( $($x:tt)+ ) ) => {{
+        node!($($x)*)
+    }};
+    ($x:expr) => {{
+        $x
+    }}
+}
+
+#[macro_export]
+macro_rules! nseq {
+    ($first:expr , $($x:expr),+) => {{
+        ($first)
+            $(.nseq($x))*
+    }};
+    ( $x:expr) => {$x}
+}
+
 
 #[macro_export]
 macro_rules! mrpo {

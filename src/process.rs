@@ -12,6 +12,13 @@ impl<T> Is for T {
     type Value = T;
 }
 
+pub struct NotIm {}
+pub struct IsIm {}
+pub trait Im {}
+impl Im for NotIm {}
+impl Im for IsIm {}
+
+
 pub trait Process<'a, In: 'a>: 'a + Sized {
     type Out: 'a;
     type NI: Node<'a, In, Out = ()> + Sized;
@@ -52,12 +59,8 @@ where
 {
     fn fill_graph(self, g: &mut Graph<'a>) -> usize {
         let (pni, pind, pno) = self.p.compile(g);
-        if let Some(_) = g[pind] {
-            panic!(" g[pind] != None in Seq pind {} vec {:?}", pind, g)
-        }
-        g[pind] = Some(Box::new(pno));
-        g.push(Some(Box::new(pni)));
-        g.len() - 1
+        g.set(pind, box pno);
+        g.add(box pni)
     }
 }
 
@@ -67,8 +70,7 @@ where
 {
     fn fill_graph(self, g: &mut Graph<'a>) -> usize {
         let pnio = self.p.compileIm(g);
-        g.push(Some(Box::new(pnio)));
-        g.len() - 1
+        g.add(box pnio)
     }
 }
 
@@ -84,12 +86,6 @@ where
         pd: PhantomData,
     }
 }
-
-pub struct NotIm {}
-pub struct IsIm {}
-pub trait Im {}
-impl Im for NotIm {}
-impl Im for IsIm {}
 
 //  _____      __  __       _
 // |  ___| __ |  \/  |_   _| |_
@@ -140,10 +136,7 @@ where
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let (pni, pind, pno) = self.p.p.compile(g);
         let (qni, qind, qno) = self.q.p.compile(g);
-        if let Some(_) = g[pind] {
-            panic!("g[pind] != None in Seq")
-        }
-        g[pind] = Some(Box::new(pno.nseq(qni)));
+        g.set(pind, box node!(pno >> qni));
         (pni, qind, qno)
 
     }
@@ -163,7 +156,7 @@ where
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let pnio = self.p.p.compileIm(g);
         let (qni, qind, qno) = self.q.p.compile(g);
-        (pnio.nseq(qni), qind, qno)
+        (node!(pnio >> qni), qind, qno)
 
     }
 }
@@ -182,7 +175,7 @@ where
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let (pni, pind, pno) = self.p.p.compile(g);
         let qnio = self.q.p.compileIm(g);
-        (pni, pind, pno.nseq(qnio))
+        (pni, pind, node!(pno >> qnio))
 
     }
 }
@@ -201,7 +194,7 @@ where
     fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
         let pnio = self.p.p.compileIm(g);
         let qnio = self.q.p.compileIm(g);
-        pnio.nseq(qnio)
+        node!(pnio >> qnio)
     }
 }
 
@@ -230,13 +223,53 @@ where
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let rcin = Rc::new(Cell::new(In::default()));
         let rcout = rcin.clone();
-        g.push(None);
+        let out = g.reserve();
         (
-            RcStore::new(rcin).nseq(NPause::new(g.len() - 1)),
-            g.len() - 1,
+            nseq!(RcStore::new(rcin), NPause::new(out)),
+            out,
             RcLoad::new(rcout),
         )
     }
 }
 
+// __        ___     _ _
+// \ \      / / |__ (_) | ___
+//  \ \ /\ / /| '_ \| | |/ _ \
+//   \ V  V / | | | | | |  __/
+//    \_/\_/  |_| |_|_|_|\___|
 
+enum LoopStatus<C, E> {
+    Continue(C),
+    Exit(E),
+}
+
+struct While<P>(P);
+
+// impl<'a, P, In: 'a, Out: 'a> Process<'a, In> for While<MarkedProcess<P, NotIm>>
+// where
+//     P: Process<
+//         'a,
+//         In,
+//         Out = Out,
+//     >,
+//     In: Default,
+// {
+//     type Out = Q::Out;
+//     type NI = P::NI;
+//     type NO = Q::NO;
+//     type NIO = DummyN<Out>;
+//     type Mark = NotIm;
+//     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+//         let While(MarkedProcess { p: p, pd: _ }) = self;
+//         let (pni, pind, pno) = p.compile(g);
+//         // input one time to initialize the loop
+//         let rcin = Rc::new(Cell::new(In::default()));
+//         // beginning of the loop
+//         let rcbeg = rcin.clone();
+//         // end of the loop
+//         let rcend = rcin.clone();
+//         let first_node = RcLoad::new(rcbeg).nseq(pni);
+//         let first_node_ind = g.add(box first_node);
+//         (pni, qind, qno)
+//     }
+// }
