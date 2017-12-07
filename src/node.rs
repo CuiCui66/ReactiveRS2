@@ -16,6 +16,13 @@ pub trait Node<'a, In: 'a>: 'a + Debug {
     {
         NSeq { n1: self, n2: n2 }
     }
+    fn alter<NF, In2: 'a>(self, nf: NF) -> NChoice<Self, NF>
+    where
+        NF: Node<'a, In2, Out = Self::Out> + Sized,
+        Self: Sized,
+    {
+        NChoice { nt: self, nf: nf }
+    }
 }
 
 
@@ -123,10 +130,8 @@ impl<Out> Debug for RcStore<Out> {
 }
 
 
-impl<T> RcStore<T> {
-    pub fn new(rc: Rc<Cell<T>>) -> Self {
-        RcStore { p: rc }
-    }
+pub fn store<T>(rc: Rc<Cell<T>>) -> RcStore<T> {
+    RcStore { p: rc }
 }
 
 impl<'a, T: 'a> Node<'a, T> for RcStore<T> {
@@ -147,11 +152,10 @@ impl<Out> Debug for RcLoad<Out> {
 }
 
 
-impl<T> RcLoad<T> {
-    pub fn new(rc: Rc<Cell<T>>) -> Self {
-        RcLoad { p: rc }
-    }
+pub fn load<T>(rc: Rc<Cell<T>>) -> RcLoad<T> {
+    RcLoad { p: rc }
 }
+
 
 
 impl<'a, T: 'a> Node<'a, ()> for RcLoad<T>
@@ -174,10 +178,9 @@ where
 pub struct NJump {
     dest: usize,
 }
-impl NJump {
-    pub fn new(rc: usize) -> Self {
-        Self { dest: rc }
-    }
+
+pub fn jump(pos :usize) -> NJump {
+    NJump{dest:pos}
 }
 
 impl<'a> Node<'a, ()> for NJump {
@@ -198,11 +201,11 @@ impl<'a> Node<'a, ()> for NJump {
 pub struct NPause {
     dest: usize,
 }
-impl NPause {
-    pub fn new(rc: usize) -> Self {
-        NPause { dest: rc }
-    }
+
+pub fn pause(pos :usize) -> NPause {
+    NPause{dest:pos}
 }
+
 
 impl<'a> Node<'a, ()> for NPause {
     type Out = ();
@@ -211,8 +214,40 @@ impl<'a> Node<'a, ()> for NPause {
     }
 }
 
-// __        ___     _ _
-// \ \      / / |__ (_) | ___
-//  \ \ /\ / /| '_ \| | |/ _ \
-//   \ V  V / | | | | | |  __/
-//    \_/\_/  |_| |_|_|_|\___|
+//   ____ _           _
+//  / ___| |__   ___ (_) ___ ___
+// | |   | '_ \ / _ \| |/ __/ _ \
+// | |___| | | | (_) | | (_|  __/
+//  \____|_| |_|\___/|_|\___\___|
+
+#[derive(Debug)]
+pub enum ChoiceData<T, F> {
+    True(T),
+    False(F),
+}
+use self::ChoiceData::*;
+
+
+#[derive(Debug)]
+pub struct NChoice<NT, NF> {
+    nt: NT,
+    nf: NF,
+}
+
+impl<'a,NT,NF, InT: 'a, InF: 'a, Out: 'a> Node<'a, ChoiceData<InT, InF>> for NChoice<NT,NF>
+    where
+    NT : Node<'a,InT,Out = Out>,
+    NF : Node<'a,InF,Out = Out>,
+{
+    type Out = Out;
+    fn call(&mut self, tasks: &mut Tasks, val: ChoiceData<InT, InF>) -> Out {
+        match val {
+            True(t) => {
+                self.nt.call(tasks,t)
+            }
+            False(f) => {
+                self.nf.call(tasks,f)
+            }
+        }
+    }
+}

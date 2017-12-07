@@ -1,58 +1,13 @@
 
 #[macro_export]
-macro_rules! pro {
-
-    ( $first:tt >> $($x:tt)>>+ ) => {{
-        (pro!($first))
-            $(.seq(pro!($x)))*
-    }};
-    ( $first:tt || $($x:tt)||+ ) => {{
-        (pro!($first))
-            $(.join(pro!($x)))*
-
-    }};
-    ( ( $($x:tt)+ ) ) => {{
-        pro!($($x)*)
-    }};
-    ($x:expr) => {{
-        $x
-    }}
-}
-
-#[macro_export]
-macro_rules! node {
-
-    ( $first:tt >> $($x:tt)>>+ ) => {{
-        (node!($first))
-            $(.nseq(node!($x)))*
-    }};
-       ( ( $($x:tt)+ ) ) => {{
-        node!($($x)*)
-    }};
-    ($x:expr) => {{
-        $x
-    }}
-}
-
-#[macro_export]
-macro_rules! nseq {
-    ($first:expr , $($x:expr),+) => {{
-        ($first)
-            $(.nseq($x))*
-    }};
-    ( $x:expr) => {$x}
-}
-
-
-#[macro_export]
-macro_rules! mrpo {
+macro_rules! mpro {
     ($($x:tt)+ ) => {{
         mp(pro!($($x)*))
     }};
 }
 
 #[macro_export]
-macro_rules! runtime {
+macro_rules! rt {
     ($($x:tt)+) => {{
         Runtime::new(mp(pro!($($x)*)))
     }};

@@ -14,7 +14,7 @@ impl<T> Is for T {
 
 pub struct NotIm {}
 pub struct IsIm {}
-pub trait Im {}
+pub trait Im: Sized {}
 impl Im for NotIm {}
 impl Im for IsIm {}
 
@@ -39,6 +39,19 @@ pub trait Process<'a, In: 'a>: 'a + Sized {
         Seq {
             p: mp(self),
             q: mp(p),
+        }
+
+    }
+    fn choice<PF, InF: 'a>(
+        self,
+        p: PF,
+    ) -> PChoice<MarkedProcess<Self, Self::Mark>, MarkedProcess<PF, PF::Mark>>
+    where
+        PF: Process<'a, InF, Out = Self::Out>,
+    {
+        PChoice {
+            pt: mp(self),
+            pf: mp(p),
         }
 
     }
@@ -86,6 +99,30 @@ where
         pd: PhantomData,
     }
 }
+
+//  _   _       _   _     _
+// | \ | | ___ | |_| |__ (_)_ __   __ _
+// |  \| |/ _ \| __| '_ \| | '_ \ / _` |
+// | |\  | (_) | |_| | | | | | | | (_| |
+// |_| \_|\___/ \__|_| |_|_|_| |_|\__, |
+//                                |___/
+
+pub struct PNothing{}
+
+impl<'a> Process<'a, ()> for PNothing
+{
+    type Out = ();
+    type NI = DummyN<()>;
+    type NO = DummyN<()>;
+    type NIO = Nothing;
+    fn compileIm(self, _: &mut Graph) -> Self::NIO {
+        Nothing{}
+    }
+    type Mark = IsIm;
+}
+
+
+
 
 //  _____      __  __       _
 // |  ___| __ |  \/  |_   _| |_
@@ -224,13 +261,126 @@ where
         let rcin = Rc::new(Cell::new(In::default()));
         let rcout = rcin.clone();
         let out = g.reserve();
-        (
-            nseq!(RcStore::new(rcin), NPause::new(out)),
-            out,
-            RcLoad::new(rcout),
-        )
+        (node!(store(rcin) >> pause(out)), out, load(rcout))
     }
 }
+
+//   ____ _           _
+//  / ___| |__   ___ (_) ___ ___
+// | |   | '_ \ / _ \| |/ __/ _ \
+// | |___| | | | (_) | | (_|  __/
+//  \____|_| |_|\___/|_|\___\___|
+
+
+pub struct PChoice<PT, PF> {
+    pt: PT,
+    pf: PF,
+}
+impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
+    for PChoice<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>>
+where
+    PT: Process<'a, InT, Out = Out>,
+    PF: Process<'a, InF, Out = Out>,
+    Out: Default,
+{
+    type Out = Out;
+    type NI = NChoice<PT::NI, PF::NI>;
+    type NO = RcLoad<Out>;
+    type NIO = DummyN<Out>;
+    type Mark = NotIm;
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let (ptni, ptind, ptno) = self.pt.p.compile(g);
+        let (pfni, pfind, pfno) = self.pf.p.compile(g);
+        let rct = Rc::new(Cell::new(Out::default()));
+        let rcf = rct.clone();
+        let rcout = rct.clone();
+        let out = g.reserve();
+        g.set(ptind, box node!(ptno >> store(rct) >> jump(out)));
+        g.set(pfind, box node!(pfno >> store(rcf) >> jump(out)));
+        (node!(choice ptni pfni), out, load(rcout))
+
+    }
+}
+
+impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
+    for PChoice<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>>
+where
+    PT: Process<'a, InT, Out = Out>,
+    PF: Process<'a, InF, Out = Out>,
+    Out: Default,
+{
+    type Out = Out;
+    type NI = NChoice<NSeq<PT::NIO, NSeq<RcStore<Out>, NJump>>, PF::NI>;
+    type NO = RcLoad<Out>;
+    type NIO = DummyN<Out>;
+    type Mark = NotIm;
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let ptnio = self.pt.p.compileIm(g);
+        let (pfni, pfind, pfno) = self.pf.p.compile(g);
+        let rct = Rc::new(Cell::new(Out::default()));
+        let rcf = rct.clone();
+        let rcout = rct.clone();
+        let out = g.reserve();
+        g.set(pfind, box node!(pfno >> store(rcf) >> jump(out)));
+        (
+            node!(choice {ptnio >> store(rct)>>jump(out)} pfni),
+            out,
+            load(rcout),
+        )
+
+    }
+}
+
+
+impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
+    for PChoice<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>>
+where
+    PT: Process<'a, InT, Out = Out>,
+    PF: Process<'a, InF, Out = Out>,
+    Out: Default,
+{
+    type Out = Out;
+    type NI = NChoice<PT::NI, NSeq<PF::NIO, NSeq<RcStore<Out>, NJump>> >;
+    type NO = RcLoad<Out>;
+    type NIO = DummyN<Out>;
+    type Mark = NotIm;
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let (ptni, ptind, ptno) = self.pt.p.compile(g);
+        let pfnio = self.pf.p.compileIm(g);
+        let rct = Rc::new(Cell::new(Out::default()));
+        let rcf = rct.clone();
+        let rcout = rct.clone();
+        let out = g.reserve();
+        g.set(ptind, box node!(ptno >> store(rct) >> jump(out)));
+        (
+            node!(choice ptni {pfnio >> store(rcf) >> jump(out)}),
+            out,
+            load(rcout),
+        )
+
+    }
+}
+
+impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
+    for PChoice<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>>
+    where
+    PT: Process<'a, InT, Out = Out>,
+    PF: Process<'a, InF, Out = Out>,
+    Out: Default,
+{
+    type Out = Out;
+    type NI = DummyN<()>;
+    type NO = DummyN<Out>;
+    type NIO = NChoice<PT::NIO,PF::NIO>;
+    type Mark = IsIm;
+    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+        let ptnio = self.pt.p.compileIm(g);
+        let pfnio = self.pf.p.compileIm(g);
+        node!(choice ptnio pfnio)
+    }
+}
+
+
 
 // __        ___     _ _
 // \ \      / / |__ (_) | ___
@@ -238,12 +388,7 @@ where
 //   \ V  V / | | | | | |  __/
 //    \_/\_/  |_| |_|_|_|\___|
 
-enum LoopStatus<C, E> {
-    Continue(C),
-    Exit(E),
-}
-
-struct While<P>(P);
+//struct While<P>(P);
 
 // impl<'a, P, In: 'a, Out: 'a> Process<'a, In> for While<MarkedProcess<P, NotIm>>
 // where

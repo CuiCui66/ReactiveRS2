@@ -19,6 +19,7 @@ mod take;
 mod tests {
     use engine::*;
     use process::*;
+    use node::*;
 
     #[test]
     fn instant_action() {
@@ -44,7 +45,11 @@ mod tests {
         let mut i = 0;
         let p = &mut i as *mut i32;
         {
-            let mut r = Runtime::new(mp((|_: ()| 42).seq(Pause).seq(|v| { i = v; })));
+            let mut r = rt!{
+                |_| 42;
+                Pause;
+                |v| i = v
+            };
             r.instant();
             unsafe {
                 assert_eq!(*p, 0);
@@ -54,24 +59,17 @@ mod tests {
         assert_eq!(i, 42);
     }
     #[test]
-    fn macrot() {
+    fn choice() {
         let mut i = 0;
-        run!((|_| 42) >> Pause >> (|v| { i = v; }));
-        assert_eq!(i, 42);
-    }
-
-    #[test]
-    fn pmacro() {
-        let mut i = 0;
-        {
-            let mut r = Runtime::new(mp(ppro!{
-                    |_| 42;
-                    Pause;
-                    |val| {i = val;}
-                }));
-            r.execute();
+        run!{
+            |_| ChoiceData::True(42);
+            choice {
+                |v| i=v
+            } {
+                |()| unreachable!()
+            }
         }
         assert_eq!(i, 42);
-
     }
+
 }
