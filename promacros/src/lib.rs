@@ -7,14 +7,21 @@ extern crate rustc_plugin;
 
 use std::vec::Vec;
 use syntax::ptr::P;
-use syntax::ast::*;
+use syntax::ast::{Expr};
 use syntax::parse::token::*;
 use syntax::tokenstream::*;
+
 use syntax::ext::base::{ExtCtxt, MacResult, DummyResult, MacEager};
 use syntax::ext::build::AstBuilder; // A trait for expr_usize.
 use syntax::ext::quote::rt::Span;
 use rustc_plugin::Registry;
 
+fn printtts(args : &[TokenTree]){
+    for a in args {
+        print!("{} ",a.clone().joint());
+    }
+    println!();
+}
 
 fn extract_ts(ts: TokenStream) -> Vec<TokenTree> {
     let mut res = vec![];
@@ -62,6 +69,10 @@ fn split_on_binop_node(
 }
 
 fn parse_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
+
+    // print!("parse pro : ");
+    // printtts(args);
+
     if args.len() == 0 {
         cx.expr_ident(sp,cx.ident_of("PNothing"));
     }
@@ -75,7 +86,7 @@ fn parse_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
                                       delim: d,
                                       tts: ref ts,
                                   }) => {
-                if d == DelimToken::Paren || d == DelimToken::Bracket {
+                if d == DelimToken::Paren || d == DelimToken::Brace {
                     return parse_pro(cx, sp, &extract_ts(ts.clone().into()));
                 } else {
                     cx.span_err(sp, "Process delimited by brackets ?");
@@ -88,8 +99,8 @@ fn parse_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
     if args.len() == 3 {
         if let TokenTree::Token(_, Ident(id)) = args[0] {
             if id.name.as_str() == "choice" {
-                let n1 = parse_node(cx, args[1].span(), &args[1..2]);
-                let n2 = parse_node(cx, args[2].span(), &args[2..3]);
+                let n1 = parse_pro(cx, args[1].span(), &args[1..2]);
+                let n2 = parse_pro(cx, args[2].span(), &args[2..3]);
                 return cx.expr_method_call(sp, n1, cx.ident_of("choice"), vec![n2]);
             }
         }

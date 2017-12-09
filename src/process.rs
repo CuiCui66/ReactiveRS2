@@ -40,7 +40,6 @@ pub trait Process<'a, In: 'a>: 'a + Sized {
             p: mp(self),
             q: mp(p),
         }
-
     }
     fn choice<PF, InF: 'a>(
         self,
@@ -56,6 +55,13 @@ pub trait Process<'a, In: 'a>: 'a + Sized {
 
     }
 }
+
+//  _____         _           _           _
+// |_   _|__  ___| |__  _ __ (_) ___ __ _| |
+//   | |/ _ \/ __| '_ \| '_ \| |/ __/ _` | |
+//   | |  __/ (__| | | | | | | | (_| (_| | |
+//   |_|\___|\___|_| |_|_| |_|_|\___\__,_|_|
+
 
 pub trait Graphfiller<'a> {
     fn fill_graph(self, g: &mut Graph<'a>) -> usize;
@@ -87,9 +93,6 @@ where
     }
 }
 
-
-
-
 pub fn mp<'a, In: 'a, P>(p: P) -> MarkedProcess<P, P::Mark>
 where
     P: Process<'a, In>,
@@ -107,22 +110,18 @@ where
 // |_| \_|\___/ \__|_| |_|_|_| |_|\__, |
 //                                |___/
 
-pub struct PNothing{}
+pub struct PNothing {}
 
-impl<'a> Process<'a, ()> for PNothing
-{
+impl<'a> Process<'a, ()> for PNothing {
     type Out = ();
     type NI = DummyN<()>;
     type NO = DummyN<()>;
     type NIO = Nothing;
     fn compileIm(self, _: &mut Graph) -> Self::NIO {
-        Nothing{}
+        Nothing {}
     }
     type Mark = IsIm;
 }
-
-
-
 
 //  _____      __  __       _
 // |  ___| __ |  \/  |_   _| |_
@@ -138,6 +137,9 @@ where
     type NI = DummyN<()>;
     type NO = DummyN<Out>;
     type NIO = FnMutN<F>;
+
+
+
     fn compileIm(self, _: &mut Graph) -> Self::NIO {
         FnMutN(self)
     }
@@ -175,7 +177,6 @@ where
         let (qni, qind, qno) = self.q.p.compile(g);
         g.set(pind, box node!(pno >> qni));
         (pni, qind, qno)
-
     }
 }
 
@@ -249,8 +250,6 @@ pub struct Pause {}
 pub static Pause: Pause = Pause {};
 
 impl<'a, In: 'a> Process<'a, In> for Pause
-where
-    In: Default,
 {
     type Out = In;
     type NI = NSeq<RcStore<In>, NPause>;
@@ -258,7 +257,7 @@ where
     type NIO = DummyN<In>;
     type Mark = NotIm;
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rcin = Rc::new(Cell::new(In::default()));
+        let rcin = new_rcell();
         let rcout = rcin.clone();
         let out = g.reserve();
         (node!(store(rcin) >> pause(out)), out, load(rcout))
@@ -281,7 +280,6 @@ impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
 where
     PT: Process<'a, InT, Out = Out>,
     PF: Process<'a, InF, Out = Out>,
-    Out: Default,
 {
     type Out = Out;
     type NI = NChoice<PT::NI, PF::NI>;
@@ -291,7 +289,7 @@ where
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let (ptni, ptind, ptno) = self.pt.p.compile(g);
         let (pfni, pfind, pfno) = self.pf.p.compile(g);
-        let rct = Rc::new(Cell::new(Out::default()));
+        let rct = new_rcell();
         let rcf = rct.clone();
         let rcout = rct.clone();
         let out = g.reserve();
@@ -317,7 +315,7 @@ where
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let ptnio = self.pt.p.compileIm(g);
         let (pfni, pfind, pfno) = self.pf.p.compile(g);
-        let rct = Rc::new(Cell::new(Out::default()));
+        let rct = new_rcell();
         let rcf = rct.clone();
         let rcout = rct.clone();
         let out = g.reserve();
@@ -340,14 +338,14 @@ where
     Out: Default,
 {
     type Out = Out;
-    type NI = NChoice<PT::NI, NSeq<PF::NIO, NSeq<RcStore<Out>, NJump>> >;
+    type NI = NChoice<PT::NI, NSeq<PF::NIO, NSeq<RcStore<Out>, NJump>>>;
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let (ptni, ptind, ptno) = self.pt.p.compile(g);
         let pfnio = self.pf.p.compileIm(g);
-        let rct = Rc::new(Cell::new(Out::default()));
+        let rct = new_rcell();
         let rcf = rct.clone();
         let rcout = rct.clone();
         let out = g.reserve();
@@ -357,13 +355,12 @@ where
             out,
             load(rcout),
         )
-
     }
 }
 
 impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
     for PChoice<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>>
-    where
+where
     PT: Process<'a, InT, Out = Out>,
     PF: Process<'a, InF, Out = Out>,
     Out: Default,
@@ -371,7 +368,7 @@ impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
     type Out = Out;
     type NI = DummyN<()>;
     type NO = DummyN<Out>;
-    type NIO = NChoice<PT::NIO,PF::NIO>;
+    type NIO = NChoice<PT::NIO, PF::NIO>;
     type Mark = IsIm;
     fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
         let ptnio = self.pt.p.compileIm(g);
@@ -382,39 +379,66 @@ impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
 
 
 
-// __        ___     _ _
-// \ \      / / |__ (_) | ___
-//  \ \ /\ / /| '_ \| | |/ _ \
-//   \ V  V / | | | | | |  __/
-//    \_/\_/  |_| |_|_|_|\___|
+//  _
+// | |    ___   ___  _ __
+// | |   / _ \ / _ \| '_ \
+// | |__| (_) | (_) | |_) |
+// |_____\___/ \___/| .__/
+//                  |_|
 
-//struct While<P>(P);
+pub struct PLoop<P> {
+    p: P,
+}
 
-// impl<'a, P, In: 'a, Out: 'a> Process<'a, In> for While<MarkedProcess<P, NotIm>>
-// where
-//     P: Process<
-//         'a,
-//         In,
-//         Out = Out,
-//     >,
-//     In: Default,
-// {
-//     type Out = Q::Out;
-//     type NI = P::NI;
-//     type NO = Q::NO;
-//     type NIO = DummyN<Out>;
-//     type Mark = NotIm;
-//     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-//         let While(MarkedProcess { p: p, pd: _ }) = self;
-//         let (pni, pind, pno) = p.compile(g);
-//         // input one time to initialize the loop
-//         let rcin = Rc::new(Cell::new(In::default()));
-//         // beginning of the loop
-//         let rcbeg = rcin.clone();
-//         // end of the loop
-//         let rcend = rcin.clone();
-//         let first_node = RcLoad::new(rcbeg).nseq(pni);
-//         let first_node_ind = g.add(box first_node);
-//         (pni, qind, qno)
-//     }
-// }
+impl<'a, P, In: 'a, Out: 'a> Process<'a, In>
+    for PLoop<MarkedProcess<P,NotIm>>
+    where
+    P: Process<'a, In, Out = ChoiceData<In,Out>>,
+    Out: Default,
+    In: Default,
+{
+    type Out = Out;
+    type NI = NSeq<RcStore<In>,NJump>;
+    type NO = RcLoad<Out>;
+    type NIO = DummyN<Out>;
+    type Mark = IsIm;
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI,usize,Self::NO){
+        let (pni, pind, pno) = self.p.p.compile(g);
+        let rcextin = new_rcell();
+        let rcbegin = rcextin.clone();
+        let rcendin = rcextin.clone();
+        let rcendout = new_rcell();
+        let rcextout = rcendout.clone();
+        let in_id = g.add(box node!(load(rcbegin) >> pni));
+        let out_id = g.reserve();
+        g.set(pind,box node!(
+            pno >> choice {
+                store(rcendin) >> jump(in_id)
+            }{
+                store(rcendout) >> jump(out_id)
+            }));
+        (
+            node!(store(rcextin) >> jump(in_id)),
+            out_id,
+            node!(load(rcextout))
+        )
+    }
+}
+
+impl<'a, P, In: 'a, Out: 'a> Process<'a, In>
+    for PLoop<MarkedProcess<P,IsIm>>
+    where
+    P: Process<'a, In, Out = ChoiceData<In,Out>>,
+    Out: Default,
+    In: Default,
+{
+    type Out = Out;
+    type NI = DummyN<()>;
+    type NO = DummyN<Out>;
+    type NIO = LoopIm<P::NIO>;
+    type Mark = IsIm;
+    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO{
+        let pnio = self.p.p.compileIm(g);
+        LoopIm(pnio)
+    }
+}

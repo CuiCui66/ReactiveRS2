@@ -119,8 +119,15 @@ where
 // |  _ < (__  | |  | | (_| | | | | | |_) |
 // |_| \_\___| |_|  |_|\__,_|_| |_|_| .__/
 //                                  |_|
+
+type RCell<T> = Rc<Cell<Option<T>>>;
+
+pub fn new_rcell<T>() -> RCell<T> {
+    Rc::new(Cell::new(None))
+}
+
 pub struct RcStore<T> {
-    p: Rc<Cell<T>>,
+    p: RCell<T>,
 }
 
 impl<Out> Debug for RcStore<Out> {
@@ -130,19 +137,19 @@ impl<Out> Debug for RcStore<Out> {
 }
 
 
-pub fn store<T>(rc: Rc<Cell<T>>) -> RcStore<T> {
+pub fn store<T>(rc: RCell<T>) -> RcStore<T> {
     RcStore { p: rc }
 }
 
 impl<'a, T: 'a> Node<'a, T> for RcStore<T> {
     type Out = ();
     fn call(&mut self, _tasks: &mut Tasks, val: T) {
-        self.p.set(val);
+        self.p.set(Some(val));
     }
 }
 
 pub struct RcLoad<T> {
-    p: Rc<Cell<T>>,
+    p: RCell<T>,
 }
 
 impl<Out> Debug for RcLoad<Out> {
@@ -152,19 +159,16 @@ impl<Out> Debug for RcLoad<Out> {
 }
 
 
-pub fn load<T>(rc: Rc<Cell<T>>) -> RcLoad<T> {
+pub fn load<T>(rc: RCell<T>) -> RcLoad<T> {
     RcLoad { p: rc }
 }
 
 
 
-impl<'a, T: 'a> Node<'a, ()> for RcLoad<T>
-where
-    T: Default,
-{
+impl<'a, T: 'a> Node<'a, ()> for RcLoad<T> {
     type Out = T;
     fn call(&mut self, _tasks: &mut Tasks, _: ()) -> T {
-        self.p.take()
+        self.p.take().unwrap()
     }
 }
 
@@ -179,8 +183,8 @@ pub struct NJump {
     dest: usize,
 }
 
-pub fn jump(pos :usize) -> NJump {
-    NJump{dest:pos}
+pub fn jump(pos: usize) -> NJump {
+    NJump { dest: pos }
 }
 
 impl<'a> Node<'a, ()> for NJump {
@@ -202,8 +206,8 @@ pub struct NPause {
     dest: usize,
 }
 
-pub fn pause(pos :usize) -> NPause {
-    NPause{dest:pos}
+pub fn pause(pos: usize) -> NPause {
+    NPause { dest: pos }
 }
 
 
@@ -247,6 +251,37 @@ impl<'a,NT,NF, InT: 'a, InF: 'a, Out: 'a> Node<'a, ChoiceData<InT, InF>> for NCh
             }
             False(f) => {
                 self.nf.call(tasks,f)
+            }
+        }
+    }
+}
+
+
+//  _                     ___
+// | |    ___   ___  _ __|_ _|_ __ ___
+// | |   / _ \ / _ \| '_ \| || '_ ` _ \
+// | |__| (_) | (_) | |_) | || | | | | |
+// |_____\___/ \___/| .__/___|_| |_| |_|
+//                  |_|
+
+#[derive(Debug)]
+pub struct LoopIm<N>(pub N);
+
+impl<'a, N, In: 'a, Out: 'a> Node<'a, In> for LoopIm<N>
+where
+    N: Node<'a, In, Out = ChoiceData<In, Out>>,
+{
+    type Out = Out;
+    fn call(&mut self, tasks: &mut Tasks, mut val: In) -> Out {
+        let &mut LoopIm(ref mut p) = self;
+        loop {
+            match p.call(tasks, val) {
+                True(t) => {
+                    val = t;
+                }
+                False(f) => {
+                    return f;
+                }
             }
         }
     }

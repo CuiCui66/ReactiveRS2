@@ -45,7 +45,8 @@ mod tests {
         let mut i = 0;
         let p = &mut i as *mut i32;
         {
-            let mut r = rt!{
+            let mut r =
+                rt!{
                 |_| 42;
                 Pause;
                 |v| i = v
@@ -65,6 +66,21 @@ mod tests {
             |_| ChoiceData::True(42);
             choice {
                 |v| i=v
+            } {
+                |()| unreachable!()
+            }
+        }
+        assert_eq!(i, 42);
+    }
+    #[test]
+    fn choice_pause() {
+        let mut i = 0;
+        run!{
+            |_| ChoiceData::True(42);
+            Pause;
+            choice {
+                Pause;
+                |v :usize| i = v
             } {
                 |()| unreachable!()
             }
