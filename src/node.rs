@@ -1,14 +1,15 @@
 use std::marker::PhantomData;
 
 use engine::*;
+use signal::*;
 use std::rc::Rc;
 use std::cell::*;
 use std::fmt;
 use std::fmt::Debug;
 
-pub trait Node<'a, In: 'a>: 'a + Debug {
+pub trait Node<'a, In: 'a>: 'a {
     type Out: 'a;
-    fn call(&mut self, tasks: &mut Tasks, val: In) -> Self::Out;
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, val: In) -> Self::Out;
     fn nseq<N2>(self, n2: N2) -> NSeq<Self, N2>
     where
         N2: Node<'a, Self::Out> + Sized,
@@ -27,12 +28,11 @@ pub trait Node<'a, In: 'a>: 'a + Debug {
 
 
 
-#[derive(Debug)]
 pub struct Nothing {}
 
 impl<'a> Node<'a, ()> for Nothing {
     type Out = ();
-    fn call(&mut self, _tasks: &mut Tasks, _val: ()) -> Self::Out {}
+    fn call(&mut self, _: &mut SubRuntime<'a>, _val: ()) -> Self::Out {}
 }
 
 //  _____                 _
@@ -57,7 +57,7 @@ where
     Out: 'a,
 {
     type Out = Out;
-    fn call(&mut self, _: &mut Tasks, _: In) -> Out {
+    fn call(&mut self, _: &mut SubRuntime<'a>, _: In) -> Out {
         panic!("Called empty node");
     }
 }
@@ -82,7 +82,7 @@ where
     F: FnMut(In) -> Out + 'a,
 {
     type Out = Out;
-    fn call(&mut self, _: &mut Tasks, val: In) -> Out {
+    fn call(&mut self, _: &mut SubRuntime<'a>, val: In) -> Out {
         let &mut FnMutN(ref mut f) = self;
         f(val)
     }
@@ -95,7 +95,6 @@ where
 // |____/ \___|\__, |
 //                |_|
 
-#[derive(Debug)]
 pub struct NSeq<N1, N2> {
     n1: N1,
     n2: N2,
@@ -107,9 +106,9 @@ where
     N2: Node<'a, Mid, Out = Out>,
 {
     type Out = Out;
-    fn call(&mut self, t: &mut Tasks, val: In) -> Out {
-        let valm = self.n1.call(t, val);
-        self.n2.call(t, valm)
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, val: In) -> Out {
+        let valm = self.n1.call(sub_runtime, val);
+        self.n2.call(sub_runtime, valm)
     }
 }
 
@@ -143,7 +142,7 @@ pub fn store<T>(rc: RCell<T>) -> RcStore<T> {
 
 impl<'a, T: 'a> Node<'a, T> for RcStore<T> {
     type Out = ();
-    fn call(&mut self, _tasks: &mut Tasks, val: T) {
+    fn call(&mut self, _: &mut SubRuntime<'a>,  val: T) {
         self.p.set(Some(val));
     }
 }
@@ -167,7 +166,7 @@ pub fn load<T>(rc: RCell<T>) -> RcLoad<T> {
 
 impl<'a, T: 'a> Node<'a, ()> for RcLoad<T> {
     type Out = T;
-    fn call(&mut self, _tasks: &mut Tasks, _: ()) -> T {
+    fn call(&mut self, _: &mut SubRuntime<'a>, _: ()) -> T {
         self.p.take().unwrap()
     }
 }
@@ -178,7 +177,6 @@ impl<'a, T: 'a> Node<'a, ()> for RcLoad<T> {
 // | |_| | |_| | | | | | | |_) |
 //  \___/ \__,_|_| |_| |_| .__/
 //                       |_|
-#[derive(Debug)]
 pub struct NJump {
     dest: usize,
 }
@@ -189,8 +187,8 @@ pub fn jump(pos: usize) -> NJump {
 
 impl<'a> Node<'a, ()> for NJump {
     type Out = ();
-    fn call(&mut self, tasks: &mut Tasks, _: ()) {
-        tasks.current.push(self.dest);
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, _: ()) {
+        sub_runtime.tasks.current.push(self.dest);
     }
 }
 
@@ -201,7 +199,6 @@ impl<'a> Node<'a, ()> for NJump {
 // |  __/ (_| | |_| \__ \  __/
 // |_|   \__,_|\__,_|___/\___|
 
-#[derive(Debug)]
 pub struct NPause {
     dest: usize,
 }
@@ -213,8 +210,8 @@ pub fn pause(pos: usize) -> NPause {
 
 impl<'a> Node<'a, ()> for NPause {
     type Out = ();
-    fn call(&mut self, tasks: &mut Tasks, _: ()) {
-        tasks.next.push(self.dest);
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>,  _: ()) {
+        sub_runtime.tasks.next.push(self.dest);
     }
 }
 
@@ -224,7 +221,6 @@ impl<'a> Node<'a, ()> for NPause {
 // | |___| | | | (_) | | (_|  __/
 //  \____|_| |_|\___/|_|\___\___|
 
-#[derive(Debug)]
 pub enum ChoiceData<T, F> {
     True(T),
     False(F),
@@ -232,7 +228,6 @@ pub enum ChoiceData<T, F> {
 use self::ChoiceData::*;
 
 
-#[derive(Debug)]
 pub struct NChoice<NT, NF> {
     nt: NT,
     nf: NF,
@@ -244,13 +239,13 @@ impl<'a,NT,NF, InT: 'a, InF: 'a, Out: 'a> Node<'a, ChoiceData<InT, InF>> for NCh
     NF : Node<'a,InF,Out = Out>,
 {
     type Out = Out;
-    fn call(&mut self, tasks: &mut Tasks, val: ChoiceData<InT, InF>) -> Out {
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>,  val: ChoiceData<InT, InF>) -> Out {
         match val {
             True(t) => {
-                self.nt.call(tasks,t)
+                self.nt.call(sub_runtime, t)
             }
             False(f) => {
-                self.nf.call(tasks,f)
+                self.nf.call(sub_runtime, f)
             }
         }
     }
@@ -264,7 +259,6 @@ impl<'a,NT,NF, InT: 'a, InF: 'a, Out: 'a> Node<'a, ChoiceData<InT, InF>> for NCh
 // |_____\___/ \___/| .__/___|_| |_| |_|
 //                  |_|
 
-#[derive(Debug)]
 pub struct LoopIm<N>(pub N);
 
 impl<'a, N, In: 'a, Out: 'a> Node<'a, In> for LoopIm<N>
@@ -272,10 +266,10 @@ where
     N: Node<'a, In, Out = ChoiceData<In, Out>>,
 {
     type Out = Out;
-    fn call(&mut self, tasks: &mut Tasks, mut val: In) -> Out {
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, mut val: In) -> Out {
         let &mut LoopIm(ref mut p) = self;
         loop {
-            match p.call(tasks, val) {
+            match p.call(sub_runtime, val) {
                 True(t) => {
                     val = t;
                 }
@@ -284,5 +278,27 @@ where
                 }
             }
         }
+    }
+}
+
+
+//  _____           _ _
+// | ____|_ __ ___ (_) |_
+// |  _| | '_ ` _ \| | __|
+// | |___| | | | | | | |_
+// |_____|_| |_| |_|_|\__|
+
+#[derive(Clone, Copy)]
+pub struct NEmitD {}
+
+impl<'a, SV: 'a, E: 'a, V: 'a, In: 'a> Node<'a, ((SignalRuntimeRef<SV>, E), In)> for NEmitD
+where
+    SV: SignalValue<E=E, V=V>,
+{
+    type Out = In;
+
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, ((sr,e),val): ((SignalRuntimeRef<SV>, E), In)) -> Self::Out {
+        sr.emit(e, sub_runtime);
+        val
     }
 }

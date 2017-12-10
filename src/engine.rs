@@ -40,20 +40,35 @@ pub struct Tasks {
     pub next: Vec<usize>,
 }
 
+pub struct EndOfInstant<'a> {
+    pub continuations: Vec<Box<Fn(&mut EndOfInstant<'a>) + 'a>>
+}
+
+pub struct SubRuntime<'a> {
+    pub tasks: Tasks,
+    pub eoi: EndOfInstant<'a>,
+}
+
+
 /// Runtime for running reactive graph.
 pub struct Runtime<'a> {
     nodes: Vec<Box<Node<'a, (), Out = ()>>>,
-    tasks: Tasks,
+    sub_runtime: SubRuntime<'a>,
 }
 
 impl<'a> Runtime<'a> {
     fn newtest() -> Self {
         Runtime::<'a> {
             nodes: vec![],
-            tasks: Tasks {
-                current: vec![],
-                next: vec![],
-            },
+            sub_runtime: SubRuntime {
+                tasks: Tasks {
+                    current: vec![],
+                    next: vec![],
+                },
+                eoi: EndOfInstant {
+                    continuations: vec![],
+                },
+            }
         }
     }
 
@@ -78,7 +93,7 @@ impl<'a> Runtime<'a> {
         let mut g = Graph::new();
         let start = gf.fill_graph(&mut g);
         let mut r = Runtime::fromgraph(g);
-        r.tasks.current.push(start);
+        r.sub_runtime.tasks.current.push(start);
         r
     }
 
@@ -91,13 +106,19 @@ impl<'a> Runtime<'a> {
     }
 
     pub fn instant(&mut self) -> bool {
-        while self.tasks.current.len() > 0 {
-            let v = take(&mut self.tasks.current);
+        while self.sub_runtime.tasks.current.len() > 0 {
+            let v = take(&mut self.sub_runtime.tasks.current);
             for i in v {
-                self.nodes[i].call(&mut self.tasks, ());
+                self.nodes[i].call(&mut self.sub_runtime, ());
             }
         }
-        self.tasks.current = take(&mut self.tasks.next);
-        self.tasks.current.len() > 0
+        self.sub_runtime.tasks.current = take(&mut self.sub_runtime.tasks.next);
+
+        let eois = take(&mut self.sub_runtime.eoi.continuations);
+        for eoi in eois {
+            (*eoi)(&mut self.sub_runtime.eoi);
+        }
+
+        self.sub_runtime.tasks.current.len() > 0
     }
 }

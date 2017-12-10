@@ -3,6 +3,7 @@ use engine::*;
 use std::marker::PhantomData;
 use std::rc::Rc;
 use std::cell::*;
+use signal::*;
 
 pub trait Is {
     type Value;
@@ -440,5 +441,34 @@ impl<'a, P, In: 'a, Out: 'a> Process<'a, In>
     fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO{
         let pnio = self.p.p.compileIm(g);
         LoopIm(pnio)
+    }
+}
+
+
+
+//  _____           _ _
+// | ____|_ __ ___ (_) |_
+// |  _| | '_ ` _ \| | __|
+// | |___| | | | | | | |_
+// |_____|_| |_| |_|_|\__|
+
+#[derive(Copy,Clone)]
+pub struct Emit {}
+
+#[allow(non_upper_case_globals)]
+pub static Emit: Emit = Emit {};
+
+impl<'a, In: 'a, E: 'a, SV> Process<'a, ((SignalRuntimeRef<SV>, E),In)> for Emit
+where
+    SV: SignalValue<E=E> + 'a,
+{
+    type NI = DummyN<()>;
+    type NO = DummyN<In>;
+    type Mark = IsIm;
+    type NIO = NEmitD;
+    type Out = In;
+
+    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+        NEmitD {}
     }
 }

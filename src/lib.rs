@@ -10,6 +10,7 @@ pub mod macros;
 pub mod engine;
 pub mod node;
 pub mod process;
+pub mod signal;
 mod take;
 
 
@@ -20,6 +21,7 @@ mod tests {
     use engine::*;
     use process::*;
     use node::*;
+    use signal::*;
 
     #[test]
     fn instant_action() {
@@ -40,6 +42,7 @@ mod tests {
         }
         assert_eq!(i, 42);
     }
+
     #[test]
     fn pause() {
         let mut i = 0;
@@ -59,6 +62,7 @@ mod tests {
         }
         assert_eq!(i, 42);
     }
+
     #[test]
     fn choice() {
         let mut i = 0;
@@ -72,6 +76,7 @@ mod tests {
         }
         assert_eq!(i, 42);
     }
+
     #[test]
     fn choice_pause() {
         let mut i = 0;
@@ -88,4 +93,21 @@ mod tests {
         assert_eq!(i, 42);
     }
 
+    #[test]
+    fn emit() {
+        let mut value = 0;
+        let signal = SignalRuntimeRef::new_pure();
+        {
+            run! {
+                |_| {
+                    let signal = SignalRuntimeRef::new_pure();
+                    let signal2 = signal.clone();
+                ((signal,()), signal2)
+                };
+                Emit;
+                |val| value = 42
+            };
+        }
+        assert_eq!(value, 42);
+    }
 }

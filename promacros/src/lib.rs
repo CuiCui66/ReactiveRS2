@@ -107,7 +107,7 @@ fn parse_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
     }
 
 
-    for i in 0..args.len() {
+    for i in (0..args.len()).rev() {
         match args[i] {
             TokenTree::Token(spt, ref tok) => {
                 match tok {
