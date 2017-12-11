@@ -41,7 +41,7 @@ pub struct Tasks {
 }
 
 pub struct EndOfInstant<'a> {
-    pub continuations: Vec<Box<Fn(&mut EndOfInstant<'a>) + 'a>>
+    pub continuations: Vec<Box<Fn(&mut SubRuntime<'a>) + 'a>>
 }
 
 pub struct SubRuntime<'a> {
@@ -116,7 +116,7 @@ impl<'a> Runtime<'a> {
 
         let eois = take(&mut self.sub_runtime.eoi.continuations);
         for eoi in eois {
-            (*eoi)(&mut self.sub_runtime.eoi);
+            (*eoi)(&mut self.sub_runtime);
         }
 
         self.sub_runtime.tasks.current.len() > 0

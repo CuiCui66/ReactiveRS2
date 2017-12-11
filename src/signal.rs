@@ -1,6 +1,7 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::mem;
+use take::take;
 use engine::{SubRuntime, Tasks, EndOfInstant};
 
 //  ____  _                   _ ____              _   _
@@ -18,6 +19,8 @@ pub(crate) struct SignalRuntime<SV>
     is_set: RefCell<bool>,
     pre_set: RefCell<bool>,
     pending_await: RefCell<Vec<usize>>,
+    pending_await_immediate: RefCell<Vec<usize>>,
+    pending_present: RefCell<Vec<(usize,usize)>>,
     values: SV
 }
 
@@ -29,6 +32,8 @@ impl<SV> SignalRuntime<SV>
             is_set: RefCell::new(false),
             pre_set: RefCell::new(false),
             pending_await: RefCell::new(vec![]),
+            pending_await_immediate: RefCell::new(vec![]),
+            pending_present: RefCell::new(vec![]),
             values: signal_value
         }
     }
@@ -123,10 +128,24 @@ where
 
     /// Process pending await nodes
     fn process_pending_await(&self, tasks: &mut Tasks) {
-        let mut nodes = vec![];
-        mem::swap(&mut nodes, &mut *self.signal_runtime.pending_await.borrow_mut());
+        let mut nodes = take(&mut *self.signal_runtime.pending_await.borrow_mut());
         for node in nodes {
             tasks.next.push(node);
+        }
+    }
+
+    /// Process pending await immediate nodes
+    fn process_pending_await_immediate(&self, tasks: &mut Tasks) {
+        let mut nodes = take(&mut *self.signal_runtime.pending_await_immediate.borrow_mut());
+        for node in nodes {
+            tasks.current.push(node);
+        }
+    }
+
+    fn process_pending_present(&self, tasks: &mut Tasks) {
+        let mut nodes = take(&mut *self.signal_runtime.pending_present.borrow_mut());
+        for node in nodes {
+            tasks.next.push(node.0);
         }
     }
 
@@ -146,12 +165,20 @@ where
         }
 
         self.process_pending_await(&mut sub_runtime.tasks);
+        self.process_pending_await_immediate(&mut sub_runtime.tasks);
+        self.process_pending_present(&mut sub_runtime.tasks);
 
         let signal_runtime_ref = (*self).clone();
         let current_id = *self.signal_runtime.id.borrow();
 
 
-        sub_runtime.eoi.continuations.push(box move |eoi: &mut EndOfInstant<'a>| {
+        sub_runtime.eoi.continuations.push(box move |sr: &mut SubRuntime<'a>| {
+
+            let mut nodes = take(&mut *signal_runtime_ref.signal_runtime.pending_present.borrow_mut());
+            for node in nodes {
+                sr.tasks.current.push(node.1);
+            }
+
             *signal_runtime_ref.signal_runtime.pre_set.borrow_mut() = true;
             *signal_runtime_ref.signal_runtime.is_set.borrow_mut() = false;
             signal_runtime_ref.signal_runtime.values.reset_value();
@@ -160,7 +187,7 @@ where
 
             // Update pre_set if no emit is made in the next instant
             // Since the id is modified each instant that has an emit,
-            eoi.continuations.push(box move |eoi: &mut EndOfInstant<'a>| {
+            sr.eoi.continuations.push(box move |sr: &mut SubRuntime<'a>| {
                 let future_id = *signal_runtime_ref2.signal_runtime.id.borrow();
                 if future_id == current_id {
                     signal_runtime_ref2.signal_runtime.values.reset_value();
