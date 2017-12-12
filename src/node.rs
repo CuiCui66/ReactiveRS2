@@ -147,6 +147,14 @@ impl<'a, T: 'a> Node<'a, T> for RcStore<T> {
     }
 }
 
+impl<'a, T: 'a, In: 'a> Node<'a, (T,In)> for RcStore<T> {
+    type Out = In;
+    fn call(&mut self, _: &mut SubRuntime<'a>, (rc_val, val): (T,In)) -> Self::Out {
+        self.p.set(Some(rc_val));
+        val
+    }
+}
+
 pub struct RcLoad<T> {
     p: RCell<T>,
 }
@@ -300,5 +308,27 @@ where
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, ((sr,e),val): ((SignalRuntimeRef<SV>, E), In)) -> Self::Out {
         sr.emit(e, sub_runtime);
         val
+    }
+}
+
+
+//     _                _ _
+//    / \__      ____ _(_) |_
+//   / _ \ \ /\ / / _` | | __|
+//  / ___ \ V  V / (_| | | |_
+// /_/   \_\_/\_/ \__,_|_|\__|
+
+
+#[derive(Clone,Copy)]
+pub struct NAwaitD(pub usize);
+
+impl<'a, SV: 'a, E: 'a, V: 'a> Node<'a, SignalRuntimeRef<SV>> for NAwaitD
+where
+    SV: SignalValue<E=E, V=V>,
+{
+    type Out = ();
+
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: SignalRuntimeRef<SV>) -> Self::Out {
+        sr.await(sub_runtime.tasks, self.0);
     }
 }
