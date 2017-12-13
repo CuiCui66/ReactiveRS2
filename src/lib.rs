@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn emit() {
-        let mut value = 0;
+        let mut value = None;
         let signal = SignalRuntimeRef::new_pure();
         {
             run! {
@@ -104,10 +104,11 @@ mod tests {
                     let signal2 = signal.clone();
                 ((signal,()), signal2)
                 };
-                Emit;
-                |val| value = 42
+                EmitD;
+                AwaitD;
+                |val| value = Some(val)
             };
         }
-        assert_eq!(value, 42);
+        assert_eq!(value, Some(()));
     }
 }

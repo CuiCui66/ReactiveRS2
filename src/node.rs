@@ -129,12 +129,6 @@ pub struct RcStore<T> {
     p: RCell<T>,
 }
 
-impl<Out> Debug for RcStore<Out> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "RcStore")
-    }
-}
-
 
 pub fn store<T>(rc: RCell<T>) -> RcStore<T> {
     RcStore { p: rc }
@@ -147,22 +141,13 @@ impl<'a, T: 'a> Node<'a, T> for RcStore<T> {
     }
 }
 
-impl<'a, T: 'a, In: 'a> Node<'a, (T,In)> for RcStore<T> {
-    type Out = In;
-    fn call(&mut self, _: &mut SubRuntime<'a>, (rc_val, val): (T,In)) -> Self::Out {
-        self.p.set(Some(rc_val));
-        val
-    }
-}
 
 pub struct RcLoad<T> {
     p: RCell<T>,
 }
 
-impl<Out> Debug for RcLoad<Out> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "RcStore")
-    }
+pub fn store_clone<T>(rc: RCell<T>) -> RcStoreClone<T> {
+    RcStoreClone {p: rc}
 }
 
 
@@ -176,6 +161,39 @@ impl<'a, T: 'a> Node<'a, ()> for RcLoad<T> {
     type Out = T;
     fn call(&mut self, _: &mut SubRuntime<'a>, _: ()) -> T {
         self.p.take().unwrap()
+    }
+}
+
+
+pub struct RcStoreClone<T> {
+    p: RCell<T>,
+}
+
+impl<'a, T: 'a> Node<'a, T> for RcStoreClone<T>
+where
+    T: Clone
+{
+    type Out = T;
+    fn call(&mut self, _: &mut SubRuntime<'a>, val: T) -> Self::Out {
+        self.p.set(Some(val.clone()));
+        val
+    }
+}
+
+pub struct RcStoreCloneFirst<T> {
+    p: RCell<T>,
+}
+
+impl<'a, C: 'a, V: 'a> Node<'a, (C,V)> for RcStoreCloneFirst<(C,V)>
+where
+    C: Clone + 'a,
+{
+    type Out = C;
+
+    fn call(&mut self, _: &mut SubRuntime<'a>, (clone_val,val): (C,V)) -> Self::Out {
+        let out_val = clone_val.clone();
+        self.p.set(Some((clone_val,val)));
+        out_val
     }
 }
 
@@ -312,23 +330,72 @@ where
 }
 
 
-//     _                _ _
-//    / \__      ____ _(_) |_
-//   / _ \ \ /\ / / _` | | __|
-//  / ___ \ V  V / (_| | | |_
-// /_/   \_\_/\_/ \__,_|_|\__|
+
+//   ____      _
+//  / ___| ___| |_
+// | |  _ / _ \ __|
+// | |_| |  __/ |_
+//  \____|\___|\__|
+
+
+#[derive(Clone, Copy)]
+pub(crate) struct NGetD {}
+
+impl<'a, SV: 'a, V: 'a, In: 'a> Node<'a, (SignalRuntimeRef<SV>, In)> for NGetD
+where
+    SV: SignalValue<V=V>,
+{
+    type Out = (V,In);
+
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, (sr,val): (SignalRuntimeRef<SV>, In)) -> Self::Out {
+        (sr.signal_runtime.values.get_pre_value(), val)
+    }
+}
+
+impl<'a, SV: 'a, V: 'a> Node<'a, SignalRuntimeRef<SV>> for NGetD
+where
+    SV: SignalValue<V=V>,
+{
+    type Out = V;
+
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: SignalRuntimeRef<SV>) -> Self::Out {
+        sr.signal_runtime.values.get_pre_value()
+    }
+}
+
+
+
+
+// __        __    _ _
+// \ \      / /_ _(_) |_
+//  \ \ /\ / / _` | | __|
+//   \ V  V / (_| | | |_
+//    \_/\_/ \__,_|_|\__|
+
 
 
 #[derive(Clone,Copy)]
-pub struct NAwaitD(pub usize);
+pub(crate) struct NWaitD(pub usize);
 
-impl<'a, SV: 'a, E: 'a, V: 'a> Node<'a, SignalRuntimeRef<SV>> for NAwaitD
+impl<'a, SV: 'a, In: 'a> Node<'a, (SignalRuntimeRef<SV>, In)> for NWaitD
 where
-    SV: SignalValue<E=E, V=V>,
+    SV: SignalValue,
+{
+    type Out = In;
+
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, (sr,val): (SignalRuntimeRef<SV>, In)) -> Self::Out {
+        sr.await(&mut sub_runtime.tasks, self.0);
+        val
+    }
+}
+
+impl<'a, SV: 'a> Node<'a, SignalRuntimeRef<SV>> for NWaitD
+where
+    SV: SignalValue,
 {
     type Out = ();
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: SignalRuntimeRef<SV>) -> Self::Out {
-        sr.await(sub_runtime.tasks, self.0);
+        sr.await(&mut sub_runtime.tasks, self.0);
     }
 }

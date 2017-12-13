@@ -453,12 +453,12 @@ impl<'a, P, In: 'a, Out: 'a> Process<'a, In>
 // |_____|_| |_| |_|_|\__|
 
 #[derive(Copy,Clone)]
-pub struct Emit {}
+pub struct EmitD {}
 
 #[allow(non_upper_case_globals)]
-pub static Emit: Emit = Emit {};
+pub static EmitD: EmitD = EmitD {};
 
-impl<'a, In: 'a, E: 'a, SV> Process<'a, ((SignalRuntimeRef<SV>, E),In)> for Emit
+impl<'a, In: 'a, E: 'a, SV> Process<'a, ((SignalRuntimeRef<SV>, E),In)> for EmitD
 where
     SV: SignalValue<E=E> + 'a,
 {
@@ -472,3 +472,44 @@ where
         NEmitD {}
     }
 }
+
+
+//     _                _ _
+//    / \__      ____ _(_) |_
+//   / _ \ \ /\ / / _` | | __|
+//  / ___ \ V  V / (_| | | |_
+// /_/   \_\_/\_/ \__,_|_|\__|
+
+#[derive(Clone, Copy)]
+pub struct AwaitD {}
+
+#[allow(non_upper_case_globals)]
+pub static AwaitD: AwaitD = AwaitD {};
+
+impl<'a, V: 'a, SV> Process<'a, SignalRuntimeRef<SV>> for AwaitD
+where
+    SV: SignalValue<V=V> + 'a,
+{
+    type Out = V;
+    type Mark = NotIm;
+    type NIO = DummyN<V>;
+    type NI = NSeq<RcStoreClone<SignalRuntimeRef<SV>>, NWaitD>;
+    type NO = NSeq<RcLoad<SignalRuntimeRef<SV>>, NGetD>;
+
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let out_id = g.reserve();
+        let rc = new_rcell();
+        let rc2 = rc.clone();
+
+        let ni_store = store_clone(rc);
+        let ni_wait = NWaitD(out_id);
+        let ni = node!(ni_store >> ni_wait);
+
+        let no_load = load(rc2);
+        let no_get = NGetD {};
+        let no = node!(no_load >> no_get);
+
+        (ni, out_id, no)
+    }
+}
+
