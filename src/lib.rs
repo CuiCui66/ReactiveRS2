@@ -94,21 +94,21 @@ mod tests {
     }
 
     #[test]
-    fn emit() {
-        let mut value = None;
-        let signal = SignalRuntimeRef::new_pure();
+    fn emit_await() {
+        let mut value = 0;
+        let signal = SignalRuntimeRef::new_mc(0, box |e:i32, v:&mut i32| {*v = e;});
         {
             run! {
                 |_| {
-                    let signal = SignalRuntimeRef::new_pure();
                     let signal2 = signal.clone();
-                ((signal,()), signal2)
+                    let signal3 = signal.clone();
+                    ((signal2,42), signal3)
                 };
                 EmitD;
                 AwaitD;
-                |val| value = Some(val)
+                |v| { value = v; }
             };
         }
-        assert_eq!(value, Some(()));
+        assert_eq!(value, 42);
     }
 }

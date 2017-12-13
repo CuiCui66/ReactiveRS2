@@ -146,11 +146,6 @@ pub struct RcLoad<T> {
     p: RCell<T>,
 }
 
-pub fn store_clone<T>(rc: RCell<T>) -> RcStoreClone<T> {
-    RcStoreClone {p: rc}
-}
-
-
 pub fn load<T>(rc: RCell<T>) -> RcLoad<T> {
     RcLoad { p: rc }
 }
@@ -169,6 +164,10 @@ pub struct RcStoreClone<T> {
     p: RCell<T>,
 }
 
+pub fn store_clone<T>(rc: RCell<T>) -> RcStoreClone<T> {
+    RcStoreClone {p: rc}
+}
+
 impl<'a, T: 'a> Node<'a, T> for RcStoreClone<T>
 where
     T: Clone
@@ -182,6 +181,10 @@ where
 
 pub struct RcStoreCloneFirst<T> {
     p: RCell<T>,
+}
+
+pub fn store_clone_first<T>(rc: RCell<T>) -> RcStoreCloneFirst<T> {
+    RcStoreCloneFirst {p: rc}
 }
 
 impl<'a, C: 'a, V: 'a> Node<'a, (C,V)> for RcStoreCloneFirst<(C,V)>
@@ -317,15 +320,27 @@ where
 #[derive(Clone, Copy)]
 pub struct NEmitD {}
 
-impl<'a, SV: 'a, E: 'a, V: 'a, In: 'a> Node<'a, ((SignalRuntimeRef<SV>, E), In)> for NEmitD
+impl<'a, SV: 'a, E: 'a, In: 'a> Node<'a, ((SignalRuntimeRef<SV>, E), In)> for NEmitD
 where
-    SV: SignalValue<E=E, V=V>,
+    SV: SignalValue<E=E>,
 {
     type Out = In;
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, ((sr,e),val): ((SignalRuntimeRef<SV>, E), In)) -> Self::Out {
         sr.emit(e, sub_runtime);
         val
+    }
+}
+
+impl<'a, SV: 'a, E: 'a> Node<'a, (SignalRuntimeRef<SV>, E)> for NEmitD
+where
+    SV: SignalValue<E=E>,
+{
+    type Out = ();
+
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, (sr,e): (SignalRuntimeRef<SV>, E)) -> () {
+        sr.emit(e, sub_runtime);
+        ()
     }
 }
 

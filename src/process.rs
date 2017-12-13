@@ -458,15 +458,30 @@ pub struct EmitD {}
 #[allow(non_upper_case_globals)]
 pub static EmitD: EmitD = EmitD {};
 
-impl<'a, In: 'a, E: 'a, SV> Process<'a, ((SignalRuntimeRef<SV>, E),In)> for EmitD
+impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, ((SignalRuntimeRef<SV>, E),In)> for EmitD
 where
-    SV: SignalValue<E=E> + 'a,
+    SV: SignalValue<E=E>,
 {
     type NI = DummyN<()>;
     type NO = DummyN<In>;
     type Mark = IsIm;
     type NIO = NEmitD;
     type Out = In;
+
+    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+        NEmitD {}
+    }
+}
+
+impl<'a, E: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, E)> for EmitD
+where
+    SV: SignalValue<E=E>,
+{
+    type NI = DummyN<()>;
+    type NO = DummyN<()>;
+    type Mark = IsIm;
+    type NIO = NEmitD;
+    type Out = ();
 
     fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
@@ -486,9 +501,9 @@ pub struct AwaitD {}
 #[allow(non_upper_case_globals)]
 pub static AwaitD: AwaitD = AwaitD {};
 
-impl<'a, V: 'a, SV> Process<'a, SignalRuntimeRef<SV>> for AwaitD
+impl<'a, V: 'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for AwaitD
 where
-    SV: SignalValue<V=V> + 'a,
+    SV: SignalValue<V=V>,
 {
     type Out = V;
     type Mark = NotIm;
@@ -502,6 +517,33 @@ where
         let rc2 = rc.clone();
 
         let ni_store = store_clone(rc);
+        let ni_wait = NWaitD(out_id);
+        let ni = node!(ni_store >> ni_wait);
+
+        let no_load = load(rc2);
+        let no_get = NGetD {};
+        let no = node!(no_load >> no_get);
+
+        (ni, out_id, no)
+    }
+}
+
+impl<'a, In: 'a, V: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, In)> for AwaitD
+where
+    SV: SignalValue<V=V>,
+{
+    type Out = (V,In);
+    type Mark = NotIm;
+    type NIO = DummyN<(V,In)>;
+    type NI = NSeq<RcStoreCloneFirst<(SignalRuntimeRef<SV>, In)>, NWaitD>;
+    type NO = NSeq<RcLoad<(SignalRuntimeRef<SV>, In)>, NGetD>;
+
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let out_id = g.reserve();
+        let rc = new_rcell();
+        let rc2 = rc.clone();
+
+        let ni_store = store_clone_first(rc);
         let ni_wait = NWaitD(out_id);
         let ni = node!(ni_store >> ni_wait);
 

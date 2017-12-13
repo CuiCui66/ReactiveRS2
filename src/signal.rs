@@ -45,6 +45,15 @@ impl SignalRuntime<PureSignalValue> {
     }
 }
 
+impl<E,V> SignalRuntime<MCSignalValue<E,V>>
+where
+    V: Clone
+{
+    pub fn new_mc(default_value: V, gather: Box<FnMut(E, &mut V)>) -> Self {
+        SignalRuntime::new(MCSignalValue::new(default_value,gather))
+    }
+}
+
 
 //  ____  _                   ___     __    _
 // / ___|(_) __ _ _ __   __ _| \ \   / /_ _| |_   _  ___
@@ -88,6 +97,56 @@ impl SignalValue for PureSignalValue {
 }
 
 
+//  __  __  ____ ____  _                   ___     __    _
+// |  \/  |/ ___/ ___|(_) __ _ _ __   __ _| \ \   / /_ _| |_   _  ___
+// | |\/| | |   \___ \| |/ _` | '_ \ / _` | |\ \ / / _` | | | | |/ _ \
+// | |  | | |___ ___) | | (_| | | | | (_| | | \ V / (_| | | |_| |  __/
+// |_|  |_|\____|____/|_|\__, |_| |_|\__,_|_|  \_/ \__,_|_|\__,_|\___|
+//                       |___/
+
+pub struct MCSignalValue<E,V> {
+    default_value: V,
+    current_value: RefCell<V>,
+    pre_value: RefCell<V>,
+    gather: RefCell<Box<FnMut(E, &mut V)>>,
+}
+
+impl<E,V> MCSignalValue<E,V>
+where
+    V: Clone
+{
+    fn new(default_value: V, gather: Box<FnMut(E, &mut V)>) -> Self {
+        MCSignalValue {
+            default_value: default_value.clone(),
+            current_value: RefCell::new(default_value.clone()),
+            pre_value: RefCell::new(default_value),
+            gather: RefCell::new(gather),
+        }
+    }
+}
+
+impl<E,V> SignalValue for MCSignalValue<E,V>
+where
+    V: Clone
+{
+    type E = E;
+    type V = V;
+    fn get_pre_value(&self) -> V {
+        self.pre_value.borrow().clone()
+    }
+
+    fn gather(&self, emit_value: E) {
+        (&mut *self.gather.borrow_mut())(emit_value, &mut *self.current_value.borrow_mut())
+    }
+
+    fn reset_value(&self) {
+        let mut current_value = self.current_value.borrow_mut();
+        mem::swap(&mut *self.pre_value.borrow_mut(), &mut *current_value);
+        *current_value = self.default_value.clone();
+    }
+}
+
+
 //  ____  _                   _ ____              _   _                ____       __
 // / ___|(_) __ _ _ __   __ _| |  _ \ _   _ _ __ | |_(_)_ __ ___   ___|  _ \ ___ / _|
 // \___ \| |/ _` | '_ \ / _` | | |_) | | | | '_ \| __| | '_ ` _ \ / _ \ |_) / _ \ |_
@@ -104,6 +163,17 @@ impl SignalRuntimeRef<PureSignalValue> {
     pub fn new_pure() -> Self {
         SignalRuntimeRef {
             signal_runtime: Rc::new(SignalRuntime::new_pure())
+        }
+    }
+}
+
+impl<E,V> SignalRuntimeRef<MCSignalValue<E,V>>
+where
+    V: Clone
+{
+    pub fn new_mc(default_value: V, gather: Box<FnMut(E, &mut V)>) -> Self {
+        SignalRuntimeRef {
+            signal_runtime: Rc::new(SignalRuntime::new_mc(default_value,gather))
         }
     }
 }
