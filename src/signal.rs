@@ -18,8 +18,7 @@ pub(crate) struct SignalRuntime<SV>
                                    // every instant there is an emitted value, this id increase (modulo 2)
     pub(crate) is_set: RefCell<bool>,
     pub(crate) pre_set: RefCell<bool>,
-    pub(crate) pending_await: RefCell<Vec<usize>>,
-    pub(crate) pending_await_immediate: RefCell<Vec<usize>>,
+    pub(crate) pending_signal: RefCell<Vec<usize>>,
     pub(crate) pending_present: RefCell<Vec<(usize,usize)>>,
     pub(crate) values: SV
 }
@@ -31,8 +30,7 @@ impl<SV> SignalRuntime<SV>
             id: RefCell::new(0),
             is_set: RefCell::new(false),
             pre_set: RefCell::new(false),
-            pending_await: RefCell::new(vec![]),
-            pending_await_immediate: RefCell::new(vec![]),
+            pending_signal: RefCell::new(vec![]),
             pending_present: RefCell::new(vec![]),
             values: signal_value
         }
@@ -197,16 +195,8 @@ where
 {
 
     /// Process pending await nodes
-    fn process_pending_await(&self, tasks: &mut Tasks) {
-        let mut nodes = take(&mut *self.signal_runtime.pending_await.borrow_mut());
-        for node in nodes {
-            tasks.next.push(node);
-        }
-    }
-
-    /// Process pending await immediate nodes
-    fn process_pending_await_immediate(&self, tasks: &mut Tasks) {
-        let mut nodes = take(&mut *self.signal_runtime.pending_await_immediate.borrow_mut());
+    fn process_pending_signal(&self, tasks: &mut Tasks) {
+        let mut nodes = take(&mut *self.signal_runtime.pending_signal.borrow_mut());
         for node in nodes {
             tasks.current.push(node);
         }
@@ -234,8 +224,7 @@ where
             *id %= 42;
         }
 
-        self.process_pending_await(&mut sub_runtime.tasks);
-        self.process_pending_await_immediate(&mut sub_runtime.tasks);
+        self.process_pending_signal(&mut sub_runtime.tasks);
         self.process_pending_present(&mut sub_runtime.tasks);
 
         let signal_runtime_ref = (*self).clone();
@@ -267,11 +256,11 @@ where
         });
     }
 
-    pub(crate) fn await(&self, tasks: &mut Tasks, node: usize) {
+    pub(crate) fn on_signal(&self, tasks: &mut Tasks, node: usize) {
         if *self.signal_runtime.is_set.borrow() {
-            tasks.next.push(node);
+            tasks.current.push(node);
         } else {
-            self.signal_runtime.pending_await.borrow_mut().push(node);
+            self.signal_runtime.pending_signal.borrow_mut().push(node);
         }
     }
 }

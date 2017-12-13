@@ -513,11 +513,15 @@ where
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
+        let on_wait_id = g.reserve();
+
+        g.set(on_wait_id, box pause(out_id));
+
         let rc = new_rcell();
         let rc2 = rc.clone();
 
         let ni_store = store_clone(rc);
-        let ni_wait = NWaitD(out_id);
+        let ni_wait = NWaitD(on_wait_id);
         let ni = node!(ni_store >> ni_wait);
 
         let no_load = load(rc2);
@@ -540,11 +544,15 @@ where
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
+        let on_wait_id = g.reserve();
+
+        g.set(on_wait_id, box pause(out_id));
+
         let rc = new_rcell();
         let rc2 = rc.clone();
 
         let ni_store = store_clone_first(rc);
-        let ni_wait = NWaitD(out_id);
+        let ni_wait = NWaitD(on_wait_id);
         let ni = node!(ni_store >> ni_wait);
 
         let no_load = load(rc2);
@@ -555,3 +563,44 @@ where
     }
 }
 
+//  ____
+// |  _ \ _ __ ___
+// | |_) | '__/ _ \
+// |  __/| | |  __/
+// |_|   |_|  \___|
+
+#[derive(Clone, Copy)]
+pub struct PreD {}
+
+#[allow(non_upper_case_globals)]
+pub static PreD: PreD = PreD {};
+
+impl<'a, V: 'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for PreD
+where
+    SV: SignalValue<V=V>,
+{
+    type Out = V;
+    type NI = DummyN<()>;
+    type NO = DummyN<V>;
+    type NIO = NGetD;
+    type Mark = IsIm;
+
+    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+        NGetD {}
+    }
+}
+
+impl<'a, In: 'a, V: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, In)> for PreD
+where
+    SV: SignalValue<V=V>
+{
+    type Out = (V, In);
+    type NI = DummyN<()>;
+    type NO = DummyN<(V, In)>;
+    type NIO = NGetD;
+    type Mark = IsIm;
+
+    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+        NGetD {}
+    }
+}

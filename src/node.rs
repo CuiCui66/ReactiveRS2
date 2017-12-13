@@ -399,7 +399,7 @@ where
     type Out = In;
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, (sr,val): (SignalRuntimeRef<SV>, In)) -> Self::Out {
-        sr.await(&mut sub_runtime.tasks, self.0);
+        sr.on_signal(&mut sub_runtime.tasks, self.0);
         val
     }
 }
@@ -411,6 +411,6 @@ where
     type Out = ();
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: SignalRuntimeRef<SV>) -> Self::Out {
-        sr.await(&mut sub_runtime.tasks, self.0);
+        sr.on_signal(&mut sub_runtime.tasks, self.0);
     }
 }

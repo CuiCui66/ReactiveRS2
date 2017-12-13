@@ -96,7 +96,7 @@ mod tests {
     #[test]
     fn emit_await() {
         let mut value = 0;
-        let signal = SignalRuntimeRef::new_mc(0, box |e:i32, v:&mut i32| {*v = e;});
+        let signal = SignalRuntimeRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e;});
         {
             run! {
                 |_| {
@@ -108,6 +108,28 @@ mod tests {
                 AwaitD;
                 |v| { value = v; }
             };
+        }
+        assert_eq!(value, 42);
+    }
+
+    #[test]
+    fn emit_pre() {
+        let mut value = 0;
+        let signal = SignalRuntimeRef::new_mc(1, box |e: i32, v: &mut i32| { *v *= e;});
+        {
+            run! {
+                |_| {
+                    ((signal.clone(),2),((signal.clone(),3),((signal.clone(),7), signal.clone())))
+                };
+                EmitD;
+                EmitD;
+                EmitD;
+                Pause;
+                PreD;
+                |val| {
+                    value = 42;
+                }
+            }
         }
         assert_eq!(value, 42);
     }
