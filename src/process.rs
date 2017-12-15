@@ -55,6 +55,9 @@ pub trait Process<'a, In: 'a>: 'a + Sized {
         }
 
     }
+    fn ploop(self) -> PLoop<MarkedProcess<Self, Self::Mark>> {
+        PLoop { p: mp(self) }
+    }
 }
 
 //  _____         _           _           _
@@ -250,8 +253,7 @@ pub struct Pause {}
 #[allow(non_upper_case_globals)]
 pub static Pause: Pause = Pause {};
 
-impl<'a, In: 'a> Process<'a, In> for Pause
-{
+impl<'a, In: 'a> Process<'a, In> for Pause {
     type Out = In;
     type NI = NSeq<RcStore<In>, NPause>;
     type NO = RcLoad<In>;
@@ -306,7 +308,6 @@ impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
 where
     PT: Process<'a, InT, Out = Out>,
     PF: Process<'a, InF, Out = Out>,
-    Out: Default,
 {
     type Out = Out;
     type NI = NChoice<NSeq<PT::NIO, NSeq<RcStore<Out>, NJump>>, PF::NI>;
@@ -336,7 +337,6 @@ impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
 where
     PT: Process<'a, InT, Out = Out>,
     PF: Process<'a, InF, Out = Out>,
-    Out: Default,
 {
     type Out = Out;
     type NI = NChoice<PT::NI, NSeq<PF::NIO, NSeq<RcStore<Out>, NJump>>>;
@@ -364,7 +364,6 @@ impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
 where
     PT: Process<'a, InT, Out = Out>,
     PF: Process<'a, InF, Out = Out>,
-    Out: Default,
 {
     type Out = Out;
     type NI = DummyN<()>;
@@ -395,15 +394,14 @@ impl<'a, P, In: 'a, Out: 'a> Process<'a, In>
     for PLoop<MarkedProcess<P,NotIm>>
     where
     P: Process<'a, In, Out = ChoiceData<In,Out>>,
-    Out: Default,
-    In: Default,
 {
     type Out = Out;
     type NI = NSeq<RcStore<In>,NJump>;
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
-    type Mark = IsIm;
+    type Mark = NotIm;
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI,usize,Self::NO){
+        trace!("");
         let (pni, pind, pno) = self.p.p.compile(g);
         let rcextin = new_rcell();
         let rcbegin = rcextin.clone();
@@ -430,8 +428,6 @@ impl<'a, P, In: 'a, Out: 'a> Process<'a, In>
     for PLoop<MarkedProcess<P,IsIm>>
     where
     P: Process<'a, In, Out = ChoiceData<In,Out>>,
-    Out: Default,
-    In: Default,
 {
     type Out = Out;
     type NI = DummyN<()>;
@@ -439,10 +435,72 @@ impl<'a, P, In: 'a, Out: 'a> Process<'a, In>
     type NIO = LoopIm<P::NIO>;
     type Mark = IsIm;
     fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO{
+
+        trace!("");
         let pnio = self.p.p.compileIm(g);
         LoopIm(pnio)
     }
 }
+
+
+
+//  ____
+// |  _ \ __ _ _ __
+// | |_) / _` | '__|
+// |  __/ (_| | |
+// |_|   \__,_|_|
+
+// P and Q should be marked processes
+pub struct Par<P, Q> {
+    p: P,
+    q: Q,
+}
+
+impl<'a, P, Q, In: 'a, OutP: 'a, OutQ: 'a> Process<'a, In>
+    for Par<MarkedProcess<P, NotIm>, MarkedProcess<Q, NotIm>>
+where
+    P: Process<'a, Rc<In>, Out = OutP>,
+    Q: Process<'a, Rc<In>, Out = OutQ>,
+{
+    type Out = (OutP,OutQ);
+    type NI = NSeq<NPar<P::NI,Q::NI>,Ignore>;
+    type NO = NMerge<P::Out,Q::Out>;
+    type NIO = DummyN<Self::Out>;
+    type Mark = NotIm;
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let (pni, pind, pno) = self.p.p.compile(g);
+        let (qni, qind, qno) = self.q.p.compile(g);
+        let out_ind = g.reserve();
+        let rc1 = new_rcjp();
+        let rc2 = rc1.clone();
+        let rcout = rc1.clone();
+        g.set(pind, box node!(pno >> set1(rc1,out_ind)));
+        g.set(qind, box node!(qno >> set2(rc2,out_ind)));
+        (node!((pni | qni) >> Ignore), out_ind, merge(rcout))
+    }
+}
+
+// impl<'a, P, Q, In: 'a, OutP: 'a, OutQ: 'a> Process<'a, In>
+//     for Par<MarkedProcess<P, IsIm>, MarkedProcess<Q, NotIm>>
+//     where
+//     P: Process<'a, Rc<In>, Out = OutP>,
+//     Q: Process<'a, Rc<In>, Out = OutQ>,
+// {
+//     type Out = (OutP,OutQ);
+//     type NI = NSeq<NPar<P::NI,Q::NI>,Ignore>;
+//     type NO = NMerge<P::Out,Q::Out>;
+//     type NIO = DummyN<Self::Out>;
+//     type Mark = NotIm;
+//     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+//         let pnio = self.p.p.compileIm(g);
+//         let (qni, qind, qno) = self.q.p.compile(g);
+//         let rcin = new_rcell();
+//         let rcout = rcin.clone();
+//         (node!((pnio >> store(rcin)) | qni),qind
+//     }
+// }
+
+
 
 
 

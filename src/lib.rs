@@ -5,15 +5,17 @@
 #![feature(plugin)]
 #![plugin(promacros)]
 
+extern crate core;
+#[macro_use] extern crate log;
+extern crate env_logger;
+
 #[macro_use]
 pub mod macros;
 pub mod engine;
-pub mod node;
+mod node;
 pub mod process;
 pub mod signal;
 mod take;
-
-
 
 
 #[cfg(test)]
@@ -21,16 +23,18 @@ mod tests {
     use engine::*;
     use process::*;
     use node::*;
+    use node::ChoiceData::*;
     use signal::*;
+
 
     #[test]
     fn instant_action() {
         let mut i = 0;
         {
-            let mut r = Runtime::new(mp(|_: ()| { i += 1; }));
+            let mut r = Runtime::new(mp(|_: ()| { i += 42; }));
             r.execute();
         }
-        assert_eq!(i, 1);
+        assert_eq!(i, 42);
     }
 
     #[test]
@@ -81,7 +85,7 @@ mod tests {
     fn choice_pause() {
         let mut i = 0;
         run!{
-            |_| ChoiceData::True(42);
+            |_| True(42);
             Pause;
             choice {
                 Pause;
@@ -92,6 +96,25 @@ mod tests {
         }
         assert_eq!(i, 42);
     }
+
+    fn loop_test() {
+        run!{
+            |_| 0;
+            loop {
+                |i : usize| if i < 42 {
+                    True(i+1)
+                }
+                else{
+                    False(i)
+                };
+                Pause
+            };
+            |i : usize| {
+                assert_eq!(i,42)
+            }
+        }
+    }
+
 
     #[test]
     fn emit_await() {

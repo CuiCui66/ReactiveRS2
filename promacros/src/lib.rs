@@ -95,6 +95,14 @@ fn parse_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
             }
         }
     }
+    if args.len() == 2 {
+        if let TokenTree::Token(_, Ident(id)) = args[0] {
+            if id.name.as_str() == "loop" {
+                let n1 = parse_pro(cx, args[1].span(), &args[1..2]);
+                return cx.expr_method_call(sp, n1, cx.ident_of("ploop"), vec![]);
+            }
+        }
+    }
 
     if args.len() == 3 {
         if let TokenTree::Token(_, Ident(id)) = args[0] {
@@ -113,8 +121,13 @@ fn parse_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
                 match tok {
                     &Token::Semi => {
                         let (p1, p2) = split_on_binop(cx, sp, args, i);
-                        return cx.expr_method_call(spt, p1, cx.ident_of("seq"), vec![p2]);
+                        return cx.expr_method_call(sp, p1, cx.ident_of("seq"), vec![p2]);
                     }
+                    &Token::BinOp(Or) => {
+                        let (p1, p2) = split_on_binop(cx, sp, args, i);
+                        return cx.expr_method_call(sp, p1, cx.ident_of("join"), vec![p2]);
+                    }
+
                     _ => {}
                 }
             }
@@ -170,8 +183,13 @@ fn parse_node(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
                 match tok {
                     &Token::BinOp(Shr) => {
                         let (p1, p2) = split_on_binop_node(cx, sp, args, i);
-                        return cx.expr_method_call(spt, p1, cx.ident_of("nseq"), vec![p2]);
+                        return cx.expr_method_call(sp, p1, cx.ident_of("nseq"), vec![p2]);
                     }
+                    &Token::BinOp(Or) => {
+                        let (p1, p2) = split_on_binop_node(cx, sp, args, i);
+                        return cx.expr_method_call(sp, p1, cx.ident_of("njoin"), vec![p2]);
+                    }
+
                     _ => {}
                 }
             }
