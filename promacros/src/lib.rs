@@ -16,6 +16,7 @@ use syntax::ext::build::AstBuilder; // A trait for expr_usize.
 use syntax::ext::quote::rt::Span;
 use rustc_plugin::Registry;
 
+#[allow(dead_code)]
 fn printtts(args : &[TokenTree]){
     for a in args {
         print!("{} ",a.clone().joint());
@@ -70,8 +71,8 @@ fn split_on_binop_node(
 
 fn parse_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
 
-    print!("parse pro : ");
-    printtts(args);
+    //print!("parse pro : ");
+    //printtts(args);
 
     if args.len() == 0 {
         cx.expr_ident(sp,cx.ident_of("PNothing"));
@@ -198,8 +199,8 @@ fn parse_node(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
 }
 
 fn expand_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> Box<MacResult + 'static> {
-    print!("\n\n\n\n expand pro :");
-    printtts(args);
+    //print!("\n\n\n\n expand pro :");
+    //printtts(args);
     MacEager::expr(parse_pro(cx, sp, args))
 }
 
