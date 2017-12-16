@@ -25,9 +25,9 @@ pub trait Node<'a, In: 'a>: 'a {
     {
         NChoice { nt: self, nf: nf }
     }
-    fn njoin<N2>(self, n2: N2) -> NPar<Self, N2>
+    fn njoin<In2: 'a, N2>(self, n2: N2) -> NPar<Self, N2>
     where
-        N2: Node<'a, In> + Sized,
+        N2: Node<'a,In2> + Sized,
         Self: Sized,
     {
         NPar { n1: self, n2: n2 }
@@ -166,39 +166,6 @@ impl<'a, T: 'a> Node<'a, ()> for RcLoad<T> {
         self.p.take().unwrap()
     }
 }
-
-
-
-pub struct RcLoadLeft<T> {
-    p: RCell<T>,
-}
-
-pub fn load_left<T>(rc: RCell<T>) -> RcLoadLeft<T> {
-    RcLoadLeft { p: rc }
-}
-
-impl<'a, T: 'a, In: 'a> Node<'a, In> for RcLoadLeft<T> {
-    type Out = (T, In);
-    fn call(&mut self, _: &mut SubRuntime<'a>, val: In) -> Self::Out {
-        (self.p.take().unwrap(), val)
-    }
-}
-
-pub struct RcLoadRight<T> {
-    p: RCell<T>,
-}
-
-pub fn load_Right<T>(rc: RCell<T>) -> RcLoadRight<T> {
-    RcLoadRight { p: rc }
-}
-
-impl<'a, T: 'a, In: 'a> Node<'a, In> for RcLoadRight<T> {
-    type Out = (In, T);
-    fn call(&mut self, _: &mut SubRuntime<'a>, val: In) -> Self::Out {
-        (val, self.p.take().unwrap())
-    }
-}
-
 
 pub struct RcStoreClone<T> {
     p: RCell<T>,
@@ -373,6 +340,21 @@ impl<'a, In: 'a> Node<'a, In> for Ignore {
 }
 
 #[derive(Clone, Copy)]
+pub struct GenP {}
+
+#[allow(non_upper_case_globals)]
+pub static GenP: GenP = GenP {};
+
+impl<'a> Node<'a, ()> for GenP {
+    type Out = ((), ());
+    fn call(&mut self, _: &mut SubRuntime<'a>, _: ()) -> Self::Out {
+        ((), ())
+    }
+}
+
+
+
+#[derive(Clone, Copy)]
 pub struct Ignore1 {}
 
 #[allow(non_upper_case_globals)]
@@ -409,39 +391,16 @@ pub struct NPar<N1, N2> {
     n2: N2,
 }
 
-#[cfg_attr(rustfmt, rustfmt_skip)]
-impl<'a, N1, N2, In: 'a, Out1: 'a, Out2: 'a> Node<'a, In> for NPar<N1, N2>
+impl<'a, N1, N2, In1: 'a, In2: 'a, Out1: 'a, Out2: 'a> Node<'a, (In1,In2)> for NPar<N1, N2>
     where
-    N1: Node<'a, Rc<In>, Out = Out1>,
-    N2: Node<'a, Rc<In>, Out = Out2>,
+    N1: Node<'a, In1, Out = Out1>,
+    N2: Node<'a, In2, Out = Out2>,
 {
     type Out = (Out1, Out2);
-    fn call(&mut self, t: &mut SubRuntime<'a>, val: In) -> Self::Out {
-        let valrc = Rc::new(val);
-        let valrc2 = valrc.clone();
-        (self.n1.call(t, valrc), self.n2.call(t, valrc2))
+    fn call(&mut self, t: &mut SubRuntime<'a>, (val1,val2):(In1,In2) ) -> Self::Out {
+        (self.n1.call(t, val1), self.n2.call(t, val2))
     }
 }
-
-pub struct NParMut<N1, N2> {
-    n1: N1,
-    n2: N2,
-}
-
-#[cfg_attr(rustfmt, rustfmt_skip)]
-impl<'a, N1, N2, In: 'a, Out1: 'a, Out2: 'a> Node<'a, In> for NParMut<N1, N2>
-    where
-    N1: Node<'a, In, Out = Out1>,
-    N2: Node<'a, In, Out = Out2>,
-    In: Clone
-{
-    type Out = (Out1, Out2);
-    fn call(&mut self, t: &mut SubRuntime<'a>, val: In) -> Self::Out {
-        let val2 = val.clone();
-        (self.n1.call(t, val), self.n2.call(t, val2))
-    }
-}
-
 
 pub struct JoinPoint<T1, T2> {
     o1: Option<T1>,

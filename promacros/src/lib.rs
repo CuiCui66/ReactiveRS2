@@ -70,15 +70,15 @@ fn split_on_binop_node(
 
 fn parse_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
 
-    // print!("parse pro : ");
-    // printtts(args);
+    print!("parse pro : ");
+    printtts(args);
 
     if args.len() == 0 {
         cx.expr_ident(sp,cx.ident_of("PNothing"));
     }
     if args.len() == 1 {
         match &args[0] {
-            &TokenTree::Token(sp, ref tok) => {
+            &TokenTree::Token(sp, _) => {
                 return parse_expr(cx, sp, args);
             }
             &TokenTree::Delimited(sp,
@@ -118,7 +118,7 @@ fn parse_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
     // reverse for type inference (left associativity)
     for i in (0..args.len()).rev() {
         match args[i] {
-            TokenTree::Token(spt, ref tok) => {
+            TokenTree::Token(_, ref tok) => {
                 match tok {
                     &Token::Semi => {
                         let (p1, p2) = split_on_binop(cx, sp, args, i);
@@ -132,11 +132,7 @@ fn parse_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
                     _ => {}
                 }
             }
-            TokenTree::Delimited(sp,
-                                 Delimited {
-                                     delim: d,
-                                     tts: ref ts,
-                                 }) => {}
+            TokenTree::Delimited(_,_) => {}
         }
     }
 
@@ -149,7 +145,7 @@ fn parse_node(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
     }
     if args.len() == 1 {
         match &args[0] {
-            &TokenTree::Token(sp, ref tok) => {
+            &TokenTree::Token(sp, _) => {
                 return parse_expr(cx, sp, args);
             }
             &TokenTree::Delimited(sp,
@@ -180,7 +176,7 @@ fn parse_node(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
 
     for i in 0..args.len() {
         match args[i] {
-            TokenTree::Token(spt, ref tok) => {
+            TokenTree::Token(_, ref tok) => {
                 match tok {
                     &Token::BinOp(Shr) => {
                         let (p1, p2) = split_on_binop_node(cx, sp, args, i);
@@ -194,11 +190,7 @@ fn parse_node(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
                     _ => {}
                 }
             }
-            TokenTree::Delimited(sp,
-                                 Delimited {
-                                     delim: d,
-                                     tts: ref ts,
-                                 }) => {}
+            TokenTree::Delimited(_,_) => {}
         }
     }
 
@@ -206,6 +198,8 @@ fn parse_node(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
 }
 
 fn expand_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> Box<MacResult + 'static> {
+    print!("\n\n\n\n expand pro :");
+    printtts(args);
     MacEager::expr(parse_pro(cx, sp, args))
 }
 

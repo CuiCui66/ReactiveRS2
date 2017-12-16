@@ -29,10 +29,12 @@ pub trait Process<'a, In: 'a>: 'a + Sized {
     fn compile(self, _: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         unreachable!();
     }
+
     type NIO: Node<'a, In, Out = Self::Out>;
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         unreachable!();
     }
+
     fn seq<P>(self, p: P) -> Seq<MarkedProcess<Self, Self::Mark>, MarkedProcess<P, P::Mark>>
     where
         P: Process<'a, Self::Out>,
@@ -42,6 +44,7 @@ pub trait Process<'a, In: 'a>: 'a + Sized {
             q: mp(p),
         }
     }
+
     fn choice<PF, InF: 'a>(
         self,
         p: PF,
@@ -55,8 +58,23 @@ pub trait Process<'a, In: 'a>: 'a + Sized {
         }
 
     }
+
     fn ploop(self) -> PLoop<MarkedProcess<Self, Self::Mark>> {
         PLoop { p: mp(self) }
+    }
+
+    fn join<InQ: 'a, Q>(
+        self,
+        q: Q,
+    ) -> Par<MarkedProcess<Self, Self::Mark>, MarkedProcess<Q, Q::Mark>>
+    where
+        Q: Process<'a, InQ> + Sized,
+        Self: Sized,
+    {
+        Par {
+            p: mp(self),
+            q: mp(q),
+        }
     }
 }
 
@@ -456,15 +474,15 @@ pub struct Par<P, Q> {
     q: Q,
 }
 
-impl<'a, P, Q, In: 'a, OutP: 'a, OutQ: 'a> Process<'a, In>
+impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> Process<'a, (InP, InQ)>
     for Par<MarkedProcess<P, NotIm>, MarkedProcess<Q, NotIm>>
 where
-    P: Process<'a, Rc<In>, Out = OutP>,
-    Q: Process<'a, Rc<In>, Out = OutQ>,
+    P: Process<'a, InP, Out = OutP>,
+    Q: Process<'a, InQ, Out = OutQ>,
 {
-    type Out = (OutP,OutQ);
-    type NI = NSeq<NPar<P::NI,Q::NI>,Ignore>;
-    type NO = NMerge<P::Out,Q::Out>;
+    type Out = (OutP, OutQ);
+    type NI = NSeq<NPar<P::NI, Q::NI>, Ignore>;
+    type NO = NMerge<P::Out, Q::Out>;
     type NIO = DummyN<Self::Out>;
     type Mark = NotIm;
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
@@ -476,32 +494,77 @@ where
         let rcout = rc1.clone();
         g.set(pind, box node!(pno >> set1(rc1,out_ind)));
         g.set(qind, box node!(qno >> set2(rc2,out_ind)));
-        (node!((pni || qni) >> Ignore), out_ind, merge(rcout))
+        (nodei!(pni || qni), out_ind, merge(rcout))
     }
 }
 
-impl<'a, P, Q, In: 'a, OutP: 'a, OutQ: 'a> Process<'a, In>
+impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> Process<'a, (InP, InQ)>
     for Par<MarkedProcess<P, IsIm>, MarkedProcess<Q, NotIm>>
-    where
-    P: Process<'a, Rc<In>, Out = OutP>,
-    Q: Process<'a, Rc<In>, Out = OutQ>,
+where
+    P: Process<'a, InP, Out = OutP>,
+    Q: Process<'a, InQ, Out = OutQ>,
 {
-    type Out = (OutP,OutQ);
-    type NI = NSeq<NPar<P::NI,Q::NI>,Ignore>;
-    type NO = NMerge<P::Out,Q::Out>;
+    type Out = (OutP, OutQ);
+    type NI = NSeq<NPar<NSeq<P::NIO, RcStore<OutP>>, Q::NI>, Ignore>;
+    type NO = NSeq<GenP, NPar<RcLoad<OutP>, Q::NO>>;
     type NIO = DummyN<Self::Out>;
     type Mark = NotIm;
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let pnio = self.p.p.compileIm(g);
         let (qni, qind, qno) = self.q.p.compile(g);
         let rcin = new_rcell();
-        let rcout = rcin.clone(); 
-    (node!(((pnio >> store(rcin)) || qni)>> Ignore),
-     qind,
-     node!(qno >> RcLoad) )
+        let rcout = rcin.clone();
+        (
+            nodei!((pnio >> store(rcin)) || qni),
+            qind,
+            nodep!(load(rcout) || qno),
+        )
+
     }
 }
 
+impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> Process<'a, (InP, InQ)>
+    for Par<MarkedProcess<P, NotIm>, MarkedProcess<Q, IsIm>>
+where
+    P: Process<'a, InP, Out = OutP>,
+    Q: Process<'a, InQ, Out = OutQ>,
+{
+    type Out = (OutP, OutQ);
+    type NI = NSeq<NPar<P::NI, NSeq<Q::NIO, RcStore<OutQ>>>, Ignore>;
+    type NO = NSeq<GenP, NPar<P::NO, RcLoad<OutQ>>>;
+    type NIO = DummyN<Self::Out>;
+    type Mark = NotIm;
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let (pni, pind, pno) = self.p.p.compile(g);
+        let qnio = self.q.p.compileIm(g);
+        let rcin = new_rcell();
+        let rcout = rcin.clone();
+        (
+            nodei!(pni || (qnio >> store(rcin))),
+            pind,
+            nodep!(pno || load(rcout)),
+        )
+
+    }
+}
+
+impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> Process<'a, (InP, InQ)>
+    for Par<MarkedProcess<P, IsIm>, MarkedProcess<Q, IsIm>>
+where
+    P: Process<'a, InP, Out = OutP>,
+    Q: Process<'a, InQ, Out = OutQ>,
+{
+    type Out = (OutP, OutQ);
+    type NI = DummyN<()>;
+    type NO = DummyN<Self::Out>;
+    type NIO = NPar<P::NIO, Q::NIO>;
+    type Mark = IsIm;
+    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+        let pnio = self.p.p.compileIm(g);
+        let qnio = self.q.p.compileIm(g);
+        node!(pnio || qnio)
+    }
+}
 
 
 
@@ -512,7 +575,7 @@ impl<'a, P, Q, In: 'a, OutP: 'a, OutQ: 'a> Process<'a, In>
 // | |___| | | | | | | |_
 // |_____|_| |_| |_|_|\__|
 
-#[derive(Copy,Clone)]
+#[derive(Copy, Clone)]
 pub struct EmitD {}
 
 #[allow(non_upper_case_globals)]
@@ -535,7 +598,7 @@ where
 
 impl<'a, E: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, E)> for EmitD
 where
-    SV: SignalValue<E=E>,
+    SV: SignalValue<E = E>,
 {
     type NI = DummyN<()>;
     type NO = DummyN<()>;
@@ -563,7 +626,7 @@ pub static AwaitD: AwaitD = AwaitD {};
 
 impl<'a, V: 'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for AwaitD
 where
-    SV: SignalValue<V=V>,
+    SV: SignalValue<V = V>,
 {
     type Out = V;
     type Mark = NotIm;
@@ -639,7 +702,7 @@ pub static PreD: PreD = PreD {};
 
 impl<'a, V: 'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for PreD
 where
-    SV: SignalValue<V=V>,
+    SV: SignalValue<V = V>,
 {
     type Out = V;
     type NI = DummyN<()>;

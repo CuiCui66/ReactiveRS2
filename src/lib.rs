@@ -71,7 +71,7 @@ mod tests {
     fn choice() {
         let mut i = 0;
         run!{
-            |_| ChoiceData::True(42);
+            |_| True(42);
             choice {
                 |v| i=v
             } {
@@ -97,6 +97,7 @@ mod tests {
         assert_eq!(i, 42);
     }
 
+    #[test]
     fn loop_test() {
         run!{
             |_| 0;
@@ -109,11 +110,86 @@ mod tests {
                 };
                 Pause
             };
-            |i : usize| {
+            |i| {
                 assert_eq!(i,42)
             }
         }
     }
+
+    #[test]
+    fn par() {
+        run!{
+            |_| (0,0);
+            {
+                loop {
+                    |i : usize|
+                    if i < 21 {
+                        True(i+1)
+                    }
+                    else{
+                        False(i)
+                    };
+                    Pause
+                } || loop {
+                    |i : usize|
+                    if i < 21 {
+                        True(i+1)
+                    }
+                    else{
+                        False(i)
+                    };
+                    Pause
+                }
+            };
+            |(v1,v2)| v1 + v2;
+            Pause;
+            |i| {
+                assert_eq!(i,42)
+            }
+        }
+    }
+
+    #[test]
+    fn par_half_im() {
+        run!{
+            |_| (0,0);
+            {
+                loop {
+                    |i : usize|
+                    if i < 21 {
+                        True(i+1)
+                    }
+                    else{
+                        False(i)
+                    };
+                    Pause
+                } || |_| 21
+            };
+            |(v1,v2)| v1 + v2;
+            Pause;
+            |i| {
+                assert_eq!(i,42)
+            }
+        }
+    }
+
+    #[test]
+    fn par_im() {
+        run!{
+            |_| (0,0);
+            {
+                |_| 21 || |_| 21
+            };
+            |(v1,v2)| v1 + v2;
+            Pause;
+            |i| {
+                assert_eq!(i,42)
+            }
+        }
+    }
+
+
+
 
 
     #[test]
