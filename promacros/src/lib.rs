@@ -115,6 +115,7 @@ fn parse_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
     }
 
 
+    // reverse for type inference (left associativity)
     for i in (0..args.len()).rev() {
         match args[i] {
             TokenTree::Token(spt, ref tok) => {
@@ -123,7 +124,7 @@ fn parse_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
                         let (p1, p2) = split_on_binop(cx, sp, args, i);
                         return cx.expr_method_call(sp, p1, cx.ident_of("seq"), vec![p2]);
                     }
-                    &Token::BinOp(Or) => {
+                    &Token::OrOr => {
                         let (p1, p2) = split_on_binop(cx, sp, args, i);
                         return cx.expr_method_call(sp, p1, cx.ident_of("join"), vec![p2]);
                     }
@@ -185,7 +186,7 @@ fn parse_node(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
                         let (p1, p2) = split_on_binop_node(cx, sp, args, i);
                         return cx.expr_method_call(sp, p1, cx.ident_of("nseq"), vec![p2]);
                     }
-                    &Token::BinOp(Or) => {
+                    &Token::OrOr => {
                         let (p1, p2) = split_on_binop_node(cx, sp, args, i);
                         return cx.expr_method_call(sp, p1, cx.ident_of("njoin"), vec![p2]);
                     }

@@ -133,10 +133,11 @@ pub fn new_rcell<T>() -> Rc<Cell<Option<T>>> {
     Rc::new(Cell::new(None))
 }
 
+
+
 pub struct RcStore<T> {
     p: RCell<T>,
 }
-
 
 pub fn store<T>(rc: RCell<T>) -> RcStore<T> {
     RcStore { p: rc }
@@ -144,10 +145,11 @@ pub fn store<T>(rc: RCell<T>) -> RcStore<T> {
 
 impl<'a, T: 'a> Node<'a, T> for RcStore<T> {
     type Out = ();
-    fn call(&mut self, _: &mut SubRuntime<'a>,  val: T) {
+    fn call(&mut self, _: &mut SubRuntime<'a>, val: T) {
         self.p.set(Some(val));
     }
 }
+
 
 
 pub struct RcLoad<T> {
@@ -158,12 +160,42 @@ pub fn load<T>(rc: RCell<T>) -> RcLoad<T> {
     RcLoad { p: rc }
 }
 
-
-
 impl<'a, T: 'a> Node<'a, ()> for RcLoad<T> {
     type Out = T;
     fn call(&mut self, _: &mut SubRuntime<'a>, _: ()) -> T {
         self.p.take().unwrap()
+    }
+}
+
+
+
+pub struct RcLoadLeft<T> {
+    p: RCell<T>,
+}
+
+pub fn load_left<T>(rc: RCell<T>) -> RcLoadLeft<T> {
+    RcLoadLeft { p: rc }
+}
+
+impl<'a, T: 'a, In: 'a> Node<'a, In> for RcLoadLeft<T> {
+    type Out = (T, In);
+    fn call(&mut self, _: &mut SubRuntime<'a>, val: In) -> Self::Out {
+        (self.p.take().unwrap(), val)
+    }
+}
+
+pub struct RcLoadRight<T> {
+    p: RCell<T>,
+}
+
+pub fn load_Right<T>(rc: RCell<T>) -> RcLoadRight<T> {
+    RcLoadRight { p: rc }
+}
+
+impl<'a, T: 'a, In: 'a> Node<'a, In> for RcLoadRight<T> {
+    type Out = (In, T);
+    fn call(&mut self, _: &mut SubRuntime<'a>, val: In) -> Self::Out {
+        (val, self.p.take().unwrap())
     }
 }
 
@@ -173,12 +205,12 @@ pub struct RcStoreClone<T> {
 }
 
 pub fn store_clone<T>(rc: RCell<T>) -> RcStoreClone<T> {
-    RcStoreClone {p: rc}
+    RcStoreClone { p: rc }
 }
 
 impl<'a, T: 'a> Node<'a, T> for RcStoreClone<T>
 where
-    T: Clone
+    T: Clone,
 {
     type Out = T;
     fn call(&mut self, _: &mut SubRuntime<'a>, val: T) -> Self::Out {
@@ -187,23 +219,25 @@ where
     }
 }
 
+
+
 pub struct RcStoreCloneFirst<T> {
     p: RCell<T>,
 }
 
 pub fn store_clone_first<T>(rc: RCell<T>) -> RcStoreCloneFirst<T> {
-    RcStoreCloneFirst {p: rc}
+    RcStoreCloneFirst { p: rc }
 }
 
-impl<'a, C: 'a, V: 'a> Node<'a, (C,V)> for RcStoreCloneFirst<(C,V)>
+impl<'a, C: 'a, V: 'a> Node<'a, (C, V)> for RcStoreCloneFirst<(C, V)>
 where
     C: Clone + 'a,
 {
     type Out = C;
 
-    fn call(&mut self, _: &mut SubRuntime<'a>, (clone_val,val): (C,V)) -> Self::Out {
+    fn call(&mut self, _: &mut SubRuntime<'a>, (clone_val, val): (C, V)) -> Self::Out {
         let out_val = clone_val.clone();
-        self.p.set(Some((clone_val,val)));
+        self.p.set(Some((clone_val, val)));
         out_val
     }
 }
@@ -247,7 +281,7 @@ pub fn pause(pos: usize) -> NPause {
 
 impl<'a> Node<'a, ()> for NPause {
     type Out = ();
-    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>,  _: ()) {
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, _: ()) {
         sub_runtime.tasks.next.push(self.dest);
     }
 }
@@ -327,7 +361,7 @@ where
 // |___\__, |_| |_|\___/|_|  \___|
 //     |___/
 
-#[derive(Clone,Copy)]
+#[derive(Clone, Copy)]
 pub struct Ignore {}
 
 #[allow(non_upper_case_globals)]
@@ -338,28 +372,28 @@ impl<'a, In: 'a> Node<'a, In> for Ignore {
     fn call(&mut self, _: &mut SubRuntime<'a>, _: In) -> Self::Out {}
 }
 
-#[derive(Clone,Copy)]
+#[derive(Clone, Copy)]
 pub struct Ignore1 {}
 
 #[allow(non_upper_case_globals)]
 pub static Ignore1: Ignore1 = Ignore1 {};
 
-impl<'a, In1: 'a, In2:'a> Node<'a, (In1,In2)> for Ignore1 {
+impl<'a, In1: 'a, In2: 'a> Node<'a, (In1, In2)> for Ignore1 {
     type Out = In2;
-    fn call(&mut self, _: &mut SubRuntime<'a>, (_,val): (In1,In2)) -> Self::Out {
+    fn call(&mut self, _: &mut SubRuntime<'a>, (_, val): (In1, In2)) -> Self::Out {
         val
     }
 }
 
-#[derive(Clone,Copy)]
+#[derive(Clone, Copy)]
 pub struct Ignore2 {}
 
 #[allow(non_upper_case_globals)]
 pub static Ignore2: Ignore2 = Ignore2 {};
 
-impl<'a, In1: 'a, In2:'a> Node<'a, (In1,In2)> for Ignore2 {
+impl<'a, In1: 'a, In2: 'a> Node<'a, (In1, In2)> for Ignore2 {
     type Out = In1;
-    fn call(&mut self, _: &mut SubRuntime<'a>, (val,_): (In1,In2)) -> Self::Out {
+    fn call(&mut self, _: &mut SubRuntime<'a>, (val, _): (In1, In2)) -> Self::Out {
         val
     }
 }
@@ -378,8 +412,8 @@ pub struct NPar<N1, N2> {
 #[cfg_attr(rustfmt, rustfmt_skip)]
 impl<'a, N1, N2, In: 'a, Out1: 'a, Out2: 'a> Node<'a, In> for NPar<N1, N2>
     where
-    N1: Node<'a, Rc<In>, Out = Out1,>,
-    N2: Node<'a, Rc<In>, Out = Out2,>,
+    N1: Node<'a, Rc<In>, Out = Out1>,
+    N2: Node<'a, Rc<In>, Out = Out2>,
 {
     type Out = (Out1, Out2);
     fn call(&mut self, t: &mut SubRuntime<'a>, val: In) -> Self::Out {
@@ -388,6 +422,26 @@ impl<'a, N1, N2, In: 'a, Out1: 'a, Out2: 'a> Node<'a, In> for NPar<N1, N2>
         (self.n1.call(t, valrc), self.n2.call(t, valrc2))
     }
 }
+
+pub struct NParMut<N1, N2> {
+    n1: N1,
+    n2: N2,
+}
+
+#[cfg_attr(rustfmt, rustfmt_skip)]
+impl<'a, N1, N2, In: 'a, Out1: 'a, Out2: 'a> Node<'a, In> for NParMut<N1, N2>
+    where
+    N1: Node<'a, In, Out = Out1>,
+    N2: Node<'a, In, Out = Out2>,
+    In: Clone
+{
+    type Out = (Out1, Out2);
+    fn call(&mut self, t: &mut SubRuntime<'a>, val: In) -> Self::Out {
+        let val2 = val.clone();
+        (self.n1.call(t, val), self.n2.call(t, val2))
+    }
+}
+
 
 pub struct JoinPoint<T1, T2> {
     o1: Option<T1>,
@@ -480,19 +534,23 @@ impl<'a, SV: 'a, E: 'a, In: 'a> Node<'a, ((SignalRuntimeRef<SV>, E), In)> for NE
 {
     type Out = In;
 
-    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, ((sr,e),val): ((SignalRuntimeRef<SV>, E), In)) -> Self::Out {
+    fn call(
+        &mut self,
+        sub_runtime: &mut SubRuntime<'a>,
+        ((sr,e),val): ((SignalRuntimeRef<SV>, E), In)
+    ) -> Self::Out {
         sr.emit(e, sub_runtime);
         val
     }
 }
 
 impl<'a, SV: 'a, E: 'a> Node<'a, (SignalRuntimeRef<SV>, E)> for NEmitD
-    where
-    SV: SignalValue<E=E>,
+where
+    SV: SignalValue<E = E>,
 {
     type Out = ();
 
-    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, (sr,e): (SignalRuntimeRef<SV>, E)) -> () {
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, (sr, e): (SignalRuntimeRef<SV>, E)) -> () {
         sr.emit(e, sub_runtime);
         ()
     }
@@ -514,18 +572,22 @@ pub(crate) struct NGetD {}
 
 impl<'a, SV: 'a, V: 'a, In: 'a> Node<'a, (SignalRuntimeRef<SV>, In)> for NGetD
 where
-    SV: SignalValue<V=V>,
+    SV: SignalValue<V = V>,
 {
-    type Out = (V,In);
+    type Out = (V, In);
 
-    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, (sr,val): (SignalRuntimeRef<SV>, In)) -> Self::Out {
+    fn call(
+        &mut self,
+        sub_runtime: &mut SubRuntime<'a>,
+        (sr, val): (SignalRuntimeRef<SV>, In),
+    ) -> Self::Out {
         (sr.signal_runtime.values.get_pre_value(), val)
     }
 }
 
 impl<'a, SV: 'a, V: 'a> Node<'a, SignalRuntimeRef<SV>> for NGetD
 where
-    SV: SignalValue<V=V>,
+    SV: SignalValue<V = V>,
 {
     type Out = V;
 
@@ -545,7 +607,7 @@ where
 
 
 
-#[derive(Clone,Copy)]
+#[derive(Clone, Copy)]
 pub(crate) struct NWaitD(pub usize);
 
 impl<'a, SV: 'a, In: 'a> Node<'a, (SignalRuntimeRef<SV>, In)> for NWaitD
@@ -554,7 +616,11 @@ where
 {
     type Out = In;
 
-    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, (sr,val): (SignalRuntimeRef<SV>, In)) -> Self::Out {
+    fn call(
+        &mut self,
+        sub_runtime: &mut SubRuntime<'a>,
+        (sr, val): (SignalRuntimeRef<SV>, In),
+    ) -> Self::Out {
         sr.on_signal(&mut sub_runtime.tasks, self.0);
         val
     }

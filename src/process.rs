@@ -476,29 +476,31 @@ where
         let rcout = rc1.clone();
         g.set(pind, box node!(pno >> set1(rc1,out_ind)));
         g.set(qind, box node!(qno >> set2(rc2,out_ind)));
-        (node!((pni | qni) >> Ignore), out_ind, merge(rcout))
+        (node!((pni || qni) >> Ignore), out_ind, merge(rcout))
     }
 }
 
-// impl<'a, P, Q, In: 'a, OutP: 'a, OutQ: 'a> Process<'a, In>
-//     for Par<MarkedProcess<P, IsIm>, MarkedProcess<Q, NotIm>>
-//     where
-//     P: Process<'a, Rc<In>, Out = OutP>,
-//     Q: Process<'a, Rc<In>, Out = OutQ>,
-// {
-//     type Out = (OutP,OutQ);
-//     type NI = NSeq<NPar<P::NI,Q::NI>,Ignore>;
-//     type NO = NMerge<P::Out,Q::Out>;
-//     type NIO = DummyN<Self::Out>;
-//     type Mark = NotIm;
-//     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-//         let pnio = self.p.p.compileIm(g);
-//         let (qni, qind, qno) = self.q.p.compile(g);
-//         let rcin = new_rcell();
-//         let rcout = rcin.clone();
-//         (node!((pnio >> store(rcin)) | qni),qind
-//     }
-// }
+impl<'a, P, Q, In: 'a, OutP: 'a, OutQ: 'a> Process<'a, In>
+    for Par<MarkedProcess<P, IsIm>, MarkedProcess<Q, NotIm>>
+    where
+    P: Process<'a, Rc<In>, Out = OutP>,
+    Q: Process<'a, Rc<In>, Out = OutQ>,
+{
+    type Out = (OutP,OutQ);
+    type NI = NSeq<NPar<P::NI,Q::NI>,Ignore>;
+    type NO = NMerge<P::Out,Q::Out>;
+    type NIO = DummyN<Self::Out>;
+    type Mark = NotIm;
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let pnio = self.p.p.compileIm(g);
+        let (qni, qind, qno) = self.q.p.compile(g);
+        let rcin = new_rcell();
+        let rcout = rcin.clone(); 
+    (node!(((pnio >> store(rcin)) || qni)>> Ignore),
+     qind,
+     node!(qno >> RcLoad) )
+    }
+}
 
 
 
@@ -620,6 +622,8 @@ where
         (ni, out_id, no)
     }
 }
+
+
 
 //  ____
 // |  _ \ _ __ ___
