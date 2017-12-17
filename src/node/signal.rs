@@ -90,34 +90,17 @@ where
 //   \ V  V / (_| | | |_
 //    \_/\_/ \__,_|_|\__|
 
-
-
 #[derive(Clone, Copy)]
 pub(crate) struct NWaitD(pub usize);
-
-impl<'a, SV: 'a, In: 'a> Node<'a, (SignalRuntimeRef<SV>, In)> for NWaitD
-where
-    SV: SignalValue,
-{
-    type Out = In;
-
-    fn call(
-        &mut self,
-        sub_runtime: &mut SubRuntime<'a>,
-        (sr, val): (SignalRuntimeRef<SV>, In),
-    ) -> Self::Out {
-        sr.on_signal(&mut sub_runtime.tasks, self.0);
-        val
-    }
-}
 
 impl<'a, SV: 'a> Node<'a, SignalRuntimeRef<SV>> for NWaitD
 where
     SV: SignalValue,
 {
-    type Out = ();
+    type Out = SignalRuntimeRef<SV>;
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: SignalRuntimeRef<SV>) -> Self::Out {
-        sr.on_signal(&mut sub_runtime.tasks, self.0);
+        sr.await(&mut sub_runtime.tasks, self.0);
+        sr
     }
 }

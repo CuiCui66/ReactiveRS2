@@ -190,8 +190,6 @@ mod tests {
 
 
 
-
-
     #[test]
     fn emit_await() {
         let mut value = 0;
@@ -224,9 +222,8 @@ mod tests {
                 EmitD;
                 EmitD;
                 Pause;
-                PreD;
                 |val| {
-                    value = 42;
+                    value = signal.clone().pre();
                 }
             }
         }
