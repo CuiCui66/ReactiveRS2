@@ -14,10 +14,10 @@ use engine::{SubRuntime, Tasks};
 /// Structure representing a signal runtime
 pub(crate) struct SignalRuntime<SV>
 {
-    pub(crate) id: RefCell<i32>,   // Is used to be able to do passive waiting,
-                                   // every instant there is an emitted value, this id increase (modulo 2)
-    pub(crate) is_set: RefCell<bool>,
-    pub(crate) pre_set: RefCell<bool>,
+    pub(crate) id: RefCell<i32>,   /// Is used to be able to do passive waiting,
+                                   /// every instant there is an emitted value, this id increase (modulo 2)
+    pub(crate) is_set: RefCell<bool>, /// Indicates if the signal is set or not at the current instant
+    pub(crate) pre_set: RefCell<bool>, /// Indicated if the signal was set or not at the last instant
     pub(crate) pending_await: RefCell<Vec<usize>>,
     pub(crate) pending_await_immediate: RefCell<Vec<usize>>,
     pub(crate) pending_present: RefCell<Vec<(usize,usize)>>,
@@ -243,12 +243,6 @@ where
 
 
         sub_runtime.eoi.continuations.push(box move |sr: &mut SubRuntime<'a>| {
-
-            let mut nodes = take(&mut *signal_runtime_ref.signal_runtime.pending_present.borrow_mut());
-            for node in nodes {
-                sr.tasks.current.push(node.1);
-            }
-
             *signal_runtime_ref.signal_runtime.pre_set.borrow_mut() = true;
             *signal_runtime_ref.signal_runtime.is_set.borrow_mut() = false;
             signal_runtime_ref.signal_runtime.values.reset_value();
@@ -283,10 +277,17 @@ where
         }
     }
 
-    pub(crate) fn present(&self, tasks: &mut Tasks, node_true: usize, node_false: usize) {
+    pub(crate) fn present(&self, sr: &mut SubRuntime<'a>, node_true: usize, node_false: usize) {
         if *self.signal_runtime.is_set.borrow() {
-            tasks.current.push(node_true);
+            sr.tasks.current.push(node_true);
         } else {
+            let signal_runtime_ref = self.clone();
+            sr.eoi.continuations.push(box move |sr: &mut SubRuntime| {
+                let mut nodes = take(&mut *signal_runtime_ref.signal_runtime.pending_present.borrow_mut());
+                for node in nodes {
+                    sr.tasks.current.push(node.1);
+                }
+            });
             self.signal_runtime.pending_present.borrow_mut().push((node_true, node_false));
         }
     }

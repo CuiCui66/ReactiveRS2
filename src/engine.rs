@@ -118,6 +118,6 @@ impl<'a> Runtime<'a> {
             (*eoi)(&mut self.sub_runtime);
         }
 
-        self.sub_runtime.tasks.current.len() > 0
+        self.sub_runtime.tasks.current.len() > 0 || self.sub_runtime.eoi.continuations.len() > 0
     }
 }

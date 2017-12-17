@@ -147,6 +147,6 @@ where
     type Out = ();
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: SignalRuntimeRef<SV>) -> Self::Out {
-        sr.present(&mut sub_runtime.tasks, self.node_true, self.node_false);
+        sr.present(sub_runtime, self.node_true, self.node_false);
     }
 }
