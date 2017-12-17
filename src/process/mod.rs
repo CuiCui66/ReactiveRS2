@@ -68,6 +68,17 @@ pub trait Process<'a, In: 'a>: 'a + Sized {
 
     }
 
+    fn present<PF>(self, p: PF,)
+        -> PresentD<MarkedProcess<Self,Self::Mark>, MarkedProcess<PF, PF::Mark>>
+    where
+        PF: Process<'a, (), Out = Self::Out>,
+    {
+        PresentD {
+            pt: mp(self),
+            pf: mp(p),
+        }
+    }
+
     fn ploop(self) -> PLoop<MarkedProcess<Self, Self::Mark>> {
         PLoop { p: mp(self) }
     }

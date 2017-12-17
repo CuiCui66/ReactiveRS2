@@ -3,16 +3,18 @@
 #![feature(log_syntax)]
 #![feature(box_syntax, box_patterns)]
 #![feature(plugin)]
+#![feature(test)]
 #![plugin(promacros)]
 
 extern crate core;
 #[macro_use] extern crate log;
 extern crate env_logger;
+extern crate test;
 
 #[macro_use]
 pub mod macros;
 pub mod engine;
-mod node;
+pub mod node;
 pub mod process;
 pub mod signal;
 mod take;
@@ -25,6 +27,8 @@ mod tests {
     use node::*;
     use node::ChoiceData::*;
     use signal::*;
+    use test::test::Bencher;
+    use std::cell::RefCell;
 
 
     #[test]
@@ -247,5 +251,51 @@ mod tests {
             }
         }
         assert_eq!(value, 42);
+    }
+
+    #[test]
+    fn present() {
+        let mut value = RefCell::new(0);
+        let signal = SignalRuntimeRef::new_pure();
+        {
+            run! {
+                |_| {
+                    ((signal.clone(),()), signal.clone())
+                };
+                EmitD;
+                present
+                    {|_:()| {
+                        *value.borrow_mut() = 42;
+                    }} {
+                    |_:()| {
+                        *value.borrow_mut() = 0;
+                    }}
+            }
+        }
+        assert_eq!(*value.borrow_mut(), 42);
+    }
+
+
+
+    #[bench]
+    fn bench_emit_pure(bencher: &mut Bencher) {
+        bencher.iter(|| {
+            let mut r = rt! {
+                |_| { ((SignalRuntimeRef::new_pure(),())) };
+                EmitD
+            };
+        r.execute()
+        });
+    }
+
+    #[bench]
+    fn bench_emit_value(bencher: &mut Bencher) {
+        bencher.iter(|| {
+            let mut r = rt! {
+                |_| { ((SignalRuntimeRef::new_mc(1, box |e: i32, v: &mut i32 | { *v *= e; })),42) };
+                EmitD
+            };
+            r.execute();
+        });
     }
 }

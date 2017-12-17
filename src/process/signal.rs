@@ -153,3 +153,154 @@ impl<'a, In: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, In)> for AwaitImmedi
         (ni, out_id, no)
     }
 }
+
+
+//  ____                           _
+// |  _ \ _ __ ___  ___  ___ _ __ | |_
+// | |_) | '__/ _ \/ __|/ _ \ '_ \| __|
+// |  __/| | |  __/\__ \  __/ | | | |_
+// |_|   |_|  \___||___/\___|_| |_|\__|
+
+pub struct PresentD<PT, PF> {
+    pub(crate) pt: PT,
+    pub(crate) pf: PF,
+}
+
+impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, SignalRuntimeRef<SV>>
+    for PresentD<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>>
+where
+    PT: Process<'a, (), Out=Out>,
+    PF: Process<'a, (), Out=Out>,
+    SV: SignalValue,
+{
+    type Out = Out;
+    type NI = NPresentD;
+    type NO = RcLoad<Out>;
+    type NIO = DummyN<Out>;
+    type Mark = NotIm;
+
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let rct = new_rcell();
+        let rcf = rct.clone();
+        let rc_out = rct.clone();
+        let (ptni, ptind, ptno) = self.pt.p.compile(g);
+        let (pfni, pfind, pfno) = self.pf.p.compile(g);
+
+        let out_id = g.reserve();
+        g.set(ptind, box node!(ptno >> store(rct) >> jump(out_id)));
+        g.set(pfind, box node!(pfno >> store(rcf) >> jump(out_id)));
+        let nit_id = g.add(box ptni);
+        let nif_id = g.add(box pfni);
+
+        let ni = NPresentD {
+            node_true: nit_id,
+            node_false: nif_id,
+        };
+
+        (ni, out_id, load(rc_out))
+    }
+}
+
+
+impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, SignalRuntimeRef<SV>>
+for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>>
+    where
+        PT: Process<'a, (), Out=Out>,
+        PF: Process<'a, (), Out=Out>,
+        SV: SignalValue,
+{
+    type Out = Out;
+    type NI = NPresentD;
+    type NO = RcLoad<Out>;
+    type NIO = DummyN<Out>;
+    type Mark = NotIm;
+
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let rct = new_rcell();
+        let rcf = rct.clone();
+        let rc_out = rct.clone();
+        let ptnio = self.pt.p.compileIm(g);
+        let (pfni, pfind, pfno) = self.pf.p.compile(g);
+
+        let out_id = g.reserve();
+        let ptind = g.add(box node!(ptnio >> store(rct) >> jump(out_id)));
+        g.set(pfind, box node!(pfno >> store(rcf) >> jump(out_id)));
+        let nif_id = g.add(box pfni);
+
+        let ni = NPresentD {
+            node_true: ptind,
+            node_false: nif_id,
+        };
+
+        (ni, out_id, load(rc_out))
+    }
+}
+
+
+impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, SignalRuntimeRef<SV>>
+for PresentD<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>>
+    where
+        PT: Process<'a, (), Out=Out>,
+        PF: Process<'a, (), Out=Out>,
+        SV: SignalValue,
+{
+    type Out = Out;
+    type NI = NPresentD;
+    type NO = RcLoad<Out>;
+    type NIO = DummyN<Out>;
+    type Mark = NotIm;
+
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let rct = new_rcell();
+        let rcf = rct.clone();
+        let rc_out = rct.clone();
+        let pfnio = self.pf.p.compileIm(g);
+        let (ptni, ptind, ptno) = self.pt.p.compile(g);
+
+        let out_id = g.reserve();
+        let pfind = g.add(box node!(pfnio >> store(rcf) >> jump(out_id)));
+        g.set(ptind, box node!(ptno >> store(rct) >> jump(out_id)));
+        let nit_id = g.add(box ptni);
+
+        let ni = NPresentD {
+            node_true: nit_id,
+            node_false: pfind,
+        };
+
+        (ni, out_id, load(rc_out))
+    }
+}
+
+
+impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, SignalRuntimeRef<SV>>
+for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>>
+    where
+        PT: Process<'a, (), Out=Out>,
+        PF: Process<'a, (), Out=Out>,
+        SV: SignalValue,
+{
+    type Out = Out;
+    type NI = NPresentD;
+    type NO = RcLoad<Out>;
+    type NIO = DummyN<Out>;
+    type Mark = NotIm;
+
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let rct = new_rcell();
+        let rcf = rct.clone();
+        let rc_out = rct.clone();
+        let pfnio = self.pf.p.compileIm(g);
+        let ptnio = self.pt.p.compileIm(g);
+
+        let out_id = g.reserve();
+        let pfind = g.add(box node!(pfnio >> store(rcf) >> jump(out_id)));
+        let ptind = g.add(box node!(ptnio >> store(rct) >> jump(out_id)));
+
+        let ni = NPresentD {
+            node_true: ptind,
+            node_false: pfind,
+        };
+
+        (ni, out_id, load(rc_out))
+    }
+}

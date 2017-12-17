@@ -112,6 +112,11 @@ fn parse_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
                 let n2 = parse_pro(cx, args[2].span(), &args[2..3]);
                 return cx.expr_method_call(sp, n1, cx.ident_of("choice"), vec![n2]);
             }
+            if id.name.as_str() == "present" {
+                let n1 = parse_pro(cx, args[1].span(), &args[1..2]);
+                let n2 = parse_pro(cx, args[2].span(), &args[2..3]);
+                return cx.expr_method_call(sp, n1, cx.ident_of("present"), vec![n2]);
+            }
         }
     }
 

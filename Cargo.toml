@@ -7,3 +7,7 @@ authors = ["Thibaut Pérami <thibaut.perami@ens.fr>"]
 promacros = { path = "promacros"}
 log = "0.3"
 env_logger = "0.3"
+
+[[bin]]
+name = "gol"
+path = "src/gameoflife.rs"

@@ -53,7 +53,7 @@ where
 
 
 #[derive(Clone, Copy)]
-pub(crate) struct NGetD {}
+pub struct NGetD {}
 
 impl<'a, SV: 'a, V: 'a, In: 'a> Node<'a, (SignalRuntimeRef<SV>, In)> for NGetD
 where
@@ -92,7 +92,7 @@ where
 
 
 #[derive(Clone, Copy)]
-pub(crate) struct NAwaitD(pub usize);
+pub struct NAwaitD(pub usize);
 
 impl<'a, SV: 'a> Node<'a, SignalRuntimeRef<SV>> for NAwaitD
 where
@@ -114,7 +114,7 @@ where
 // /_/   \_\_/\_/ \__,_|_|\__|___|_| |_| |_|_| |_| |_|\___|\__,_|_|\__,_|\__\___|
 
 #[derive(Clone, Copy)]
-pub(crate) struct NAwaitImmediateD(pub usize);
+pub struct NAwaitImmediateD(pub usize);
 
 impl<'a, SV: 'a> Node<'a, SignalRuntimeRef<SV>> for NAwaitImmediateD
     where
@@ -124,5 +124,29 @@ impl<'a, SV: 'a> Node<'a, SignalRuntimeRef<SV>> for NAwaitImmediateD
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: SignalRuntimeRef<SV>) -> Self::Out {
         sr.await_immediate(&mut sub_runtime.tasks, self.0);
+    }
+}
+
+
+//  ____                           _
+// |  _ \ _ __ ___  ___  ___ _ __ | |_
+// | |_) | '__/ _ \/ __|/ _ \ '_ \| __|
+// |  __/| | |  __/\__ \  __/ | | | |_
+// |_|   |_|  \___||___/\___|_| |_|\__|
+
+#[derive(Clone, Copy)]
+pub struct NPresentD {
+    pub node_true: usize,
+    pub node_false: usize,
+}
+
+impl<'a, SV: 'a> Node<'a, SignalRuntimeRef<SV>> for NPresentD
+where
+    SV: SignalValue
+{
+    type Out = ();
+
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: SignalRuntimeRef<SV>) -> Self::Out {
+        sr.present(&mut sub_runtime.tasks, self.node_true, self.node_false);
     }
 }

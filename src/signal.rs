@@ -155,7 +155,7 @@ where
 //          |___/
 
 /// A shared pointer to a signal runtime
-pub(crate) struct SignalRuntimeRef<SV> {
+pub struct SignalRuntimeRef<SV> {
     pub(crate) signal_runtime: Rc<SignalRuntime<SV>>,
 }
 
@@ -291,10 +291,7 @@ where
         }
     }
 
-    pub(crate) fn pre(&self) -> V {
+    pub fn pre(&self) -> V {
         self.signal_runtime.values.get_pre_value()
     }
 }
-
-
-
