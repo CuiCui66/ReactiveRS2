@@ -150,7 +150,7 @@ pub struct NMerge<T1, T2> {
 }
 
 pub fn merge<T1, T2>(rc: Rc<RefCell<JoinPoint<T1, T2>>>) -> NMerge<T1, T2> {
-    NMerge { rc: rc }
+    NMerge { rc }
 }
 
 impl<'a, T1: 'a, T2: 'a> Node<'a, ()> for NMerge<T1, T2> {
@@ -158,5 +158,57 @@ impl<'a, T1: 'a, T2: 'a> Node<'a, ()> for NMerge<T1, T2> {
     fn call(&mut self, _: &mut SubRuntime<'a>, _: ()) -> Self::Out {
         let jp = take(&mut *self.rc.borrow_mut());
         (jp.o1.unwrap(), jp.o2.unwrap())
+    }
+}
+
+//  ____  _
+// | __ )(_) __ _
+// |  _ \| |/ _` |
+// | |_) | | (_| |
+// |____/|_|\__, |
+//          |___/
+
+
+pub struct NBigPar {
+    pub(crate) dests: Vec<usize>,
+}
+
+impl<'a> Node<'a, ()> for NBigPar {
+    type Out = ();
+    fn call(&mut self, t: &mut SubRuntime<'a>, _: ()) -> Self::Out {
+        for d in &self.dests {
+            t.tasks.current.push(*d);
+        }
+    }
+}
+
+pub struct BigJoinPoint {
+    nb: usize,
+    total: usize,
+    dest: usize,
+}
+pub fn new_rcbjp(total: usize, dest: usize) -> Rc<RefCell<BigJoinPoint>> {
+    Rc::new(RefCell::new(BigJoinPoint { nb: 0, total, dest }))
+}
+
+
+pub struct NBigMerge {
+    rc: Rc<RefCell<BigJoinPoint>>,
+}
+
+pub fn big_merge(rc: Rc<RefCell<BigJoinPoint>>) -> NBigMerge {
+    NBigMerge { rc }
+}
+
+
+impl<'a> Node<'a, ()> for NBigMerge {
+    type Out = ();
+    fn call(&mut self, t: &mut SubRuntime<'a>, _: ()) -> Self::Out {
+        let mut bjp = self.rc.borrow_mut();
+        bjp.nb += 1;
+        if bjp.nb == bjp.total {
+            bjp.nb = 0;
+            t.tasks.current.push(bjp.dest);
+        }
     }
 }

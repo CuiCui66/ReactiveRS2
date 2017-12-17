@@ -4,12 +4,11 @@ use std::cell::*;
 use super::*;
 
 
-type RCell<T> = Rc<Cell<Option<T>>>;
+pub(super) type RCell<T> = Rc<Cell<Option<T>>>;
 
 pub fn new_rcell<T>() -> Rc<Cell<Option<T>>> {
     Rc::new(Cell::new(None))
 }
-
 
 
 pub struct RcStore<T> {
@@ -44,6 +43,23 @@ impl<'a, T: 'a> Node<'a, ()> for RcLoad<T> {
     }
 }
 
-pub struct RcStoreClone<T> {
+pub struct RcLoadCopy<T> {
     p: RCell<T>,
+}
+
+pub fn load_copy<T>(rc: RCell<T>) -> RcLoadCopy<T>
+where
+    T: Copy,
+{
+    RcLoadCopy { p: rc }
+}
+
+impl<'a, T: 'a> Node<'a, ()> for RcLoadCopy<T>
+where
+    T: Copy,
+{
+    type Out = T;
+    fn call(&mut self, _: &mut SubRuntime<'a>, _: ()) -> T {
+        self.p.get().unwrap()
+    }
 }

@@ -25,8 +25,8 @@ where
         let rc1 = new_rcjp();
         let rc2 = rc1.clone();
         let rcout = rc1.clone();
-        g.set(pind, box node!(pno >> set1(rc1,out_ind)));
-        g.set(qind, box node!(qno >> set2(rc2,out_ind)));
+        g.set(pind, box node!(pno >> set1(rc1, out_ind)));
+        g.set(qind, box node!(qno >> set2(rc2, out_ind)));
         (nodei!(pni || qni), out_ind, merge(rcout))
     }
 }
@@ -96,5 +96,41 @@ where
         let pnio = self.p.p.compileIm(g);
         let qnio = self.q.p.compileIm(g);
         node!(pnio || qnio)
+    }
+}
+
+//  ____  _
+// | __ )(_) __ _
+// |  _ \| |/ _` |
+// | |_) | | (_| |
+// |____/|_|\__, |
+//          |___/
+
+
+pub struct BigPar<P> {
+    pub(crate) vp: Vec<P>,
+}
+
+impl<'a, P, In: 'a> Process<'a, In> for BigPar<MarkedProcess<P, NotIm>>
+where
+    P: Process<'a, In, Out = ()>,
+    In: Copy
+{
+    type Out = ();
+    type NI = NSeq<RcStore<In>,NBigPar>;
+    type NO = Nothing;
+    type NIO = DummyN<Self::Out>;
+    type Mark = NotIm;
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let mut dests: Vec<usize> = vec![];
+        let end_point = g.reserve();
+        let rcbjp = new_rcbjp(self.vp.len(),end_point);
+        let rcin = new_rcell();
+        for p in self.vp{
+            let (pni, pind, pno) = p.p.compile(g);
+            g.set(pind, box node!(pno >> big_merge(rcbjp.clone())));
+            dests.push(g.add(box node!(load_copy(rcin.clone()) >> pni)));
+        };
+        (node!(store(rcin) >> NBigPar{dests}),end_point,Nothing)
     }
 }

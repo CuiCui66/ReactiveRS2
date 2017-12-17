@@ -96,7 +96,21 @@ pub trait Process<'a, In: 'a>: 'a + Sized {
             q: mp(q),
         }
     }
+
 }
+
+pub fn big_join<'a,In: 'a, P>(vp: Vec<P>) -> BigPar<MarkedProcess<P, P::Mark>>
+    where
+    P: Process<'a, In, Out = ()> + Sized,
+    In: Copy,
+{
+    let mut res = vec![];
+    for p in vp {
+        res.push(mp(p));
+    }
+    BigPar { vp: res }
+}
+
 
 //  _____         _           _           _
 // |_   _|__  ___| |__  _ __ (_) ___ __ _| |

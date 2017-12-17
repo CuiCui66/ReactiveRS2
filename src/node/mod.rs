@@ -38,7 +38,7 @@ pub trait Node<'a, In: 'a>: 'a {
 }
 
 
-
+#[derive(Clone,Copy)]
 pub struct Nothing {}
 
 #[allow(non_upper_case_globals)]

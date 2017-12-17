@@ -11,6 +11,7 @@ extern crate core;
 extern crate env_logger;
 extern crate test;
 
+
 #[macro_use]
 pub mod macros;
 pub mod engine;
@@ -29,6 +30,7 @@ mod tests {
     use signal::*;
     use test::test::Bencher;
     use std::cell::RefCell;
+    use std::rc::*;
 
 
     #[test]
@@ -348,5 +350,25 @@ mod tests {
             };
             r.execute();
         });
+    }
+
+    #[test]
+    fn big_par(){
+        let value = Rc::new(RefCell::new(-3));
+        {
+            let mut processes = vec![];
+
+            for i in 0..10{
+                let value2 = value.clone();
+                processes.push(pro!{
+                    move |_|{
+                        *value2.borrow_mut() += i;
+                    };
+                    Pause
+                });
+            }
+            run!(big_join(processes));
+        }
+        assert_eq!(*value.borrow(), 42);
     }
 }
