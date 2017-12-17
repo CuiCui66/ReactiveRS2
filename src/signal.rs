@@ -14,10 +14,14 @@ use engine::{SubRuntime, Tasks};
 /// Structure representing a signal runtime
 pub(crate) struct SignalRuntime<SV>
 {
-    pub(crate) id: RefCell<i32>,   /// Is used to be able to do passive waiting,
-                                   /// every instant there is an emitted value, this id increase (modulo 2)
-    pub(crate) is_set: RefCell<bool>, /// Indicates if the signal is set or not at the current instant
-    pub(crate) pre_set: RefCell<bool>, /// Indicated if the signal was set or not at the last instant
+    /// Is used to be able to do passive waiting,
+    /// every instant there is an emitted value, this id increase (modulo 2)
+    pub(crate) id: RefCell<i32>,
+    /// Indicates if the signal is set or not at the current instant
+    pub(crate) is_set: RefCell<bool>,
+    /// Indicates if the signal was set or not at the last instant
+    pub(crate) pre_set: RefCell<bool>,
+    /// Contains the nodes id
     pub(crate) pending_await: RefCell<Vec<usize>>,
     pub(crate) pending_await_immediate: RefCell<Vec<usize>>,
     pub(crate) pending_present: RefCell<Vec<(usize,usize)>>,

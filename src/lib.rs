@@ -330,25 +330,45 @@ mod tests {
     }
 
     #[bench]
-    fn bench_emit_pure(bencher: &mut Bencher) {
+    fn bench_emit_pause(bencher: &mut Bencher) {
+        let signal = SignalRuntimeRef::new_pure();
+        let mut rt = rt! {
+            loop {
+                |_| { (signal.clone(), ()) };
+                EmitD;
+                Pause;
+                |_| {
+                    True(())
+                }
+            }
+        };
+
         bencher.iter(|| {
-            let mut r = rt! {
-                |_| { ((SignalRuntimeRef::new_pure(),())) };
-                EmitD
-            };
-        r.execute()
+            for i in 0..1000 {
+                rt.instant();
+            }
         });
     }
 
 
     #[bench]
-    fn bench_emit_value(bencher: &mut Bencher) {
+    fn bench_emit_await(bencher: &mut Bencher) {
+        let signal = SignalRuntimeRef::new_pure();
+        let mut rt = rt! {
+            loop {
+                |_| { ((signal.clone(), ()), signal.clone()) };
+                EmitD;
+                AwaitD;
+                |_:()| {
+                    True(())
+                }
+            }
+        };
+
         bencher.iter(|| {
-            let mut r = rt! {
-                |_| { ((SignalRuntimeRef::new_mc(1, box |e: i32, v: &mut i32 | { *v *= e; })),42) };
-                EmitD
-            };
-            r.execute();
+            for i in 0..1000 {
+                rt.instant();
+            }
         });
     }
 
