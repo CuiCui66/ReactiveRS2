@@ -99,3 +99,57 @@ where
         (ni, out_id, no)
     }
 }
+
+
+//     _                _ _   ___                              _ _       _
+//    / \__      ____ _(_) |_|_ _|_ __ ___  _ __ ___   ___  __| (_) __ _| |_ ___
+//   / _ \ \ /\ / / _` | | __|| || '_ ` _ \| '_ ` _ \ / _ \/ _` | |/ _` | __/ _ \
+//  / ___ \ V  V / (_| | | |_ | || | | | | | | | | | |  __/ (_| | | (_| | ||  __/
+// /_/   \_\_/\_/ \__,_|_|\__|___|_| |_| |_|_| |_| |_|\___|\__,_|_|\__,_|\__\___|
+
+
+#[derive(Clone, Copy)]
+pub struct AwaitImmediateD {}
+
+#[allow(non_upper_case_globals)]
+pub static AwaitImmediateD: AwaitImmediateD = AwaitImmediateD {};
+
+impl<'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
+    where
+        SV: SignalValue,
+{
+    type Out = ();
+    type Mark = NotIm;
+    type NIO = DummyN<()>;
+    type NI = NAwaitImmediateD;
+    type NO = Nothing;
+
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let out_id = g.reserve();
+        (NAwaitImmediateD(out_id), out_id, Nothing {})
+    }
+}
+
+
+impl<'a, In: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, In)> for AwaitImmediateD
+    where
+        SV: SignalValue,
+{
+    type Out = In;
+    type Mark = NotIm;
+    type NIO = DummyN<In>;
+    type NI = NSeq<NSeq<NPar<NIdentity,RcStore<In>>, Ignore2>,NAwaitImmediateD>;
+    type NO = RcLoad<In>;
+
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let out_id = g.reserve();
+        let rc = new_rcell();
+        let rc2 = rc.clone();
+
+        let ni_first = <NIdentity as Node<'a,SignalRuntimeRef<SV>>>::njoin::<In, RcStore<In>>(NIdentity {}, store(rc));
+        let ni_second = <NPar<NIdentity,RcStore<In>> as Node<'a, (SignalRuntimeRef<SV>, In)>>::nseq(ni_first, Ignore2);
+        let ni = <NSeq<NPar<NIdentity,RcStore<In>>,Ignore2> as Node<'a, (SignalRuntimeRef<SV>, In)>>::nseq(ni_second, NAwaitImmediateD(out_id));
+        let no = load(rc2);
+        (ni, out_id, no)
+    }
+}

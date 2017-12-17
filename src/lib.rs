@@ -210,6 +210,25 @@ mod tests {
     }
 
     #[test]
+    fn emit_await_immediate() {
+        let mut value = 0;
+        let signal = SignalRuntimeRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e; });
+        {
+            run! {
+                |_| {
+                    let signal2 = signal.clone();
+                    let signal3 = signal.clone();
+                    ((signal2,42), signal3)
+                };
+                EmitD;
+                AwaitImmediateD;
+                |()| { value = 42; }
+            };
+        }
+        assert_eq!(value, 42);
+    }
+
+    #[test]
     fn emit_pre() {
         let mut value = 0;
         let signal = SignalRuntimeRef::new_mc(1, box |e: i32, v: &mut i32| { *v *= e;});

@@ -105,3 +105,24 @@ where
         sr
     }
 }
+
+
+//     _                _ _   ___                              _ _       _
+//    / \__      ____ _(_) |_|_ _|_ __ ___  _ __ ___   ___  __| (_) __ _| |_ ___
+//   / _ \ \ /\ / / _` | | __|| || '_ ` _ \| '_ ` _ \ / _ \/ _` | |/ _` | __/ _ \
+//  / ___ \ V  V / (_| | | |_ | || | | | | | | | | | |  __/ (_| | | (_| | ||  __/
+// /_/   \_\_/\_/ \__,_|_|\__|___|_| |_| |_|_| |_| |_|\___|\__,_|_|\__,_|\__\___|
+
+#[derive(Clone, Copy)]
+pub(crate) struct NAwaitImmediateD(pub usize);
+
+impl<'a, SV: 'a> Node<'a, SignalRuntimeRef<SV>> for NAwaitImmediateD
+    where
+        SV: SignalValue,
+{
+    type Out = ();
+
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: SignalRuntimeRef<SV>) -> Self::Out {
+        sr.await_immediate(&mut sub_runtime.tasks, self.0);
+    }
+}
