@@ -38,7 +38,7 @@ fn parse_expr(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
     parser.parse_expr().unwrap_or_else(| mut d| {
         d.emit();
         return DummyResult::raw_expr(sp);
-    }) // TODO handle error
+    })
 }
 
 fn split_on_binop(

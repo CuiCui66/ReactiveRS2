@@ -299,4 +299,8 @@ where
     pub fn pre(&self) -> V {
         self.signal_runtime.values.get_pre_value()
     }
+
+    pub fn pre_set(&self) -> bool {
+        *self.signal_runtime.pre_set.borrow()
+    }
 }

@@ -24,10 +24,17 @@ struct Board {
 impl Board {
 
     fn new(width: usize, height: usize) -> Board {
+        let mut signals = vec![vec![]];
+        for i in 0..height {
+            for j in 0..width {
+                signals[i].push(Signal::new_mc(0, box |_:(), a: &mut usize| {*a += 1;}));
+            }
+            signals.push(vec![]);
+        }
         Board {
             width,
             height,
-            signals: vec![vec![Signal::new_mc(0, box |_:(), a: &mut usize| {*a += 1;} ); width]; height],
+            signals,
             data: vec![vec![false; width]; height],
         }
     }
@@ -79,44 +86,87 @@ fn main() {
                 let s6 = board.signals[((i+1)%height) as usize][((j-1+width)%width) as usize].clone();
                 let s7 = board.signals[((i+1)%height) as usize][j as usize].clone();
                 let s8 = board.signals[((i+1)%height) as usize][((j+1)%width) as usize].clone();
+
+
                 let process = pro!(
                     loop {
                         move |_:()| {
-                            s.clone()
+                            (s.clone(), s.clone())
                         };
                         AwaitD;
-                        move |val:usize| {
-                            let e1 = (s1.clone(), ());
-                            let e2 = ((s2.clone(), ()), e1);
-                            let e3 = ((s3.clone(), ()), e2);
-                            let e4 = ((s4.clone(), ()), e3);
-                            let e5 = ((s5.clone(), ()), e4);
-                            let e6 = ((s6.clone(), ()), e5);
-                            let e7 = ((s7.clone(), ()), e6);
-                            let e8 = ((s8.clone(), ()), e7);
-                            e8
-                        };
-                        EmitD;
-                        EmitD;
-                        EmitD;
-                        EmitD;
-                        EmitD;
-                        EmitD;
-                        EmitD;
-                        EmitD;
-                        move |_| {
-                            *cell = true;
-                            if true {
-                                False(())
-                            } else {
+                        |(v,sig): (usize,Signal)| {
+                            if v == 3 || (v == 2 && sig.pre_set()) {
                                 True(())
+                            } else {
+                                False(())
+                            }
+                        };
+                        choice {
+                            move |_| {
+                                let e1 = (s1.clone(), ());
+                                let e2 = ((s2.clone(), ()), e1);
+                                let e3 = ((s3.clone(), ()), e2);
+                                let e4 = ((s4.clone(), ()), e3);
+                                let e5 = ((s5.clone(), ()), e4);
+                                let e6 = ((s6.clone(), ()), e5);
+                                let e7 = ((s7.clone(), ()), e6);
+                                let e8 = ((s8.clone(), ()), e7);
+                                e8
+                            };
+                            EmitD;
+                            EmitD;
+                            EmitD;
+                            EmitD;
+                            EmitD;
+                            EmitD;
+                            EmitD;
+                            EmitD;
+                            move |_| {
+                                *cell = true;
+                                if true {
+                                    False(())
+                                } else {
+                                    True(())
+                                }}
+                        } {
+                            |_| {
+                                if true {
+                                    False(())
+                                } else {
+                                    True(())
+                                }
                             }
                         }
                     }
                 );
+
                 processes.push(process);
             }
         }
+
+
+        let mut rt1 = pro!(big_join(processes));
+
+
+        let signal1 = board.signals[3][3].clone();
+        let signal2 = board.signals[3][4].clone();
+        let signal3 = board.signals[3][5].clone();
+
+        let mut rt2 = (|_| {
+            ((signal1.clone(),()),((signal2.clone(),()), (signal3.clone(), ())))
+        }).seq(EmitD).seq(EmitD).seq(EmitD);
+
+        let mut rt6 = (|_| {
+            ((signal1.clone(),()),((signal2.clone(),()), (signal3.clone(), ())))
+        }).seq(EmitD).seq(EmitD).seq(EmitD);
+
+        let mut rt8 = (|_| {
+            ((signal1.clone(),()),((signal2.clone(),()), (signal3.clone(), ())))
+        }).seq(EmitD).seq(EmitD).seq(EmitD);
+
+        let mut rt = rt!(rt2; rt6; rt8; rt1);
+        rt.instant();
+        rt.instant();
     }
 
     println!("{}", board);
