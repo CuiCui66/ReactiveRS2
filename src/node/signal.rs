@@ -84,16 +84,17 @@ where
 
 
 
-// __        __    _ _
-// \ \      / /_ _(_) |_
-//  \ \ /\ / / _` | | __|
-//   \ V  V / (_| | | |_
-//    \_/\_/ \__,_|_|\__|
+//     _                _ _
+//    / \__      ____ _(_) |_
+//   / _ \ \ /\ / / _` | | __|
+//  / ___ \ V  V / (_| | | |_
+// /_/   \_\_/\_/ \__,_|_|\__|
+
 
 #[derive(Clone, Copy)]
-pub(crate) struct NWaitD(pub usize);
+pub(crate) struct NAwaitD(pub usize);
 
-impl<'a, SV: 'a> Node<'a, SignalRuntimeRef<SV>> for NWaitD
+impl<'a, SV: 'a> Node<'a, SignalRuntimeRef<SV>> for NAwaitD
 where
     SV: SignalValue,
 {

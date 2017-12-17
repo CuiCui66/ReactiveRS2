@@ -63,7 +63,7 @@ where
     type Out = V;
     type Mark = NotIm;
     type NIO = DummyN<V>;
-    type NI = NSeq<NWaitD, RcStore<SignalRuntimeRef<SV>>>;
+    type NI = NSeq<NAwaitD, RcStore<SignalRuntimeRef<SV>>>;
     type NO = NSeq<RcLoad<SignalRuntimeRef<SV>>, NGetD>;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
@@ -71,7 +71,7 @@ where
         let rc = new_rcell();
         let rc2 = rc.clone();
 
-        let ni = node!(NWaitD(out_id) >> store(rc));
+        let ni = node!(NAwaitD(out_id) >> store(rc));
         let no = node!(load(rc2) >> NGetD {});
         (ni, out_id, no)
     }
@@ -84,7 +84,7 @@ where
     type Out = (V,In);
     type Mark = NotIm;
     type NIO = DummyN<(V,In)>;
-    type NI = NSeq<NPar<NWaitD,NIdentity>,RcStore<(SignalRuntimeRef<SV>, In)>>;
+    type NI = NSeq<NPar<NAwaitD,NIdentity>,RcStore<(SignalRuntimeRef<SV>, In)>>;
     type NO = NSeq<RcLoad<(SignalRuntimeRef<SV>, In)>, NGetD>;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
@@ -93,7 +93,7 @@ where
         let rc2 = rc.clone();
 
         // Type inference won't work here
-        let ni_first = <NWaitD as Node<'a,SignalRuntimeRef<SV>>>::njoin::<In, NIdentity>(NWaitD(out_id), NIdentity {});
+        let ni_first = <NAwaitD as Node<'a,SignalRuntimeRef<SV>>>::njoin::<In, NIdentity>(NAwaitD(out_id), NIdentity {});
         let ni = node!(ni_first >> store(rc));
         let no = node!(load(rc2) >> NGetD{});
         (ni, out_id, no)
