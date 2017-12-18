@@ -435,4 +435,25 @@ mod tests {
             }
         });
     }
+
+
+    #[bench]
+    fn bench_emits_await(bencher: &mut Bencher) {
+        let signal = SignalRuntimeRef::new_pure();
+        let mut rt = rt! {
+            loop {
+                EmitS(signal.clone());
+                AwaitS(signal.clone());
+                |_:((),())| {
+                    True(())
+                }
+            }
+        };
+
+        bencher.iter(|| {
+            for i in 0..1000 {
+                rt.instant();
+            }
+        });
+    }
 }
