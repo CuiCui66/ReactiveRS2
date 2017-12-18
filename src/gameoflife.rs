@@ -89,6 +89,15 @@ fn main() {
                 let s7 = board.signals[((i+1)%height) as usize][j as usize].clone();
                 let s8 = board.signals[((i+1)%height) as usize][((j+1)%width) as usize].clone();
 
+                let v = vec![(s1.clone(),()),
+                             (s2.clone(),()),
+                             (s3.clone(),()),
+                             (s4.clone(),()),
+                             (s5.clone(),()),
+                             (s6.clone(),()),
+                             (s7.clone(),()),
+                             (s8.clone(),())];
+
                 let cell_value = &board.data[i as usize][j as usize];
 
                 let process = pro!(
@@ -108,14 +117,7 @@ fn main() {
                             |_:()| {
                                 ()
                             };
-                            emit_value(s1.clone(), ());
-                            emit_value(s2.clone(), ());
-                            emit_value(s3.clone(), ());
-                            emit_value(s4.clone(), ());
-                            emit_value(s5.clone(), ());
-                            emit_value(s6.clone(), ());
-                            emit_value(s7.clone(), ());
-                            emit_value(s8.clone(), ());
+                            emit_value_vec(v);
                             move |_:()| {
                                 *(*cell_value).borrow_mut() = true;
                                 if true {
