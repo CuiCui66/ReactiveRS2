@@ -24,7 +24,7 @@ impl<T> Is for T {
 
 pub struct NotIm {}
 pub struct IsIm {}
-pub trait Im: Sized {}
+pub trait Im: Sized + 'static {}
 impl Im for NotIm {}
 impl Im for IsIm {}
 
@@ -35,14 +35,12 @@ pub trait Process<'a, In: 'a>: 'a + Sized {
     type NO: Node<'a, (), Out = Self::Out> + Sized;
     /// If mark is set to IsIm, compile panics, if it is NotIm, compileIm panics
     type Mark: Im;
-    fn compile(self, _: &mut Graph<'a>) -> (Self::NI, usize, Self::NO)
-    {
+    fn compile(self, _: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         unreachable!();
     }
 
     type NIO: Node<'a, In, Out = Self::Out>;
-    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO
-    {
+    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         unreachable!();
     }
 
@@ -83,8 +81,7 @@ pub trait Process<'a, In: 'a>: 'a + Sized {
         }
     }
 
-    fn ploop(self) -> PLoop<MarkedProcess<Self, Self::Mark>>
-    {
+    fn ploop(self) -> PLoop<MarkedProcess<Self, Self::Mark>> {
         PLoop { p: mp(self) }
     }
 
@@ -101,8 +98,8 @@ pub trait Process<'a, In: 'a>: 'a + Sized {
         }
     }
 
-    fn pbox(self) -> Pbox<'a,In,Self::Out,Self::NI,Self::NO,Self::NIO,Self::Mark>{
-        Pbox{p:box self}
+    fn pbox(self) -> Pbox<'a, In, Self::Out, Self::NI, Self::NO, Self::NIO, Self::Mark> {
+        Pbox { p: box self }
     }
 }
 
@@ -136,6 +133,17 @@ pub struct MarkedProcess<P, Mark: Im> {
     pd: PhantomData<Mark>,
 }
 
+impl<'a, P, Mark> Graphfiller<'a> for MarkedProcess<P, Mark>
+where
+    P: Process<'a, (), Out = ()>,
+    Mark: Im,
+{
+    default fn fill_graph(self, _: &mut Graph<'a>) -> usize {
+        unreachable!();
+    }
+}
+
+
 impl<'a, P> Graphfiller<'a> for MarkedProcess<P, NotIm>
 where
     P: Process<'a, (), Out = ()>,
@@ -166,6 +174,8 @@ where
         pd: PhantomData,
     }
 }
+
+
 //  ____  ____
 // |  _ \| __ )  _____  __
 // | |_) |  _ \ / _ \ \/ /
@@ -193,10 +203,10 @@ where
     type NO = P::NO;
     type NIO = P::NIO;
     type Mark = P::Mark;
-    fn compile_box(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO){
+    fn compile_box(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         (*self).compile(g)
     }
-    fn compileIm_box(self: Box<Self>, g: &mut Graph<'a>) -> Self::NIO{
+    fn compileIm_box(self: Box<Self>, g: &mut Graph<'a>) -> Self::NIO {
         (*self).compileIm(g)
     }
 }
@@ -205,18 +215,19 @@ pub struct Pbox<'a, In, Out, NI, NO, NIO, Mark> {
     p: Box<ProcessBox<'a, In, Out = Out, NI = NI, NO = NO, NIO = NIO, Mark = Mark>>,
 }
 
-impl<'a, In: 'a, Out: 'a, NI, NO, NIO, Mark : Im + 'a> Process<'a, In>
-    for Pbox<'a, In, Out, NI, NO, NIO, Mark> where
-    NI : Node<'a,In,Out=()>,
-    NO : Node<'a,(),Out=Out>,
-    NIO : Node<'a,In,Out=Out>
+impl<'a, In: 'a, Out: 'a, NI, NO, NIO, Mark: Im + 'a> Process<'a, In>
+    for Pbox<'a, In, Out, NI, NO, NIO, Mark>
+where
+    NI: Node<'a, In, Out = ()>,
+    NO: Node<'a, (), Out = Out>,
+    NIO: Node<'a, In, Out = Out>,
 {
     type Out = Out;
     type NI = NI;
     type NO = NO;
     type NIO = NIO;
     type Mark = Mark;
-    fn compile(self, g: &mut Graph<'a>) -> (NI,usize,NO) {
+    fn compile(self, g: &mut Graph<'a>) -> (NI, usize, NO) {
         self.p.compile_box(g)
     }
     fn compileIm(self, g: &mut Graph<'a>) -> NIO {
@@ -232,24 +243,25 @@ impl<'a, In: 'a, Out: 'a, NI, NO, NIO, Mark : Im + 'a> Process<'a, In>
 // |_|  \___/|_|  \___\___||_| \__, | .__/ \___|
 //                             |___/|_|
 
-pub struct ForceType<In,Out> {
-    a : PhantomData<In>,
-    b : PhantomData<Out>,
+pub struct ForceType<In, Out> {
+    a: PhantomData<In>,
+    b: PhantomData<Out>,
 }
 
-pub fn force_type<In,Out>() -> ForceType<In,Out>{
-    ForceType{a:PhantomData, b :PhantomData}
+pub fn force_type<In, Out>() -> ForceType<In, Out> {
+    ForceType {
+        a: PhantomData,
+        b: PhantomData,
+    }
 }
 
-impl<In,Out> ForceType<In,Out>{
-    pub fn force<'a,P>(p :P) -> P
-        where
-        P: Process<'a,In,Out = Out>,
-        In :'a,
-        Out :'a
+impl<In, Out> ForceType<In, Out> {
+    pub fn force<'a, P>(p: P) -> P
+    where
+        P: Process<'a, In, Out = Out>,
+        In: 'a,
+        Out: 'a,
     {
         p
     }
 }
-
-
