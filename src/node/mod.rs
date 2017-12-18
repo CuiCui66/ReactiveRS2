@@ -21,6 +21,14 @@ pub trait Node<'a, In: 'a>: 'a {
     {
         NSeq { n1: self, n2: n2 }
     }
+    fn nseqd<N2>(self, n2: N2) -> NSeqD<'a,In,Self::Out,N2::Out>
+        where
+        N2: Node<'a, Self::Out> + Sized,
+        Self: Sized,
+    {
+        NSeqD { n1: box self, n2: box n2 } 
+    }
+
     fn alter<NF, In2: 'a>(self, nf: NF) -> NChoice<Self, NF>
     where
         NF: Node<'a, In2, Out = Self::Out> + Sized,
@@ -30,7 +38,7 @@ pub trait Node<'a, In: 'a>: 'a {
     }
     fn njoin<In2: 'a, N2>(self, n2: N2) -> NPar<Self, N2>
     where
-        N2: Node<'a,In2> + Sized,
+        N2: Node<'a, In2> + Sized,
         Self: Sized,
     {
         NPar { n1: self, n2: n2 }
@@ -38,7 +46,7 @@ pub trait Node<'a, In: 'a>: 'a {
 }
 
 
-#[derive(Clone,Copy)]
+#[derive(Clone, Copy)]
 pub struct Nothing {}
 
 #[allow(non_upper_case_globals)]
@@ -121,6 +129,20 @@ impl<'a, N1, N2, In: 'a, Mid: 'a, Out: 'a> Node<'a, In> for NSeq<N1, N2>
 where
     N1: Node<'a, In, Out = Mid>,
     N2: Node<'a, Mid, Out = Out>,
+{
+    type Out = Out;
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, val: In) -> Out {
+        let valm = self.n1.call(sub_runtime, val);
+        self.n2.call(sub_runtime, valm)
+    }
+}
+
+pub struct NSeqD<'a, In, Mid, Out> {
+    n1: Box<Node<'a, In, Out = Mid>>,
+    n2: Box<Node<'a, Mid, Out = Out>>,
+}
+
+impl<'a, In: 'a, Mid: 'a, Out: 'a> Node<'a, In> for NSeqD<'a,In, Mid, Out>
 {
     type Out = Out;
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, val: In) -> Out {

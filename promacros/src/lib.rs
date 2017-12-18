@@ -102,6 +102,11 @@ fn parse_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
                 let n1 = parse_pro(cx, args[1].span(), &args[1..2]);
                 return cx.expr_method_call(sp, n1, cx.ident_of("ploop"), vec![]);
             }
+            if id.name.as_str() == "box" {
+                let n1 = parse_pro(cx, args[1].span(), &args[1..2]);
+                return cx.expr_method_call(sp, n1, cx.ident_of("pbox"), vec![]);
+            }
+
         }
     }
 

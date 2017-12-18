@@ -156,6 +156,42 @@ mod tests {
     }
 
     #[test]
+    fn box_par() {
+        run!{
+            |_| (0,0);
+            {
+                box {
+                    loop {
+                        |i : usize|
+                        if i < 21 {
+                            True(i+1)
+                        }
+                        else{
+                            False(i)
+                        };
+                        Pause
+                    }
+                }|| loop {
+                    |i : usize|
+                    if i < 21 {
+                        True(i+1)
+                    }
+                    else{
+                        False(i)
+                    };
+                    Pause
+                }
+            };
+            |(v1,v2)| v1 + v2;
+            Pause;
+            |i| {
+                assert_eq!(i,42)
+            }
+        }
+    }
+
+
+    #[test]
     fn par_half_im() {
         run!{
             |_| (0,0);

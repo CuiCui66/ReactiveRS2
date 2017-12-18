@@ -45,6 +45,36 @@ impl<'a, F: 'a, In: 'a, Out: 'a> Process<'a, In> for F
     type Mark = IsIm;
 }
 
+//      _
+//     | |_   _ _ __ ___  _ __
+//  _  | | | | | '_ ` _ \| '_ \
+// | |_| | |_| | | | | | | |_) |
+//  \___/ \__,_|_| |_| |_| .__/
+//                       |_|
+
+
+#[derive(Copy, Clone, Debug)]
+pub struct Jump {}
+
+#[allow(non_upper_case_globals)]
+pub static Jump: Jump = Jump {};
+
+impl<'a, In: 'a> Process<'a, In> for Jump {
+    type Out = In;
+    type NI = NSeq<RcStore<In>, NJump>;
+    type NO = RcLoad<In>;
+    type NIO = DummyN<In>;
+    type Mark = NotIm;
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let rcin = new_rcell();
+        let rcout = rcin.clone();
+        let out = g.reserve();
+        (node!(store(rcin) >> jump(out)), out, load(rcout))
+    }
+}
+
+
+
 //  ____
 // |  _ \ __ _ _   _ ___  ___
 // | |_) / _` | | | / __|/ _ \
