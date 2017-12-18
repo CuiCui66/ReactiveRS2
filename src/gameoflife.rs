@@ -10,9 +10,6 @@ use ReactiveRS2::engine::*;
 use ReactiveRS2::node::ChoiceData::*;
 use std::fmt::{Display, Formatter, Error};
 use std::cell::RefCell;
-use std::borrow::*;
-
-const N: usize = 10;
 
 type Signal = SignalRuntimeRef<MCSignalValue<(),usize>>;
 
@@ -28,7 +25,7 @@ impl Board {
     fn new(width: usize, height: usize) -> Board {
         let mut signals = vec![vec![]];
         for i in 0..height {
-            for j in 0..width {
+            for _ in 0..width {
                 signals[i].push(Signal::new_mc(0, box |_:(), a: &mut usize| {*a += 1;}));
             }
             signals.push(vec![]);
@@ -41,7 +38,7 @@ impl Board {
         }
     }
 
-    fn reset(&mut self) {
+    fn reset(&self) {
         for line in &self.data {
             for cell in line {
                 *cell.borrow_mut() = false;
@@ -69,14 +66,14 @@ impl Display for Board {
 
 
 fn main() {
-    let mut board = Board::new(20,10);
+    let board = Board::new(20,10);
 
     {
         let mut processes = vec![];
         let height = board.height as i32;
         let width = board.width as i32;
-        for (i, line) in board.data.iter().enumerate() {
-            for (j, cell) in line.iter().enumerate() {
+        for i in 0..board.height {
+            for j in 0..board.width {
                 let i = i as i32;
                 let j = j as i32;
                 let s = board.signals[i as usize][j as usize].clone();
@@ -142,7 +139,7 @@ fn main() {
         }
 
 
-        let mut rt1 = pro!(big_join(processes));
+        let rt1 = pro!(big_join(processes));
 
 
         let signal1 = board.signals[3][3].clone();
@@ -150,21 +147,21 @@ fn main() {
         let signal3 = board.signals[3][5].clone();
 
 
-        let mut rt2 = pro!(
+        let rt2 = pro!(
             |_:()| { () };
             emit_value(signal1.clone(), ());
             emit_value(signal2.clone(), ());
             emit_value(signal3.clone(), ())
         );
 
-        let mut rt8 = pro!(
+        let rt8 = pro!(
             |_:()| { () };
             emit_value(signal1.clone(), ());
             emit_value(signal2.clone(), ());
             emit_value(signal3.clone(), ())
         );
 
-        let mut rt6 = pro!(
+        let rt6 = pro!(
             |_:()| { () };
             emit_value(signal1.clone(), ());
             emit_value(signal2.clone(), ());

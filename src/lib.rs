@@ -25,7 +25,6 @@ mod take;
 mod tests {
     use engine::*;
     use process::*;
-    use node::*;
     use node::ChoiceData::*;
     use signal::*;
     use test::test::Bencher;

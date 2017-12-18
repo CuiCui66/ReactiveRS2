@@ -24,7 +24,7 @@ where
     type NIO = NEmitD;
     type Out = In;
 
-    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
     }
 }
@@ -39,7 +39,7 @@ where
     type NIO = NEmitD;
     type Out = ();
 
-    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
     }
 }
@@ -54,7 +54,7 @@ impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, (Vec<(SignalRuntimeRef<SV>, E)>,In)>
     type NIO = NEmitD;
     type Out = In;
 
-    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
     }
 }
@@ -69,7 +69,7 @@ impl<'a, E: 'a, SV: 'a> Process<'a, Vec<(SignalRuntimeRef<SV>, E)>> for EmitD
     type NIO = NEmitD;
     type Out = ();
 
-    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
     }
 }
@@ -100,7 +100,7 @@ where
     type NIO = NEmitS<SV, E>;
     type Out = ();
 
-    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitS(self.0, PhantomData)
     }
 }
@@ -116,7 +116,7 @@ where
     type NIO = NEmitS<SV, E>;
     type Mark = IsIm;
 
-    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitS(self.0, PhantomData)
     }
 }
@@ -149,7 +149,7 @@ where
     type NIO = NEmitVecS<SV>;
     type Out = ();
 
-    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVecS(self.0)
     }
 }
@@ -165,7 +165,7 @@ where
     type NIO = NEmitVecS<SV>;
     type Mark = IsIm;
 
-    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVecS(self.0)
     }
 }
@@ -200,7 +200,7 @@ where
     type NIO = NEmitVS<SV, E>;
     type Out = In;
 
-    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVS(self.0, self.1)
     }
 }
@@ -235,7 +235,7 @@ impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, In> for EmitVVecS<SV, E>
     type NIO = NEmitVVecS<SV, E>;
     type Out = In;
 
-    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVVecS(self.0)
     }
 }

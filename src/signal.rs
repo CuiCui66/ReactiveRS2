@@ -202,7 +202,7 @@ where
 
     /// Process pending await nodes
     fn process_pending_await(&self, tasks: &mut Tasks) {
-        let mut nodes = take(&mut *self.signal_runtime.pending_await.borrow_mut());
+        let nodes = take(&mut *self.signal_runtime.pending_await.borrow_mut());
         for node in nodes {
             tasks.next.push(node);
         }
@@ -210,14 +210,14 @@ where
 
     /// Process pending await nodes
     fn process_pending_await_immediate(&self, tasks: &mut Tasks) {
-        let mut nodes = take(&mut *self.signal_runtime.pending_await_immediate.borrow_mut());
+        let nodes = take(&mut *self.signal_runtime.pending_await_immediate.borrow_mut());
         for node in nodes {
             tasks.current.push(node);
         }
     }
 
     fn process_pending_present(&self, tasks: &mut Tasks) {
-        let mut nodes = take(&mut *self.signal_runtime.pending_present.borrow_mut());
+        let nodes = take(&mut *self.signal_runtime.pending_present.borrow_mut());
         for node in nodes {
             tasks.next.push(node.0);
         }
@@ -255,7 +255,7 @@ where
 
             // Update pre_set if no emit is made in the next instant
             // Since the id is modified each instant that has an emit,
-            sr.eoi.continuations.push(box move |sr: &mut SubRuntime<'a>| {
+            sr.eoi.continuations.push(box move |_: &mut SubRuntime<'a>| {
                 let future_id = *signal_runtime_ref2.signal_runtime.id.borrow();
                 if future_id == current_id {
                     signal_runtime_ref2.signal_runtime.values.reset_value();
@@ -286,12 +286,14 @@ where
             sr.tasks.current.push(node_true);
         } else {
             let signal_runtime_ref = self.clone();
-            sr.eoi.continuations.push(box move |sr: &mut SubRuntime| {
-                let mut nodes = take(&mut *signal_runtime_ref.signal_runtime.pending_present.borrow_mut());
-                for node in nodes {
-                    sr.tasks.current.push(node.1);
-                }
-            });
+            if self.signal_runtime.pending_present.borrow().len() == 0 {
+                sr.eoi.continuations.push(box move |sr: &mut SubRuntime| {
+                    let nodes = take(&mut *signal_runtime_ref.signal_runtime.pending_present.borrow_mut());
+                    for node in nodes {
+                        sr.tasks.current.push(node.1);
+                    }
+                });
+            }
             self.signal_runtime.pending_present.borrow_mut().push((node_true, node_false));
         }
     }

@@ -222,7 +222,7 @@ where
 
     fn call(
         &mut self,
-        sub_runtime: &mut SubRuntime<'a>,
+        _: &mut SubRuntime<'a>,
         (sr, val): (SignalRuntimeRef<SV>, In),
     ) -> Self::Out {
         (sr.signal_runtime.values.get_pre_value(), val)
@@ -235,7 +235,7 @@ where
 {
     type Out = V;
 
-    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: SignalRuntimeRef<SV>) -> Self::Out {
+    fn call(&mut self, _: &mut SubRuntime<'a>, sr: SignalRuntimeRef<SV>) -> Self::Out {
         sr.signal_runtime.values.get_pre_value()
     }
 }
@@ -259,7 +259,7 @@ where
 
     fn call(
         &mut self,
-        sub_runtime: &mut SubRuntime<'a>,
+        _: &mut SubRuntime<'a>,
         _: (),
     ) -> Self::Out {
         self.0.signal_runtime.values.get_pre_value()
