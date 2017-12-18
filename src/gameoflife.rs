@@ -93,11 +93,11 @@ fn main() {
 
                 let process = pro!(
                     loop {
-                        move |_:()| {
-                            (s.clone(), s.clone())
+                        |_:()| {
+                            ()
                         };
-                        AwaitD;
-                        move |(v,sig): (usize,Signal)| {
+                        AwaitS(s.clone());
+                        move |(v,_): (usize,())| {
                             if v == 3 || (v == 2 && *(*cell_value).borrow()) {
                                 True(())
                             } else {
@@ -105,26 +105,18 @@ fn main() {
                             }
                         };
                         choice {
-                            move |_| {
-                                let e1 = (s1.clone(), ());
-                                let e2 = ((s2.clone(), ()), e1);
-                                let e3 = ((s3.clone(), ()), e2);
-                                let e4 = ((s4.clone(), ()), e3);
-                                let e5 = ((s5.clone(), ()), e4);
-                                let e6 = ((s6.clone(), ()), e5);
-                                let e7 = ((s7.clone(), ()), e6);
-                                let e8 = ((s8.clone(), ()), e7);
-                                e8
+                            |_:()| {
+                                ()
                             };
-                            EmitD;
-                            EmitD;
-                            EmitD;
-                            EmitD;
-                            EmitD;
-                            EmitD;
-                            EmitD;
-                            EmitD;
-                            move |_| {
+                            emit_value(s1.clone(), ());
+                            emit_value(s2.clone(), ());
+                            emit_value(s3.clone(), ());
+                            emit_value(s4.clone(), ());
+                            emit_value(s5.clone(), ());
+                            emit_value(s6.clone(), ());
+                            emit_value(s7.clone(), ());
+                            emit_value(s8.clone(), ());
+                            move |_:()| {
                                 *(*cell_value).borrow_mut() = true;
                                 if true {
                                     False(())
@@ -132,7 +124,7 @@ fn main() {
                                     True(())
                                 }}
                         } {
-                            |_| {
+                            |_:()| {
                                 if true {
                                     False(())
                                 } else {
@@ -155,17 +147,27 @@ fn main() {
         let signal2 = board.signals[3][4].clone();
         let signal3 = board.signals[3][5].clone();
 
-        let mut rt2 = (|_| {
-            ((signal1.clone(),()),((signal2.clone(),()), (signal3.clone(), ())))
-        }).seq(EmitD).seq(EmitD).seq(EmitD);
 
-        let mut rt6 = (|_| {
-            ((signal1.clone(),()),((signal2.clone(),()), (signal3.clone(), ())))
-        }).seq(EmitD).seq(EmitD).seq(EmitD);
+        let mut rt2 = pro!(
+            |_:()| { () };
+            emit_value(signal1.clone(), ());
+            emit_value(signal2.clone(), ());
+            emit_value(signal3.clone(), ())
+        );
 
-        let mut rt8 = (|_| {
-            ((signal1.clone(),()),((signal2.clone(),()), (signal3.clone(), ())))
-        }).seq(EmitD).seq(EmitD).seq(EmitD);
+        let mut rt8 = pro!(
+            |_:()| { () };
+            emit_value(signal1.clone(), ());
+            emit_value(signal2.clone(), ());
+            emit_value(signal3.clone(), ())
+        );
+
+        let mut rt6 = pro!(
+            |_:()| { () };
+            emit_value(signal1.clone(), ());
+            emit_value(signal2.clone(), ());
+            emit_value(signal3.clone(), ())
+        );
 
         let mut rt = rt!(rt2; rt6; rt8; rt1);
         rt.instant();
