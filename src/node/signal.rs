@@ -50,9 +50,9 @@ impl<'a, SV: 'a, E: 'a, In: 'a> Node<'a, ((SignalRuntimeRef<SV>, E), In)> for NE
 
 
 #[derive(Clone)]
-pub struct NEmitS<SV>(pub SignalRuntimeRef<SV>);
+pub struct NEmitS<SV, E>(pub SignalRuntimeRef<SV>, pub PhantomData<E>);
 
-impl<'a, SV: 'a, E: 'a> Node<'a, E> for NEmitS<SV>
+impl<'a, SV: 'a, E: 'a> Node<'a, E> for NEmitS<SV, E>
 where
     SV: SignalValue<E = E>,
 {
@@ -65,20 +65,41 @@ where
 }
 
 
-// Rust don't seems to understand that (E, In) != E
-/*
-impl<'a, In: 'a, SV: 'a, E: 'a> Node<'a, (E, In)> for NEmitS<SV>
+impl<'a, In: 'a, SV: 'a, E: 'a> Node<'a, (E, In)> for NEmitS<SV, E>
 where
     SV: SignalValue<E = E>,
 {
     type Out = In;
 
-    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, (emit_value, val): (E, In)) {
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, (emit_value, val): (E, In)) -> In {
         self.0.emit(emit_value, sub_runtime);
         val
     }
-}*/
+}
 
+//  _____           _ _ __     ______
+// | ____|_ __ ___ (_) |\ \   / / ___|
+// |  _| | '_ ` _ \| | __\ \ / /\___ \
+// | |___| | | | | | | |_ \ V /  ___) |
+// |_____|_| |_| |_|_|\__| \_/  |____/
+
+
+#[derive(Clone)]
+pub struct NEmitVS<SV, E>(pub SignalRuntimeRef<SV>, pub E);
+
+impl<'a, In: 'a, SV: 'a, E: 'a> Node<'a, In> for NEmitVS<SV, E>
+where
+    SV: SignalValue<E = E>,
+    E: Clone
+{
+    type Out = In;
+
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, val: In) -> In {
+        println!("ah");
+        self.0.emit(self.1.clone(), sub_runtime);
+        val
+    }
+}
 
 //   ____      _   ____
 //  / ___| ___| |_|  _ \

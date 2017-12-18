@@ -51,40 +51,80 @@ where
 // |_____|_| |_| |_|_|\__|____/
 
 #[derive(Clone)]
-pub struct EmitS<SV>(pub SignalRuntimeRef<SV>);
+pub struct EmitS<SV, E>(pub SignalRuntimeRef<SV>, pub PhantomData<E>);
 
-
-impl<'a, SV: 'a> Process<'a, SV::E> for EmitS<SV>
+pub fn emit<SV>(sr: SignalRuntimeRef<SV>) -> EmitS<SV, SV::E>
 where
-    SV: SignalValue,
+    SV:SignalValue
+{
+    EmitS(sr, PhantomData)
+}
+
+impl<'a, E: 'a, SV: 'a> Process<'a, E> for EmitS<SV, E>
+where
+    SV: SignalValue<E = E>,
 {
     type NI = DummyN<()>;
     type NO = DummyN<()>;
     type Mark = IsIm;
-    type NIO = NEmitS<SV>;
+    type NIO = NEmitS<SV, E>;
     type Out = ();
 
     fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
-        NEmitS(self.0)
+        NEmitS(self.0, PhantomData)
     }
 }
 
-/*
-impl<'a, SV: 'a, In: 'a> Process<'a, (SV::E,In)> for EmitS<SV>
+
+impl<'a, SV: 'a, E: 'a, In: 'a> Process<'a, (E,In)> for EmitS<SV, E>
 where
-    SV: SignalValue,
+    SV: SignalValue<E = E>,
 {
     type NI = DummyN<()>;
     type NO = DummyN<In>;
     type Out = In;
-    type NIO = NEmitS<SV>;
+    type NIO = NEmitS<SV, E>;
     type Mark = IsIm;
 
     fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
-        NEmitS(self.0)
+        NEmitS(self.0, PhantomData)
     }
-}*/
+}
 
+
+//  _____           _ _ __     ______
+// | ____|_ __ ___ (_) |\ \   / / ___|
+// |  _| | '_ ` _ \| | __\ \ / /\___ \
+// | |___| | | | | | | |_ \ V /  ___) |
+// |_____|_| |_| |_|_|\__| \_/  |____/
+
+
+#[derive(Clone)]
+pub struct EmitVS<SV, E>(pub SignalRuntimeRef<SV>, pub E);
+
+pub fn emit_value<SV, E>(sr: SignalRuntimeRef<SV>, value: E) -> EmitVS<SV, E>
+    where
+SV: SignalValue<E = E>,
+E: Clone,
+{
+    EmitVS(sr, value)
+}
+
+impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, In> for EmitVS<SV, E>
+where
+    SV: SignalValue<E = E>,
+    E: Clone,
+{
+    type NI = DummyN<()>;
+    type NO = DummyN<In>;
+    type Mark = IsIm;
+    type NIO = NEmitVS<SV, E>;
+    type Out = In;
+
+    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+        NEmitVS(self.0, self.1)
+    }
+}
 
 //     _                _ _   ____
 //    / \__      ____ _(_) |_|  _ \
@@ -152,7 +192,6 @@ where
 
 #[derive(Clone)]
 pub struct AwaitS<SV>(pub SignalRuntimeRef<SV>);
-
 
 impl<'a, In: 'a, V: 'a, SV: 'a> Process<'a, In> for AwaitS<SV>
 where
