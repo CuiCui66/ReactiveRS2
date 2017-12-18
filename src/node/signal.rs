@@ -42,6 +42,39 @@ impl<'a, SV: 'a, E: 'a, In: 'a> Node<'a, ((SignalRuntimeRef<SV>, E), In)> for NE
 }
 
 
+impl<'a, SV: 'a, E: 'a> Node<'a, Vec<(SignalRuntimeRef<SV>, E)>> for NEmitD
+    where
+        SV: SignalValue<E = E>,
+{
+    type Out = ();
+
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, vec: Vec<(SignalRuntimeRef<SV>, E)>) -> () {
+        for (sr, emit_value) in vec {
+            sr.emit(emit_value, sub_runtime);
+        }
+        ()
+    }
+}
+
+
+impl<'a, SV: 'a, E: 'a, In: 'a> Node<'a, (Vec<(SignalRuntimeRef<SV>, E)>, In)> for NEmitD
+    where
+        SV: SignalValue<E=E>,
+{
+    type Out = In;
+
+    fn call(
+        &mut self,
+        sub_runtime: &mut SubRuntime<'a>,
+        (vec,val): (Vec<(SignalRuntimeRef<SV>, E)>, In)
+    ) -> Self::Out {
+        for (sr,emit_value) in vec {
+            sr.emit(emit_value, sub_runtime);
+        }
+        val
+    }
+}
+
 //  _____           _ _   ____
 // | ____|_ __ ___ (_) |_/ ___|
 // |  _| | '_ ` _ \| | __\___ \
@@ -77,6 +110,51 @@ where
     }
 }
 
+//  _____           _ _ __     __        ____
+// | ____|_ __ ___ (_) |\ \   / /__  ___/ ___|
+// |  _| | '_ ` _ \| | __\ \ / / _ \/ __\___ \
+// | |___| | | | | | | |_ \ V /  __/ (__ ___) |
+// |_____|_| |_| |_|_|\__| \_/ \___|\___|____/
+
+
+#[derive(Clone)]
+pub struct NEmitVecS<SV>(pub Vec<SignalRuntimeRef<SV>>);
+
+impl<'a, SV: 'a, E: 'a> Node<'a, Vec<E>> for NEmitVecS<SV>
+where
+    SV: SignalValue<E = E>,
+{
+    type Out = ();
+
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, emit_values: Vec<E>) -> () {
+        if emit_values.len() != self.0.len() {
+            panic!("The vector given to the EmitVecS process should have the same size as the signal vector.")
+        }
+
+        for (sr,emit_value) in self.0.iter().zip(emit_values.into_iter()) {
+            sr.emit(emit_value, sub_runtime);
+        }
+        ()
+    }
+}
+
+impl<'a, SV: 'a, E: 'a, In: 'a> Node<'a, (Vec<E>, In)> for NEmitVecS<SV>
+where
+    SV: SignalValue<E = E>,
+{
+    type Out = In;
+
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, (emit_values, val): (Vec<E>, In)) -> In {
+        if emit_values.len() != self.0.len() {
+            panic!("The vector given to the EmitVecS process should have the same size as the signal vector.")
+        }
+        for (sr,emit_value) in self.0.iter().zip(emit_values.into_iter()) {
+            sr.emit(emit_value, sub_runtime);
+        }
+        val
+    }
+}
+
 //  _____           _ _ __     ______
 // | ____|_ __ ___ (_) |\ \   / / ___|
 // |  _| | '_ ` _ \| | __\ \ / /\___ \
@@ -95,11 +173,36 @@ where
     type Out = In;
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, val: In) -> In {
-        println!("ah");
         self.0.emit(self.1.clone(), sub_runtime);
         val
     }
 }
+
+
+//  _____           _ _ __     ____     __        ____
+// | ____|_ __ ___ (_) |\ \   / /\ \   / /__  ___/ ___|
+// |  _| | '_ ` _ \| | __\ \ / /  \ \ / / _ \/ __\___ \
+// | |___| | | | | | | |_ \ V /    \ V /  __/ (__ ___) |
+// |_____|_| |_| |_|_|\__| \_/      \_/ \___|\___|____/
+
+#[derive(Clone)]
+pub struct NEmitVVecS<SV,E>(pub Vec<(SignalRuntimeRef<SV>,E)>);
+
+impl<'a, In: 'a, SV: 'a, E: 'a> Node<'a, In> for NEmitVVecS<SV, E>
+    where
+        SV: SignalValue<E = E>,
+        E: Clone,
+{
+    type Out = In;
+
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, val: In) -> In {
+        for &(ref sr,ref emit_value) in &self.0 {
+            sr.emit(emit_value.clone(), sub_runtime);
+        }
+        val
+    }
+}
+
 
 //   ____      _   ____
 //  / ___| ___| |_|  _ \

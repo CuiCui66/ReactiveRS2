@@ -44,6 +44,36 @@ where
     }
 }
 
+impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, (Vec<(SignalRuntimeRef<SV>, E)>,In)> for EmitD
+    where
+        SV: SignalValue<E=E>,
+{
+    type NI = DummyN<()>;
+    type NO = DummyN<In>;
+    type Mark = IsIm;
+    type NIO = NEmitD;
+    type Out = In;
+
+    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+        NEmitD {}
+    }
+}
+
+impl<'a, E: 'a, SV: 'a> Process<'a, Vec<(SignalRuntimeRef<SV>, E)>> for EmitD
+    where
+        SV: SignalValue<E = E>,
+{
+    type NI = DummyN<()>;
+    type NO = DummyN<()>;
+    type Mark = IsIm;
+    type NIO = NEmitD;
+    type Out = ();
+
+    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+        NEmitD {}
+    }
+}
+
 //  _____           _ _   ____
 // | ____|_ __ ___ (_) |_/ ___|
 // |  _| | '_ ` _ \| | __\___ \
@@ -92,6 +122,55 @@ where
 }
 
 
+//  _____           _ _ __     __        ____
+// | ____|_ __ ___ (_) |\ \   / /__  ___/ ___|
+// |  _| | '_ ` _ \| | __\ \ / / _ \/ __\___ \
+// | |___| | | | | | | |_ \ V /  __/ (__ ___) |
+// |_____|_| |_| |_|_|\__| \_/ \___|\___|____/
+
+
+#[derive(Clone)]
+pub struct EmitVecS<SV>(pub Vec<SignalRuntimeRef<SV>>);
+
+pub fn emit_vec<SV>(sr: Vec<SignalRuntimeRef<SV>>) -> EmitVecS<SV>
+where
+    SV:SignalValue
+{
+    EmitVecS(sr)
+}
+
+impl<'a, E: 'a, SV: 'a> Process<'a, Vec<E>> for EmitVecS<SV>
+where
+    SV: SignalValue<E = E>,
+{
+    type NI = DummyN<()>;
+    type NO = DummyN<()>;
+    type Mark = IsIm;
+    type NIO = NEmitVecS<SV>;
+    type Out = ();
+
+    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+        NEmitVecS(self.0)
+    }
+}
+
+
+impl<'a, SV: 'a, E: 'a, In: 'a> Process<'a, (Vec<E>,In)> for EmitVecS<SV>
+where
+    SV: SignalValue<E = E>,
+{
+    type NI = DummyN<()>;
+    type NO = DummyN<In>;
+    type Out = In;
+    type NIO = NEmitVecS<SV>;
+    type Mark = IsIm;
+
+    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+        NEmitVecS(self.0)
+    }
+}
+
+
 //  _____           _ _ __     ______
 // | ____|_ __ ___ (_) |\ \   / / ___|
 // |  _| | '_ ` _ \| | __\ \ / /\___ \
@@ -125,6 +204,42 @@ where
         NEmitVS(self.0, self.1)
     }
 }
+
+
+//  _____           _ _ __     ____     __        ____
+// | ____|_ __ ___ (_) |\ \   / /\ \   / /__  ___/ ___|
+// |  _| | '_ ` _ \| | __\ \ / /  \ \ / / _ \/ __\___ \
+// | |___| | | | | | | |_ \ V /    \ V /  __/ (__ ___) |
+// |_____|_| |_| |_|_|\__| \_/      \_/ \___|\___|____/
+
+
+#[derive(Clone)]
+pub struct EmitVVecS<SV, E>(pub Vec<(SignalRuntimeRef<SV>,E)>);
+
+pub fn emit_value_vec<SV, E>(values: Vec<(SignalRuntimeRef<SV>,E)>) -> EmitVVecS<SV, E>
+    where
+        SV: SignalValue<E = E>,
+        E: Clone,
+{
+    EmitVVecS(values)
+}
+
+impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, In> for EmitVVecS<SV, E>
+    where
+        SV: SignalValue<E = E>,
+        E: Clone,
+{
+    type NI = DummyN<()>;
+    type NO = DummyN<In>;
+    type Mark = IsIm;
+    type NIO = NEmitVVecS<SV, E>;
+    type Out = In;
+
+    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+        NEmitVVecS(self.0)
+    }
+}
+
 
 //     _                _ _   ____
 //    / \__      ____ _(_) |_|  _ \
