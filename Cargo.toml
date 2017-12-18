@@ -8,6 +8,6 @@ promacros = { path = "promacros"}
 log = "0.3"
 env_logger = "0.3"
 
-[[bin]]
-name = "gol"
-path = "src/gameoflife.rs"
+#[[bin]]
+#name = "gol"
+#path = "src/gameoflife.rs"

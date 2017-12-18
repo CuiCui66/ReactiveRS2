@@ -9,6 +9,8 @@ use ReactiveRS2::signal::*;
 use ReactiveRS2::engine::*;
 use ReactiveRS2::node::ChoiceData::*;
 use std::fmt::{Display, Formatter, Error};
+use std::cell::RefCell;
+use std::borrow::*;
 
 const N: usize = 10;
 
@@ -18,7 +20,7 @@ struct Board {
     width: usize,
     height: usize,
     signals: Vec<Vec<Signal>>,
-    data: Vec<Vec<bool>>
+    data: Vec<Vec<RefCell<bool>>>
 }
 
 impl Board {
@@ -35,14 +37,14 @@ impl Board {
             width,
             height,
             signals,
-            data: vec![vec![false; width]; height],
+            data: vec![vec![RefCell::new(false); width]; height],
         }
     }
 
     fn reset(&mut self) {
-        for line in &mut self.data {
+        for line in &self.data {
             for cell in line {
-                *cell = false;
+                *cell.borrow_mut() = false;
             }
         }
     }
@@ -53,7 +55,7 @@ impl Display for Board {
         let mut s = String::new();
         for line in &self.data {
             for cell in line {
-                if *cell {
+                if *cell.borrow() {
                     s += "+";
                 } else {
                     s += " ";
@@ -73,8 +75,8 @@ fn main() {
         let mut processes = vec![];
         let height = board.height as i32;
         let width = board.width as i32;
-        for (i, line) in &mut board.data.iter_mut().enumerate() {
-            for (j, cell) in line.iter_mut().enumerate() {
+        for (i, line) in board.data.iter().enumerate() {
+            for (j, cell) in line.iter().enumerate() {
                 let i = i as i32;
                 let j = j as i32;
                 let s = board.signals[i as usize][j as usize].clone();
@@ -87,6 +89,7 @@ fn main() {
                 let s7 = board.signals[((i+1)%height) as usize][j as usize].clone();
                 let s8 = board.signals[((i+1)%height) as usize][((j+1)%width) as usize].clone();
 
+                let cell_value = &board.data[i as usize][j as usize];
 
                 let process = pro!(
                     loop {
@@ -94,8 +97,8 @@ fn main() {
                             (s.clone(), s.clone())
                         };
                         AwaitD;
-                        |(v,sig): (usize,Signal)| {
-                            if v == 3 || (v == 2 && sig.pre_set()) {
+                        move |(v,sig): (usize,Signal)| {
+                            if v == 3 || (v == 2 && *(*cell_value).borrow()) {
                                 True(())
                             } else {
                                 False(())
@@ -122,7 +125,7 @@ fn main() {
                             EmitD;
                             EmitD;
                             move |_| {
-                                *cell = true;
+                                *(*cell_value).borrow_mut() = true;
                                 if true {
                                     False(())
                                 } else {
@@ -165,6 +168,7 @@ fn main() {
         }).seq(EmitD).seq(EmitD).seq(EmitD);
 
         let mut rt = rt!(rt2; rt6; rt8; rt1);
+        rt.instant();
         rt.instant();
         rt.instant();
     }

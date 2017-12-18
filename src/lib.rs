@@ -197,7 +197,7 @@ mod tests {
 
 
     #[test]
-    fn emit_await() {
+    fn emitd_await() {
         let mut value = RefCell::new(0);
         let signal = SignalRuntimeRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e;});
         {
@@ -208,6 +208,29 @@ mod tests {
                     ((signal2,42), signal3)
                 };
                 EmitD;
+                AwaitD;
+                |v| { *value.borrow_mut() = v; }
+            };
+            rt.instant();
+            assert_eq!(*value.borrow_mut(), 0);
+            rt.instant();
+            assert_eq!(*value.borrow_mut(), 42);
+        }
+    }
+
+    #[test]
+    fn emits_await() {
+        let mut value = RefCell::new(0);
+        let signal = SignalRuntimeRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e;});
+        {
+            let mut rt = rt! {
+                |_| {
+                    42
+                };
+                EmitS(signal.clone());
+                |_| {
+                    signal.clone()
+                };
                 AwaitD;
                 |v| { *value.borrow_mut() = v; }
             };
@@ -352,7 +375,7 @@ mod tests {
 
 
     #[bench]
-    fn bench_emit_pause(bencher: &mut Bencher) {
+    fn bench_emitd_pause(bencher: &mut Bencher) {
         let signal = SignalRuntimeRef::new_pure();
         let mut rt = rt! {
             loop {
@@ -372,9 +395,28 @@ mod tests {
         });
     }
 
+    #[bench]
+    fn bench_emits_pause(bencher: &mut Bencher) {
+        let signal = SignalRuntimeRef::new_pure();
+        let mut rt = rt! {
+            loop {
+                EmitS(signal.clone());
+                Pause;
+                |_| {
+                    True(())
+                }
+            }
+        };
+
+        bencher.iter(|| {
+            for i in 0..1000 {
+                rt.instant();
+            }
+        });
+    }
 
     #[bench]
-    fn bench_emit_await(bencher: &mut Bencher) {
+    fn bench_emitd_await(bencher: &mut Bencher) {
         let signal = SignalRuntimeRef::new_pure();
         let mut rt = rt! {
             loop {

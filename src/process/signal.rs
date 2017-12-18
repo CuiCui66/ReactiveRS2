@@ -1,11 +1,12 @@
 use node::*;
 use super::*;
 
-//  _____           _ _
-// | ____|_ __ ___ (_) |_
-// |  _| | '_ ` _ \| | __|
-// | |___| | | | | | | |_
-// |_____|_| |_| |_|_|\__|
+//  _____           _ _   ____
+// | ____|_ __ ___ (_) |_|  _ \
+// |  _| | '_ ` _ \| | __| | | |
+// | |___| | | | | | | |_| |_| |
+// |_____|_| |_| |_|_|\__|____/
+
 
 #[derive(Copy, Clone)]
 pub struct EmitD {}
@@ -43,12 +44,55 @@ where
     }
 }
 
+//  _____           _ _   ____
+// | ____|_ __ ___ (_) |_/ ___|
+// |  _| | '_ ` _ \| | __\___ \
+// | |___| | | | | | | |_ ___) |
+// |_____|_| |_| |_|_|\__|____/
 
-//     _                _ _
-//    / \__      ____ _(_) |_
-//   / _ \ \ /\ / / _` | | __|
-//  / ___ \ V  V / (_| | | |_
-// /_/   \_\_/\_/ \__,_|_|\__|
+#[derive(Clone)]
+pub struct EmitS<SV>(pub SignalRuntimeRef<SV>);
+
+
+impl<'a, SV: 'a> Process<'a, SV::E> for EmitS<SV>
+where
+    SV: SignalValue,
+{
+    type NI = DummyN<()>;
+    type NO = DummyN<()>;
+    type Mark = IsIm;
+    type NIO = NEmitS<SV>;
+    type Out = ();
+
+    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+        NEmitS(self.0)
+    }
+}
+
+/*
+impl<'a, SV: 'a, In: 'a> Process<'a, (SV::E,In)> for EmitS<SV>
+where
+    SV: SignalValue,
+{
+    type NI = DummyN<()>;
+    type NO = DummyN<In>;
+    type Out = In;
+    type NIO = NEmitS<SV>;
+    type Mark = IsIm;
+
+    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
+        NEmitS(self.0)
+    }
+}*/
+
+
+//     _                _ _   ____
+//    / \__      ____ _(_) |_|  _ \
+//   / _ \ \ /\ / / _` | | __| | | |
+//  / ___ \ V  V / (_| | | |_| |_| |
+// /_/   \_\_/\_/ \__,_|_|\__|____/
+
+
 
 #[derive(Clone, Copy)]
 pub struct AwaitD {}
@@ -100,12 +144,43 @@ where
     }
 }
 
+//     _                _ _   ____
+//    / \__      ____ _(_) |_/ ___|
+//   / _ \ \ /\ / / _` | | __\___ \
+//  / ___ \ V  V / (_| | | |_ ___) |
+// /_/   \_\_/\_/ \__,_|_|\__|____/
 
-//     _                _ _   ___                              _ _       _
-//    / \__      ____ _(_) |_|_ _|_ __ ___  _ __ ___   ___  __| (_) __ _| |_ ___
-//   / _ \ \ /\ / / _` | | __|| || '_ ` _ \| '_ ` _ \ / _ \/ _` | |/ _` | __/ _ \
-//  / ___ \ V  V / (_| | | |_ | || | | | | | | | | | |  __/ (_| | | (_| | ||  __/
-// /_/   \_\_/\_/ \__,_|_|\__|___|_| |_| |_|_| |_| |_|\___|\__,_|_|\__,_|\__\___|
+#[derive(Clone)]
+pub struct AwaitS<SV>(pub SignalRuntimeRef<SV>);
+
+
+impl<'a, In: 'a, V: 'a, SV: 'a> Process<'a, In> for AwaitS<SV>
+where
+    SV: SignalValue<V=V>,
+{
+    type Out = (V,In);
+    type Mark = NotIm;
+    type NIO = DummyN<(V,In)>;
+    type NI = NSeq<RcStore<In>,NAwaitS<SV>>;
+    type NO = NSeq<GenP, NPar<NGetS<SV>, RcLoad<In>>>;
+
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let out_id = g.reserve();
+        let rc = new_rcell();
+        let rc2 = rc.clone();
+
+        let ni = node!(store(rc) >> NAwaitS(self.0.clone(), out_id));
+        let no = node!( GenP >> (NGetS(self.0) || load(rc2)));
+        (ni, out_id, no)
+    }
+}
+
+
+//     _                _ _   ___                              _ _       _       ____
+//    / \__      ____ _(_) |_|_ _|_ __ ___  _ __ ___   ___  __| (_) __ _| |_ ___|  _ \
+//   / _ \ \ /\ / / _` | | __|| || '_ ` _ \| '_ ` _ \ / _ \/ _` | |/ _` | __/ _ \ | | |
+//  / ___ \ V  V / (_| | | |_ | || | | | | | | | | | |  __/ (_| | | (_| | ||  __/ |_| |
+// /_/   \_\_/\_/ \__,_|_|\__|___|_| |_| |_|_| |_| |_|\___|\__,_|_|\__,_|\__\___|____/
 
 
 #[derive(Clone, Copy)]
@@ -154,6 +229,37 @@ impl<'a, In: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, In)> for AwaitImmedi
     }
 }
 
+//     _                _ _   ___                              _ _       _       ____
+//    / \__      ____ _(_) |_|_ _|_ __ ___  _ __ ___   ___  __| (_) __ _| |_ ___/ ___|
+//   / _ \ \ /\ / / _` | | __|| || '_ ` _ \| '_ ` _ \ / _ \/ _` | |/ _` | __/ _ \___ \
+//  / ___ \ V  V / (_| | | |_ | || | | | | | | | | | |  __/ (_| | | (_| | ||  __/___) |
+// /_/   \_\_/\_/ \__,_|_|\__|___|_| |_| |_|_| |_| |_|\___|\__,_|_|\__,_|\__\___|____/
+
+
+#[derive(Clone)]
+pub struct AwaitImmediateS<SV>(pub SignalRuntimeRef<SV>);
+
+
+impl<'a, In: 'a, V: 'a, SV: 'a> Process<'a, In> for AwaitImmediateS<SV>
+    where
+        SV: SignalValue<V=V>,
+{
+    type Out = In;
+    type Mark = NotIm;
+    type NIO = DummyN<In>;
+    type NI = NSeq<RcStore<In>,NAwaitImmediateS<SV>>;
+    type NO = RcLoad<In>;
+
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let out_id = g.reserve();
+        let rc = new_rcell();
+        let rc2 = rc.clone();
+
+        let ni = node!(store(rc) >> NAwaitImmediateS(self.0.clone(), out_id));
+        let no = load(rc2);
+        (ni, out_id, no)
+    }
+}
 
 //  ____                           _
 // |  _ \ _ __ ___  ___  ___ _ __ | |_
