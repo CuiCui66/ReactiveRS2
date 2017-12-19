@@ -13,11 +13,6 @@ use engine::{SubRuntime, Tasks};
 /// Structure representing a signal runtime
 pub(crate) struct SignalRuntime<SV>
 {
-
-    /// Is used to be able to do passive waiting,
-    /// every instant there is an emitted value, this id increase (modulo 2)
-    id: i32,
-
     /// Indicates if the signal is set or not at the current instant
     pub(crate) is_set: bool,
 
@@ -43,7 +38,6 @@ impl<SV> SignalRuntime<SV>
     /// Create a new signal runtime, given a structure representing its value
     fn new(signal_value: SV) -> Self {
         SignalRuntime {
-            id: 0,
             is_set: false,
             pre_set: false,
             pending_await: vec![],
@@ -273,6 +267,23 @@ where
         }
     }
 
+    pub(crate) fn on_end_of_instant(&self, sub_runtime: &mut SubRuntime<'a>) {
+        let mut signal_runtime = self.signal_runtime.borrow_mut();
+
+        signal_runtime.values.reset_value();
+
+        if signal_runtime.is_set {
+            signal_runtime.is_set = false;
+            signal_runtime.pre_set = true;
+            let signal_runtime_ref = self.clone();
+            sub_runtime.eoi.continuations.push(box move |sub_runtime: &mut SubRuntime| {
+                signal_runtime_ref.on_end_of_instant(sub_runtime); });
+        } else {
+            signal_runtime.pre_set = false;
+        }
+    }
+
+
     /// Emit a value to the signal
     pub(crate) fn emit(&self, emit_value: E, sub_runtime: &mut SubRuntime<'a>) {
         let mut signal_runtime = self.signal_runtime.borrow_mut();
@@ -286,39 +297,18 @@ where
 
         signal_runtime.is_set = true;
 
-        // We change the id
-        signal_runtime.id += 1;
-        signal_runtime.id %= 2;
-
         // We process the awaiting nodes
         self.process_pending_await_immediate(&mut sub_runtime.tasks, &mut signal_runtime);
         self.process_pending_await(&mut sub_runtime.tasks, &mut signal_runtime);
         self.process_pending_present(&mut sub_runtime.tasks, &mut signal_runtime);
 
         let signal_runtime_ref = (*self).clone();
-        let current_id = signal_runtime.id;
 
-
-        // At the end of the instant, we reset the value of the signal
-        sub_runtime.eoi.continuations.push(box move |sr: &mut SubRuntime<'a>| {
-            let mut signal_runtime = signal_runtime_ref.signal_runtime.borrow_mut();
-            signal_runtime.pre_set = true;
-            signal_runtime.is_set = false;
-            signal_runtime.values.reset_value();
-
-            let signal_runtime_ref2 = signal_runtime_ref.clone();
-
-            // Update pre_set if no emit is made in the next instant
-            // Since the id is modified each instant that has an emit,
-            sr.eoi.continuations.push(box move |_: &mut SubRuntime<'a>| {
-                let mut signal_runtime = signal_runtime_ref2.signal_runtime.borrow_mut();
-                let future_id = signal_runtime.id;
-                if future_id == current_id {
-                    signal_runtime.values.reset_value();
-                    signal_runtime.pre_set = false;
-                }
+        if !signal_runtime.pre_set {
+            sub_runtime.eoi.continuations.push(box move |sub_runtime: &mut SubRuntime| {
+                signal_runtime_ref.on_end_of_instant(sub_runtime);
             });
-        });
+        }
     }
 
     /// Await the signal to be emitted, and then execute the node at the next instant,

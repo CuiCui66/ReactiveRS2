@@ -187,7 +187,7 @@ fn main() {
 
         let mut rt = rt!(rt2; rt1);
 
-        let n = 100_000;
+        let n = 10_000;
         let start = SteadyTime::now();
         for _ in 0..n {
             rt.instant();
