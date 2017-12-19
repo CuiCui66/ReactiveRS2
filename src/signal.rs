@@ -13,6 +13,11 @@ use engine::{SubRuntime, Tasks};
 /// Structure representing a signal runtime
 pub(crate) struct SignalRuntime<SV>
 {
+
+    /// Indicates if the signal has set an end of instant callback
+    /// for the current instant
+    pub(crate) has_eoi_callback: bool,
+
     /// Indicates if the signal is set or not at the current instant
     pub(crate) is_set: bool,
 
@@ -38,6 +43,7 @@ impl<SV> SignalRuntime<SV>
     /// Create a new signal runtime, given a structure representing its value
     fn new(signal_value: SV) -> Self {
         SignalRuntime {
+            has_eoi_callback: false,
             is_set: false,
             pre_set: false,
             pending_await: vec![],
@@ -270,6 +276,11 @@ where
     pub(crate) fn on_end_of_instant(&self, sub_runtime: &mut SubRuntime<'a>) {
         let mut signal_runtime = self.signal_runtime.borrow_mut();
 
+        let nodes = take(&mut signal_runtime.pending_present);
+        for node in nodes {
+            sub_runtime.tasks.current.push(node.1);
+        }
+
         signal_runtime.values.reset_value();
 
         if signal_runtime.is_set {
@@ -277,8 +288,10 @@ where
             signal_runtime.pre_set = true;
             let signal_runtime_ref = self.clone();
             sub_runtime.eoi.continuations.push(box move |sub_runtime: &mut SubRuntime| {
-                signal_runtime_ref.on_end_of_instant(sub_runtime); });
+                signal_runtime_ref.on_end_of_instant(sub_runtime);
+            });
         } else {
+            signal_runtime.has_eoi_callback = false;
             signal_runtime.pre_set = false;
         }
     }
@@ -302,12 +315,15 @@ where
         self.process_pending_await(&mut sub_runtime.tasks, &mut signal_runtime);
         self.process_pending_present(&mut sub_runtime.tasks, &mut signal_runtime);
 
-        let signal_runtime_ref = (*self).clone();
 
-        if !signal_runtime.pre_set {
+        if !signal_runtime.has_eoi_callback {
+            let signal_runtime_ref = (*self).clone();
+
             sub_runtime.eoi.continuations.push(box move |sub_runtime: &mut SubRuntime| {
                 signal_runtime_ref.on_end_of_instant(sub_runtime);
             });
+
+            signal_runtime.has_eoi_callback = true;
         }
     }
 
@@ -331,20 +347,23 @@ where
 
     /// If the signal is present at the current instant, execute node_true.
     /// Otherwise, execute node_false at the next instant.
-    pub(crate) fn present(&self, sr: &mut SubRuntime<'a>, node_true: usize, node_false: usize) {
-        if self.signal_runtime.borrow().is_set {
-            sr.tasks.current.push(node_true);
+    pub(crate) fn present(&self, sub_runtime: &mut SubRuntime<'a>, node_true: usize, node_false: usize) {
+        let mut signal_runtime = self.signal_runtime.borrow_mut();
+
+        if signal_runtime.is_set {
+            sub_runtime.tasks.current.push(node_true);
         } else {
-            let signal_runtime_ref = self.clone();
-            if self.signal_runtime.borrow().pending_present.len() == 0 {
-                sr.eoi.continuations.push(box move |sr: &mut SubRuntime| {
-                    let nodes = take(&mut signal_runtime_ref.signal_runtime.borrow_mut().pending_present);
-                    for node in nodes {
-                        sr.tasks.current.push(node.1);
-                    }
-                });
-            }
             self.signal_runtime.borrow_mut().pending_present.push((node_true, node_false));
+
+            if !signal_runtime.has_eoi_callback {
+                let signal_runtime_ref = (*self).clone();
+
+                sub_runtime.eoi.continuations.push(box move |sub_runtime: &mut SubRuntime| {
+                    signal_runtime_ref.on_end_of_instant(sub_runtime);
+                });
+
+                signal_runtime.has_eoi_callback = true;
+            }
         }
     }
 
