@@ -17,25 +17,25 @@ pub(crate) struct SignalRuntime<SV>
 
     /// Is used to be able to do passive waiting,
     /// every instant there is an emitted value, this id increase (modulo 2)
-    id: RefCell<i32>,
+    id: i32,
 
     /// Indicates if the signal is set or not at the current instant
-    pub(crate) is_set: RefCell<bool>,
+    pub(crate) is_set: bool,
 
     /// Indicates if the signal was set or not at the last instant
-    pub(crate) pre_set: RefCell<bool>,
+    pub(crate) pre_set: bool,
 
     /// Contains the ids of the nodes that await the signal
-    pub(crate) pending_await: RefCell<Vec<usize>>,
+    pub(crate) pending_await: Vec<usize>,
 
     /// Contains the ids of the nodes that await_immediate the signal
-    pub(crate) pending_await_immediate: RefCell<Vec<usize>>,
+    pub(crate) pending_await_immediate: Vec<usize>,
 
     /// Contains the ids of the nodes that present the signal
-    pub(crate) pending_present: RefCell<Vec<(usize,usize)>>,
+    pub(crate) pending_present: Vec<(usize,usize)>,
 
     /// Contains the values of the signal
-    pub(crate) values: SV
+    pub(crate) values: SV,
 }
 
 
@@ -44,12 +44,12 @@ impl<SV> SignalRuntime<SV>
     /// Create a new signal runtime, given a structure representing its value
     fn new(signal_value: SV) -> Self {
         SignalRuntime {
-            id: RefCell::new(0),
-            is_set: RefCell::new(false),
-            pre_set: RefCell::new(false),
-            pending_await: RefCell::new(vec![]),
-            pending_await_immediate: RefCell::new(vec![]),
-            pending_present: RefCell::new(vec![]),
+            id: 0,
+            is_set: false,
+            pre_set: false,
+            pending_await: vec![],
+            pending_await_immediate: vec![],
+            pending_present: vec![],
             values: signal_value
         }
     }
@@ -196,14 +196,14 @@ where
 /// A shared pointer to a signal runtime
 pub struct SignalRuntimeRef<SV> {
     /// The shared signal runtime
-    pub(crate) signal_runtime: Rc<SignalRuntime<SV>>,
+    pub(crate) signal_runtime: Rc<RefCell<SignalRuntime<SV>>>,
 }
 
 impl SignalRuntimeRef<PureSignalValue> {
     /// Create a shared pointer to a new pure signal runtime
     pub fn new_pure() -> Self {
         SignalRuntimeRef {
-            signal_runtime: Rc::new(SignalRuntime::new_pure())
+            signal_runtime: Rc::new(RefCell::new(SignalRuntime::new_pure()))
         }
     }
 }
@@ -215,7 +215,7 @@ where
     /// Create a shared pointer to a new multi consumer signal runtime
     pub fn new_mc(default_value: V, gather: Box<FnMut(E, &mut V)>) -> Self {
         SignalRuntimeRef {
-            signal_runtime: Rc::new(SignalRuntime::new_mc(default_value,gather))
+            signal_runtime: Rc::new(RefCell::new(SignalRuntime::new_mc(default_value,gather)))
         }
     }
 }
@@ -227,7 +227,7 @@ where
     /// Create a shared pointer to a new signal runtime, given its value manager
     pub fn new(signal_value: SV) -> Self {
         SignalRuntimeRef {
-            signal_runtime: Rc::new(SignalRuntime::new(signal_value))
+            signal_runtime: Rc::new(RefCell::new(SignalRuntime::new(signal_value)))
         }
     }
 }
@@ -252,7 +252,7 @@ where
 
     /// Process pending await nodes on signal emission
     fn process_pending_await(&self, tasks: &mut Tasks) {
-        let nodes = take(&mut *self.signal_runtime.pending_await.borrow_mut());
+        let nodes = take(&mut self.signal_runtime.borrow_mut().pending_await);
         for node in nodes {
             tasks.next.push(node);
         }
@@ -260,7 +260,7 @@ where
 
     /// Process pending await_immediate nodes on signal emission
     fn process_pending_await_immediate(&self, tasks: &mut Tasks) {
-        let nodes = take(&mut *self.signal_runtime.pending_await_immediate.borrow_mut());
+        let nodes = take(&mut self.signal_runtime.borrow_mut().pending_await_immediate);
         for node in nodes {
             tasks.current.push(node);
         }
@@ -268,29 +268,29 @@ where
 
     /// Process pending present nodes on signal emission
     fn process_pending_present(&self, tasks: &mut Tasks) {
-        let nodes = take(&mut *self.signal_runtime.pending_present.borrow_mut());
+        let nodes = take(&mut self.signal_runtime.borrow_mut().pending_present);
         for node in nodes {
-            tasks.next.push(node.0);
+            tasks.current.push(node.0);
         }
     }
 
     /// Emit a value to the signal
     pub(crate) fn emit(&self, emit_value: E, sub_runtime: &mut SubRuntime<'a>) {
         // We gather the emitted value
-        self.signal_runtime.values.gather(emit_value);
+        self.signal_runtime.borrow_mut().values.gather(emit_value);
 
         // If the signal is already set, we are finished
-        if *self.signal_runtime.is_set.borrow() {
+        if self.signal_runtime.borrow().is_set {
             return;
         }
 
-        *self.signal_runtime.is_set.borrow_mut() = true;
+        self.signal_runtime.borrow_mut().is_set = true;
 
         // We change the id
         {
-            let mut id = self.signal_runtime.id.borrow_mut();
-            *id += 1;
-            *id %= 2;
+            let mut runtime = self.signal_runtime.borrow_mut();
+            runtime.id += 1;
+            runtime.id %= 2;
         }
 
         // We process the awaiting nodes
@@ -299,24 +299,24 @@ where
         self.process_pending_present(&mut sub_runtime.tasks);
 
         let signal_runtime_ref = (*self).clone();
-        let current_id = *self.signal_runtime.id.borrow();
+        let current_id = self.signal_runtime.borrow().id;
 
 
         // At the end of the instant, we reset the value of the signal
         sub_runtime.eoi.continuations.push(box move |sr: &mut SubRuntime<'a>| {
-            *signal_runtime_ref.signal_runtime.pre_set.borrow_mut() = true;
-            *signal_runtime_ref.signal_runtime.is_set.borrow_mut() = false;
-            signal_runtime_ref.signal_runtime.values.reset_value();
+            signal_runtime_ref.signal_runtime.borrow_mut().pre_set = true;
+            signal_runtime_ref.signal_runtime.borrow_mut().is_set = false;
+            signal_runtime_ref.signal_runtime.borrow_mut().values.reset_value();
 
             let signal_runtime_ref2 = signal_runtime_ref.clone();
 
             // Update pre_set if no emit is made in the next instant
             // Since the id is modified each instant that has an emit,
             sr.eoi.continuations.push(box move |_: &mut SubRuntime<'a>| {
-                let future_id = *signal_runtime_ref2.signal_runtime.id.borrow();
+                let future_id = signal_runtime_ref2.signal_runtime.borrow().id;
                 if future_id == current_id {
-                    signal_runtime_ref2.signal_runtime.values.reset_value();
-                    *signal_runtime_ref2.signal_runtime.pre_set.borrow_mut() = false;
+                    signal_runtime_ref2.signal_runtime.borrow_mut().values.reset_value();
+                    signal_runtime_ref2.signal_runtime.borrow_mut().pre_set = false;
                 }
             });
         });
@@ -324,48 +324,48 @@ where
 
     /// Await the signal to be emitted, and then execute the node at the next instant,
     pub(crate) fn await(&self, tasks: &mut Tasks, node: usize) {
-        if *self.signal_runtime.is_set.borrow() {
+        if self.signal_runtime.borrow().is_set {
             tasks.next.push(node);
         } else {
-            self.signal_runtime.pending_await.borrow_mut().push(node);
+            self.signal_runtime.borrow_mut().pending_await.push(node);
         }
     }
 
     /// Await the signal to be emitted, and then exexute the node at the current instant
     pub(crate) fn await_immediate(&self, tasks: &mut Tasks, node: usize) {
-        if *self.signal_runtime.is_set.borrow() {
+        if self.signal_runtime.borrow().is_set {
             tasks.current.push(node);
         } else {
-            self.signal_runtime.pending_await_immediate.borrow_mut().push(node);
+            self.signal_runtime.borrow_mut().pending_await_immediate.push(node);
         }
     }
 
     /// If the signal is present at the current instant, execute node_true.
     /// Otherwise, execute node_false at the next instant.
     pub(crate) fn present(&self, sr: &mut SubRuntime<'a>, node_true: usize, node_false: usize) {
-        if *self.signal_runtime.is_set.borrow() {
+        if self.signal_runtime.borrow().is_set {
             sr.tasks.current.push(node_true);
         } else {
             let signal_runtime_ref = self.clone();
-            if self.signal_runtime.pending_present.borrow().len() == 0 {
+            if self.signal_runtime.borrow().pending_present.len() == 0 {
                 sr.eoi.continuations.push(box move |sr: &mut SubRuntime| {
-                    let nodes = take(&mut *signal_runtime_ref.signal_runtime.pending_present.borrow_mut());
+                    let nodes = take(&mut signal_runtime_ref.signal_runtime.borrow_mut().pending_present);
                     for node in nodes {
                         sr.tasks.current.push(node.1);
                     }
                 });
             }
-            self.signal_runtime.pending_present.borrow_mut().push((node_true, node_false));
+            self.signal_runtime.borrow_mut().pending_present.push((node_true, node_false));
         }
     }
 
     /// Get the value of the signal of the last instant
     pub fn pre(&self) -> V {
-        self.signal_runtime.values.get_pre_value()
+        self.signal_runtime.borrow().values.get_pre_value()
     }
 
     /// Return true if the signal was set at the last instant
     pub fn pre_set(&self) -> bool {
-        *self.signal_runtime.pre_set.borrow()
+        self.signal_runtime.borrow().pre_set
     }
 }
