@@ -8,44 +8,49 @@ use take::take;
 pub struct Graph<'a>(Vec<Option<Box<Node<'a, (), Out = ()>>>>);
 
 impl<'a> Graph<'a> {
-    pub fn new() -> Self {
+
+    pub(crate) fn new() -> Self {
         Graph(vec![])
     }
-    pub fn reserve(&mut self) -> usize {
+
+    pub(crate) fn reserve(&mut self) -> usize {
         let &mut Graph(ref mut v) = self;
         v.push(None);
         v.len() - 1
     }
-    pub fn set(&mut self, pos: usize, val: Box<Node<'a, (), Out = ()>>) {
+
+    pub(crate) fn set(&mut self, pos: usize, val: Box<Node<'a, (), Out = ()>>) {
         let &mut Graph(ref mut v) = self;
         if let Some(_) = v[pos] {
             panic!("v[pos] != None in Graph::set")
         }
         v[pos] = Some(val);
     }
-    pub fn add(&mut self, val: Box<Node<'a, (), Out = ()>>) -> usize {
+
+    pub(crate) fn add(&mut self, val: Box<Node<'a, (), Out = ()>>) -> usize {
         let &mut Graph(ref mut v) = self;
         v.push(Some(val));
         v.len() - 1
     }
-    pub fn get(self) -> Vec<Option<Box<Node<'a, (), Out = ()>>>> {
+
+    pub(crate) fn get(self) -> Vec<Option<Box<Node<'a, (), Out = ()>>>> {
         let Graph(v) = self;
         v
     }
 }
 
-pub struct Tasks {
-    pub current: Vec<usize>,
-    pub next: Vec<usize>,
+pub(crate) struct Tasks {
+    pub(crate) current: Vec<usize>,
+    pub(crate) next: Vec<usize>,
 }
 
-pub struct EndOfInstant<'a> {
-    pub continuations: Vec<Box<Fn(&mut SubRuntime<'a>) + 'a>>
+pub(crate) struct EndOfInstant<'a> {
+    pub(crate) continuations: Vec<Box<Fn(&mut SubRuntime<'a>) + 'a>>
 }
 
 pub struct SubRuntime<'a> {
-    pub tasks: Tasks,
-    pub eoi: EndOfInstant<'a>,
+    pub(crate) tasks: Tasks,
+    pub(crate) eoi: EndOfInstant<'a>,
 }
 
 
@@ -71,7 +76,7 @@ impl<'a> Runtime<'a> {
         }
     }
 
-    pub fn fromgraph(g: Graph<'a>) -> Self {
+    pub(crate) fn fromgraph(g: Graph<'a>) -> Self {
         let mut r = Self::newtest();
         for n in g.get() {
             match n {
