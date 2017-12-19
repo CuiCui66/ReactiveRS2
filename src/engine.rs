@@ -44,8 +44,12 @@ pub(crate) struct Tasks {
     pub(crate) next: Vec<usize>,
 }
 
+pub trait EndOfInstantCallback<'a>{
+    fn on_end_of_instant(&self, sub_runtime: &mut SubRuntime<'a>);
+}
+
 pub(crate) struct EndOfInstant<'a> {
-    pub(crate) continuations: Vec<Box<Fn(&mut SubRuntime<'a>) + 'a>>
+    pub(crate) pending: Vec<Box<EndOfInstantCallback<'a> + 'a>>,
 }
 
 pub struct SubRuntime<'a> {
@@ -70,7 +74,7 @@ impl<'a> Runtime<'a> {
                     next: vec![],
                 },
                 eoi: EndOfInstant {
-                    continuations: vec![],
+                    pending: vec![],
                 },
             }
         }
@@ -118,11 +122,11 @@ impl<'a> Runtime<'a> {
         }
         self.sub_runtime.tasks.current = take(&mut self.sub_runtime.tasks.next);
 
-        let eois = take(&mut self.sub_runtime.eoi.continuations);
+        let eois = take(&mut self.sub_runtime.eoi.pending);
         for eoi in eois {
-            (*eoi)(&mut self.sub_runtime);
+            eoi.on_end_of_instant(&mut self.sub_runtime);
         }
 
-        self.sub_runtime.tasks.current.len() > 0 || self.sub_runtime.eoi.continuations.len() > 0
+        self.sub_runtime.tasks.current.len() > 0 || self.sub_runtime.eoi.pending.len() > 0
     }
 }
