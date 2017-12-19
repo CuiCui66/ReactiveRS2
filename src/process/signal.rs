@@ -7,7 +7,8 @@ use super::*;
 // | |___| | | | | | | |_| |_| |
 // |_____|_| |_| |_|_|\__|____/
 
-
+/// Process representing the emission of a signal,
+/// where the signal and the value is given as the process input.
 #[derive(Copy, Clone)]
 pub struct EmitD {}
 
@@ -27,6 +28,7 @@ where
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
     }
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -48,6 +50,7 @@ where
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
     }
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -69,6 +72,7 @@ impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, (Vec<(SignalRuntimeRef<SV>, E)>,In)>
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
     }
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -90,6 +94,7 @@ impl<'a, E: 'a, SV: 'a> Process<'a, Vec<(SignalRuntimeRef<SV>, E)>> for EmitD
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
     }
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -104,6 +109,8 @@ impl<'a, E: 'a, SV: 'a> Process<'a, Vec<(SignalRuntimeRef<SV>, E)>> for EmitD
 // | |___| | | | | | | |_ ___) |
 // |_____|_| |_| |_|_|\__|____/
 
+/// Process representing the emission of a signal,
+/// where the signal is fixed and the value is given as the process input.
 #[derive(Clone)]
 pub struct EmitS<SV, E>(pub SignalRuntimeRef<SV>, pub PhantomData<E>);
 
@@ -127,6 +134,7 @@ where
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitS(self.0, PhantomData)
     }
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -164,7 +172,8 @@ where
 // | |___| | | | | | | |_ \ V /  __/ (__ ___) |
 // |_____|_| |_| |_|_|\__| \_/ \___|\___|____/
 
-
+/// Process representing the emission of multiple signals,
+/// where the signals are fixed and the values are given as the process input.
 #[derive(Clone)]
 pub struct EmitVecS<SV>(pub Vec<SignalRuntimeRef<SV>>);
 
@@ -188,6 +197,7 @@ where
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVecS(self.0)
     }
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -226,6 +236,8 @@ where
 // |_____|_| |_| |_|_|\__| \_/  |____/
 
 
+/// Process representing the emission of a signal,
+/// where the signal and the value are fixed.
 #[derive(Clone)]
 pub struct EmitVS<SV, E>(pub SignalRuntimeRef<SV>, pub E);
 
@@ -251,6 +263,7 @@ where
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVS(self.0, self.1)
     }
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -267,6 +280,8 @@ where
 // |_____|_| |_| |_|_|\__| \_/      \_/ \___|\___|____/
 
 
+/// Process representing the emission of multiple signals,
+/// where the signals and the values are fixed.
 #[derive(Clone)]
 pub struct EmitVVecS<SV, E>(pub Vec<(SignalRuntimeRef<SV>,E)>);
 
@@ -292,6 +307,7 @@ impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, In> for EmitVVecS<SV, E>
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVVecS(self.0)
     }
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -308,7 +324,8 @@ impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, In> for EmitVVecS<SV, E>
 // /_/   \_\_/\_/ \__,_|_|\__|____/
 
 
-
+/// Process awaiting for the emission of a signal, and executing the next process the next instant,
+/// where the signal is given as the process input.
 #[derive(Clone, Copy)]
 pub struct AwaitD {}
 
@@ -334,6 +351,7 @@ where
         let no = node!(load(rc2) >> NGetD {});
         (ni, out_id, no)
     }
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -363,6 +381,7 @@ where
         let no = node!(load(rc2) >> NGetD{});
         (ni, out_id, no)
     }
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -377,6 +396,9 @@ where
 //  / ___ \ V  V / (_| | | |_ ___) |
 // /_/   \_\_/\_/ \__,_|_|\__|____/
 
+
+/// Process awaiting for the emission of a signal, and executing the next process the next instant,
+/// where the signal is fixed.
 #[derive(Clone)]
 pub struct AwaitS<SV>(pub SignalRuntimeRef<SV>);
 
@@ -399,6 +421,7 @@ where
         let no = node!( GenP >> (NGetS(self.0) || load(rc2)));
         (ni, out_id, no)
     }
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -415,6 +438,8 @@ where
 // /_/   \_\_/\_/ \__,_|_|\__|___|_| |_| |_|_| |_| |_|\___|\__,_|_|\__,_|\__\___|____/
 
 
+/// Process awaiting for the emission of a signal, and executing the next process the current instant,
+/// where the signal is given as the process input.
 #[derive(Clone, Copy)]
 pub struct AwaitImmediateD {}
 
@@ -435,6 +460,7 @@ impl<'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
         let out_id = g.reserve();
         (NAwaitImmediateD(out_id), out_id, Nothing {})
     }
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -465,6 +491,7 @@ impl<'a, In: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, In)> for AwaitImmedi
         let no = load(rc2);
         (ni, out_id, no)
     }
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -480,6 +507,8 @@ impl<'a, In: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, In)> for AwaitImmedi
 // /_/   \_\_/\_/ \__,_|_|\__|___|_| |_| |_|_| |_| |_|\___|\__,_|_|\__,_|\__\___|____/
 
 
+/// Process awaiting for the emission of a signal, and executing the next process the current instant,
+/// where the signal is fixed.
 #[derive(Clone)]
 pub struct AwaitImmediateS<SV>(pub SignalRuntimeRef<SV>);
 
@@ -503,6 +532,7 @@ impl<'a, In: 'a, V: 'a, SV: 'a> Process<'a, In> for AwaitImmediateS<SV>
         let no = load(rc2);
         (ni, out_id, no)
     }
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -511,12 +541,15 @@ impl<'a, In: 'a, V: 'a, SV: 'a> Process<'a, In> for AwaitImmediateS<SV>
     }
 }
 
-//  ____                           _
-// |  _ \ _ __ ___  ___  ___ _ __ | |_
-// | |_) | '__/ _ \/ __|/ _ \ '_ \| __|
-// |  __/| | |  __/\__ \  __/ | | | |_
-// |_|   |_|  \___||___/\___|_| |_|\__|
+//  ____                           _   ____
+// |  _ \ _ __ ___  ___  ___ _ __ | |_|  _ \
+// | |_) | '__/ _ \/ __|/ _ \ '_ \| __| | | |
+// |  __/| | |  __/\__ \  __/ | | | |_| |_| |
+// |_|   |_|  \___||___/\___|_| |_|\__|____/
 
+/// Process that executes pt in the current instant if the signal is present this instant,
+/// and executes pf in the next instant otherwise,
+/// where the signal is given as the process input.
 pub struct PresentD<PT, PF> {
     pub(crate) pt: PT,
     pub(crate) pf: PF,
@@ -555,10 +588,11 @@ where
 
         (ni, out_id, load(rc_out))
     }
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
-        println!("{} [shape = box, label= \"Present\"];",num);
+        println!("{} [shape = box, label= \"PresentD\"];",num);
         (num,num)
     }
 }
@@ -596,10 +630,11 @@ for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>>
 
         (ni, out_id, load(rc_out))
     }
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
-        println!("{} [shape = box, label= \"Present\"];",num);
+        println!("{} [shape = box, label= \"PresentD\"];",num);
         (num,num)
     }
 }
@@ -637,10 +672,11 @@ for PresentD<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>>
 
         (ni, out_id, load(rc_out))
     }
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
-        println!("{} [shape = box, label= \"Present\"];",num);
+        println!("{} [shape = box, label= \"PresentD\"];",num);
         (num,num)
     }
 }
@@ -677,10 +713,197 @@ for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>>
 
         (ni, out_id, load(rc_out))
     }
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
-        println!("{} [shape = box, label= \"Present\"];",num);
+        println!("{} [shape = box, label= \"PresentD\"];",num);
+        (num,num)
+    }
+}
+
+//  ____                           _   ____
+// |  _ \ _ __ ___  ___  ___ _ __ | |_/ ___|
+// | |_) | '__/ _ \/ __|/ _ \ '_ \| __\___ \
+// |  __/| | |  __/\__ \  __/ | | | |_ ___) |
+// |_|   |_|  \___||___/\___|_| |_|\__|____/
+
+/// Process that executes pt in the current instant if the signal is present this instant,
+/// and executes pf in the next instant otherwise,
+/// where the signal is given as the process input.
+pub struct PresentS<PT,PF,SV> {
+    pub(crate) pt: PT,
+    pub(crate) pf: PF,
+    pub(crate) signal_runtime: SignalRuntimeRef<SV>,
+}
+
+impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, ()>
+for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>, SV>
+    where
+        PT: Process<'a, (), Out=Out>,
+        PF: Process<'a, (), Out=Out>,
+        SV: SignalValue,
+{
+    type Out = Out;
+    type NI = NPresentS<SV>;
+    type NO = RcLoad<Out>;
+    type NIO = DummyN<Out>;
+    type Mark = NotIm;
+
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let rct = new_rcell();
+        let rcf = rct.clone();
+        let rc_out = rct.clone();
+        let (ptni, ptind, ptno) = self.pt.p.compile(g);
+        let (pfni, pfind, pfno) = self.pf.p.compile(g);
+
+        let out_id = g.reserve();
+        g.set(ptind, box node!(ptno >> store(rct) >> jump(out_id)));
+        g.set(pfind, box node!(pfno >> store(rcf) >> jump(out_id)));
+        let nit_id = g.add(box ptni);
+        let nif_id = g.add(box pfni);
+
+        let ni = NPresentS {
+            node_true: nit_id,
+            node_false: nif_id,
+            signal_runtime: self.signal_runtime,
+        };
+
+        (ni, out_id, load(rc_out))
+    }
+
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"PresentS\"];",num);
+        (num,num)
+    }
+}
+
+
+impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, ()>
+for PresentS<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>, SV>
+    where
+        PT: Process<'a, (), Out=Out>,
+        PF: Process<'a, (), Out=Out>,
+        SV: SignalValue,
+{
+    type Out = Out;
+    type NI = NPresentS<SV>;
+    type NO = RcLoad<Out>;
+    type NIO = DummyN<Out>;
+    type Mark = NotIm;
+
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let rct = new_rcell();
+        let rcf = rct.clone();
+        let rc_out = rct.clone();
+        let ptnio = self.pt.p.compileIm(g);
+        let (pfni, pfind, pfno) = self.pf.p.compile(g);
+
+        let out_id = g.reserve();
+        let ptind = g.add(box node!(ptnio >> store(rct) >> jump(out_id)));
+        g.set(pfind, box node!(pfno >> store(rcf) >> jump(out_id)));
+        let nif_id = g.add(box pfni);
+
+        let ni = NPresentS {
+            node_true: ptind,
+            node_false: nif_id,
+            signal_runtime: self.signal_runtime,
+        };
+
+        (ni, out_id, load(rc_out))
+    }
+
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"PresentS\"];",num);
+        (num,num)
+    }
+}
+
+
+impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, ()>
+for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>, SV>
+    where
+        PT: Process<'a, (), Out=Out>,
+        PF: Process<'a, (), Out=Out>,
+        SV: SignalValue,
+{
+    type Out = Out;
+    type NI = NPresentS<SV>;
+    type NO = RcLoad<Out>;
+    type NIO = DummyN<Out>;
+    type Mark = NotIm;
+
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let rct = new_rcell();
+        let rcf = rct.clone();
+        let rc_out = rct.clone();
+        let pfnio = self.pf.p.compileIm(g);
+        let (ptni, ptind, ptno) = self.pt.p.compile(g);
+
+        let out_id = g.reserve();
+        let pfind = g.add(box node!(pfnio >> store(rcf) >> jump(out_id)));
+        g.set(ptind, box node!(ptno >> store(rct) >> jump(out_id)));
+        let nit_id = g.add(box ptni);
+
+        let ni = NPresentS {
+            node_true: nit_id,
+            node_false: pfind,
+            signal_runtime: self.signal_runtime,
+        };
+
+        (ni, out_id, load(rc_out))
+    }
+
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"PresentS\"];",num);
+        (num,num)
+    }
+}
+
+
+impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, ()>
+for PresentS<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>, SV>
+    where
+        PT: Process<'a, (), Out=Out>,
+        PF: Process<'a, (), Out=Out>,
+        SV: SignalValue,
+{
+    type Out = Out;
+    type NI = NPresentS<SV>;
+    type NO = RcLoad<Out>;
+    type NIO = DummyN<Out>;
+    type Mark = NotIm;
+
+    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let rct = new_rcell();
+        let rcf = rct.clone();
+        let rc_out = rct.clone();
+        let pfnio = self.pf.p.compileIm(g);
+        let ptnio = self.pt.p.compileIm(g);
+
+        let out_id = g.reserve();
+        let pfind = g.add(box node!(pfnio >> store(rcf) >> jump(out_id)));
+        let ptind = g.add(box node!(ptnio >> store(rct) >> jump(out_id)));
+
+        let ni = NPresentS {
+            node_true: ptind,
+            node_false: pfind,
+            signal_runtime: self.signal_runtime,
+        };
+
+        (ni, out_id, load(rc_out))
+    }
+
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"PresentS\"];",num);
         (num,num)
     }
 }

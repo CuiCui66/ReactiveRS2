@@ -11,7 +11,6 @@ use ReactiveRS2::engine::*;
 use ReactiveRS2::node::ChoiceData::*;
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::time::Instant;
 use time::SteadyTime;
 
 type CellSignal = SignalRuntimeRef<MCSignalValue<bool,(bool,usize)>>;
@@ -188,12 +187,12 @@ fn main() {
 
         let mut rt = rt!(rt2; rt1);
 
-        let N = 100_000;
+        let n = 100_000;
         let start = SteadyTime::now();
-        for _ in 0..N {
+        for _ in 0..n {
             rt.instant();
         }
-        println!("{}", N as f32 / ((SteadyTime::now() - start).num_nanoseconds().unwrap() as f32 / 1_000_000_000.))
+        println!("{}", n as f32 / ((SteadyTime::now() - start).num_nanoseconds().unwrap() as f32 / 1_000_000_000.))
     }
 
     let values = board_values.borrow();
