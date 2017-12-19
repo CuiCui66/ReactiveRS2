@@ -48,6 +48,12 @@ where
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
     }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"EmitD\"];",num);
+        (num,num)
+    }
 }
 
 impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, (Vec<(SignalRuntimeRef<SV>, E)>,In)> for EmitD
@@ -62,6 +68,12 @@ impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, (Vec<(SignalRuntimeRef<SV>, E)>,In)>
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
+    }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"EmitD\"];",num);
+        (num,num)
     }
 }
 
@@ -176,6 +188,12 @@ where
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVecS(self.0)
     }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"EmitVecS\"];",num);
+        (num,num)
+    }
 }
 
 
@@ -191,6 +209,12 @@ where
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVecS(self.0)
+    }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"EmitVecS\"];",num);
+        (num,num)
     }
 }
 
@@ -267,6 +291,12 @@ impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, In> for EmitVVecS<SV, E>
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVVecS(self.0)
+    }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"EmitVVecS\"];",num);
+        (num,num)
     }
 }
 
