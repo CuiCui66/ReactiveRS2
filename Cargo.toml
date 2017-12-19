@@ -7,6 +7,7 @@ authors = ["Thibaut Pérami <thibaut.perami@ens.fr>"]
 promacros = { path = "promacros"}
 log = "0.3"
 env_logger = "0.3"
+time = "0.1.38"
 
 [[bin]]
 name = "gol"

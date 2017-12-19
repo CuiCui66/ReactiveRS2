@@ -3,21 +3,60 @@
 #![plugin(promacros)]
 
 #[macro_use] extern crate ReactiveRS2;
+extern crate time;
 
 use ReactiveRS2::process::*;
 use ReactiveRS2::signal::*;
 use ReactiveRS2::engine::*;
 use ReactiveRS2::node::ChoiceData::*;
-use std::fmt::{Display, Formatter, Error};
 use std::cell::RefCell;
+use std::rc::Rc;
+use std::time::Instant;
+use time::SteadyTime;
 
-type Signal = SignalRuntimeRef<MCSignalValue<(),usize>>;
+type CellSignal = SignalRuntimeRef<MCSignalValue<bool,(bool,usize)>>;
+type BoardSignal = SignalRuntimeRef<BoardData>;
+
+struct BoardData {
+    width: usize,
+    height: usize,
+    data: Rc<RefCell<(usize, Vec<Vec<usize>>)>>,
+}
+
+impl BoardData {
+    fn new(width: usize, height: usize) -> (BoardData, Rc<RefCell<(usize,Vec<Vec<usize>>)>>) {
+        let board_data = BoardData {
+            width,
+            height,
+            data: Rc::new(RefCell::new((1,vec![vec![0;width];height]))),
+        };
+        let board_values = board_data.data.clone();
+        (board_data, board_values)
+    }
+}
+
+impl SignalValue for BoardData {
+    type E = (usize,usize);
+    type V = Rc<RefCell<(usize,Vec<Vec<usize>>)>>;
+
+    fn get_pre_value(&self) -> Self::V {
+       self.data.clone()
+    }
+
+    fn reset_value(&self) {
+        self.data.borrow_mut().0 += 1;
+    }
+
+    fn gather(&self, (i,j): (usize, usize)) {
+        let mut data = self.data.borrow_mut();
+        data.1[i][j] = data.0;
+    }
+}
 
 struct Board {
     width: usize,
     height: usize,
-    signals: Vec<Vec<Signal>>,
-    data: Vec<Vec<RefCell<bool>>>
+    signals: Vec<Vec<CellSignal>>,
 }
 
 impl Board {
@@ -26,7 +65,14 @@ impl Board {
         let mut signals = vec![vec![]];
         for i in 0..height {
             for _ in 0..width {
-                signals[i].push(Signal::new_mc(0, box |_:(), a: &mut usize| {*a += 1;}));
+                let gather = box |is_self: bool, &mut (ref mut was_set, ref mut nb_neighbors): &mut (bool, usize)| {
+                    if is_self {
+                        *was_set = true;
+                    } else {
+                        *nb_neighbors += 1;
+                    }
+                };
+                signals[i].push(CellSignal::new_mc((false, 0), gather));
             }
             signals.push(vec![]);
         }
@@ -34,40 +80,17 @@ impl Board {
             width,
             height,
             signals,
-            data: vec![vec![RefCell::new(false); width]; height],
         }
-    }
-
-    fn reset(&self) {
-        for line in &self.data {
-            for cell in line {
-                *cell.borrow_mut() = false;
-            }
-        }
-    }
-}
-
-impl Display for Board {
-    fn fmt(&self, formatter: &mut Formatter) -> Result<(), Error> {
-        let mut s = String::new();
-        for line in &self.data {
-            for cell in line {
-                if *cell.borrow() {
-                    s += "+";
-                } else {
-                    s += " ";
-                }
-            }
-            s += "\n";
-        }
-        write!(formatter,"{}",s)
     }
 }
 
 
 fn main() {
+    let width = 20;
+    let height = 10;
     let board = Board::new(20,10);
-
+    let (board_data, board_values) = BoardData::new(width, height);
+    let board_signal = BoardSignal::new(board_data);
     {
         let mut processes = vec![];
         let height = board.height as i32;
@@ -86,16 +109,16 @@ fn main() {
                 let s7 = board.signals[((i+1)%height) as usize][j as usize].clone();
                 let s8 = board.signals[((i+1)%height) as usize][((j+1)%width) as usize].clone();
 
-                let v = vec![(s1.clone(),()),
-                             (s2.clone(),()),
-                             (s3.clone(),()),
-                             (s4.clone(),()),
-                             (s5.clone(),()),
-                             (s6.clone(),()),
-                             (s7.clone(),()),
-                             (s8.clone(),())];
-
-                let cell_value = &board.data[i as usize][j as usize];
+                let v =
+                    vec![(s.clone(),true),
+                         (s1.clone(),false),
+                         (s2.clone(),false),
+                         (s3.clone(),false),
+                         (s4.clone(),false),
+                         (s5.clone(),false),
+                         (s6.clone(),false),
+                         (s7.clone(),false),
+                         (s8.clone(),false)];
 
                 let process = pro!(
                     loop {
@@ -103,8 +126,8 @@ fn main() {
                             ()
                         };
                         AwaitS(s.clone());
-                        move |(v,_): (usize,())| {
-                            if v == 3 || (v == 2 && *(*cell_value).borrow()) {
+                        move |((was_set,v),_): ((bool,usize),())| {
+                            if v == 3 || (v == 2 && was_set) {
                                 True(())
                             } else {
                                 False(())
@@ -115,16 +138,16 @@ fn main() {
                                 ()
                             };
                             emit_value_vec(v);
+                            emit_value(board_signal.clone(), (i as usize,j as usize));
                             move |_:()| {
-                                *(*cell_value).borrow_mut() = true;
-                                if true {
+                                if false {
                                     False(())
                                 } else {
                                     True(())
                                 }}
                         } {
                             |_:()| {
-                                if true {
+                                if false {
                                     False(())
                                 } else {
                                     True(())
@@ -145,34 +168,43 @@ fn main() {
         let signal1 = board.signals[3][3].clone();
         let signal2 = board.signals[3][4].clone();
         let signal3 = board.signals[3][5].clone();
+        let signal4 = board.signals[8][4].clone();
+        let signal5 = board.signals[8][5].clone();
+        let signal6 = board.signals[8][6].clone();
 
+        let v = vec![
+            (signal1.clone(),false),(signal1.clone(),false),(signal1.clone(),false),
+            (signal2.clone(),false),(signal2.clone(),false),(signal2.clone(),false),
+            (signal3.clone(),false),(signal3.clone(),false),(signal3.clone(),false),
+            (signal4.clone(),false),(signal4.clone(),false),(signal4.clone(),false),
+            (signal5.clone(),false),(signal5.clone(),false),(signal5.clone(),false),
+            (signal6.clone(),false),(signal6.clone(),false),(signal6.clone(),false)];
 
         let rt2 = pro!(
             |_:()| { () };
-            emit_value(signal1.clone(), ());
-            emit_value(signal2.clone(), ());
-            emit_value(signal3.clone(), ())
+            emit_value_vec(v)
         );
 
-        let rt8 = pro!(
-            |_:()| { () };
-            emit_value(signal1.clone(), ());
-            emit_value(signal2.clone(), ());
-            emit_value(signal3.clone(), ())
-        );
 
-        let rt6 = pro!(
-            |_:()| { () };
-            emit_value(signal1.clone(), ());
-            emit_value(signal2.clone(), ());
-            emit_value(signal3.clone(), ())
-        );
+        let mut rt = rt!(rt2; rt1);
 
-        let mut rt = rt!(rt2; rt6; rt8; rt1);
-        rt.instant();
-        rt.instant();
-        rt.instant();
+        let N = 100_000;
+        let start = SteadyTime::now();
+        for _ in 0..N {
+            rt.instant();
+        }
+        println!("{}", N as f32 / ((SteadyTime::now() - start).num_nanoseconds().unwrap() as f32 / 1_000_000_000.))
     }
 
-    println!("{}", board);
+    let values = board_values.borrow();
+    for i in 0..height {
+        for j in 0..width {
+            if values.1[i][j] == values.0-1 {
+                print!("+");
+            } else {
+                print!(" ");
+            }
+        }
+        print!("\n");
+    }
 }
