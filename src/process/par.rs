@@ -29,6 +29,20 @@ where
         g.set(qind, box node!(qno >> set2(rc2, out_ind)));
         (nodei!(pni || qni), out_ind, merge(rcout))
     }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let (begp,endp) = self.p.p.printDot(curNum);
+        let (begq,endq) = self.q.p.printDot(curNum);
+        let numbeg = *curNum;
+        let numend = numbeg +1;
+        *curNum += 2;
+        println!("{} [shape = triangle, label = \"\"]",numbeg);
+        println!("{}:sw -> {}:n [label = \"{}\"]",numbeg,begp,tname::<InP>());
+        println!("{}:se -> {}:n [label = \"{}\"]",numbeg,begq,tname::<InQ>());
+        println!("{} [shape= invtriangle, label = \"\"]",numend);
+        println!("{}:s -> {}:nw [label = \"{}\"]",endp,numend,tname::<OutP>());
+        println!("{}:s -> {}:ne [label = \"{}\"]",endq,numend,tname::<OutQ>());
+        (numbeg,numend)
+    }
 }
 
 impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> Process<'a, (InP, InQ)>
@@ -53,6 +67,20 @@ where
             nodep!(load(rcout) || qno),
         )
 
+    }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let (begp,endp) = self.p.p.printDot(curNum);
+        let (begq,endq) = self.q.p.printDot(curNum);
+        let numbeg = *curNum;
+        let numend = numbeg +1;
+        *curNum += 2;
+        println!("{} [shape = triangle, label = \"\"]",numbeg);
+        println!("{} -> {}:n [label = \"{}\"]",numbeg,begp,tname::<InP>());
+        println!("{} -> {}:n [label = \"{}\"]",numbeg,begq,tname::<InQ>());
+        println!("{} [shape= invtriangle, label = \"\"]",numend);
+        println!("{} -> {}:n [label = \"{}\"]",endp,numend,tname::<OutP>());
+        println!("{} -> {}:n [label = \"{}\"]",endq,numend,tname::<OutQ>());
+        (numbeg,numend)
     }
 }
 
@@ -79,6 +107,20 @@ where
         )
 
     }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let (begp,endp) = self.p.p.printDot(curNum);
+        let (begq,endq) = self.q.p.printDot(curNum);
+        let numbeg = *curNum;
+        let numend = numbeg +1;
+        *curNum += 2;
+        println!("{} [shape = triangle, label = \"\"]",numbeg);
+        println!("{} -> {}:n [label = \"{}\"]",numbeg,begp,tname::<InP>());
+        println!("{} -> {}:n [label = \"{}\"]",numbeg,begq,tname::<InQ>());
+        println!("{} [shape= invtriangle, label = \"\"]",numend);
+        println!("{} -> {}:n [label = \"{}\"]",endp,numend,tname::<OutP>());
+        println!("{} -> {}:n [label = \"{}\"]",endq,numend,tname::<OutQ>());
+        (numbeg,numend)
+    }
 }
 
 impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> Process<'a, (InP, InQ)>
@@ -96,6 +138,20 @@ where
         let pnio = self.p.p.compileIm(g);
         let qnio = self.q.p.compileIm(g);
         node!(pnio || qnio)
+    }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let (begp,endp) = self.p.p.printDot(curNum);
+        let (begq,endq) = self.q.p.printDot(curNum);
+        let numbeg = *curNum;
+        let numend = numbeg +1;
+        *curNum += 2;
+        println!("{} [shape = triangle, label = \"\"]",numbeg);
+        println!("{} -> {}:n [label = \"{}\"]",numbeg,begp,tname::<InP>());
+        println!("{} -> {}:n [label = \"{}\"]",numbeg,begq,tname::<InQ>());
+        println!("{} [shape= invtriangle, label = \"\"]",numend);
+        println!("{} -> {}:n [label = \"{}\"]",endp,numend,tname::<OutP>());
+        println!("{} -> {}:n [label = \"{}\"]",endq,numend,tname::<OutQ>());
+        (numbeg,numend)
     }
 }
 
@@ -132,5 +188,11 @@ where
             dests.push(g.add(box node!(load_copy(rcin.clone()) >> pni)));
         };
         (node!(store(rcin) >> NBigPar{dests}),end_point,Nothing)
+    }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"BigPar\"];",num);
+        (num,num)
     }
 }

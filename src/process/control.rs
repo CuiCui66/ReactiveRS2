@@ -35,7 +35,20 @@ where
         g.set(ptind, box node!(ptno >> store(rct) >> jump(out)));
         g.set(pfind, box node!(pfno >> store(rcf) >> jump(out)));
         (node!(choice ptni pfni), out, load(rcout))
-
+    }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let (begt,endt) = self.pt.p.printDot(curNum);
+        let (begf,endf) = self.pf.p.printDot(curNum);
+        let numbeg = *curNum;
+        let numend = numbeg +1;
+        *curNum += 2;
+        println!("{} [shape=diamond, label=\"if\"]",numbeg);
+        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
+        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
+        println!("{} [size = 0.1]",numend);
+        println!("{} -> {}:w",endt,numend);
+        println!("{} -> {}:e",endf,numend);
+        (numbeg,numend)
     }
 }
 
@@ -65,6 +78,20 @@ where
         )
 
     }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let (begt,endt) = self.pt.p.printDot(curNum);
+        let (begf,endf) = self.pf.p.printDot(curNum);
+        let numbeg = *curNum;
+        let numend = numbeg +1;
+        *curNum += 2;
+        println!("{} [shape=diamond, label=\"if\"]",numbeg);
+        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
+        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
+        println!("{} [size = 0.1]",numend);
+        println!("{} -> {}:w",endt,numend);
+        println!("{} -> {}:e",endf,numend);
+        (numbeg,numend)
+    }
 }
 
 
@@ -93,6 +120,20 @@ where
             load(rcout),
         )
     }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let (begt,endt) = self.pt.p.printDot(curNum);
+        let (begf,endf) = self.pf.p.printDot(curNum);
+        let numbeg = *curNum;
+        let numend = numbeg +1;
+        *curNum += 2;
+        println!("{} [shape=diamond, label=\"if\"]",numbeg);
+        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
+        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
+        println!("{} [size = 0.1]",numend);
+        println!("{} -> {}:w",endt,numend);
+        println!("{} -> {}:e",endf,numend);
+        (numbeg,numend)
+    }
 }
 
 impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
@@ -110,6 +151,20 @@ where
         let ptnio = self.pt.p.compileIm(g);
         let pfnio = self.pf.p.compileIm(g);
         node!(choice ptnio pfnio)
+    }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let (begt,endt) = self.pt.p.printDot(curNum);
+        let (begf,endf) = self.pf.p.printDot(curNum);
+        let numbeg = *curNum;
+        let numend = numbeg +1;
+        *curNum += 2;
+        println!("{} [shape=diamond, label=\"if\"]",numbeg);
+        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
+        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
+        println!("{} [size = 0.1]",numend);
+        println!("{} -> {}:w",endt,numend);
+        println!("{} -> {}:e",endf,numend);
+        (numbeg,numend)
     }
 }
 
@@ -158,6 +213,18 @@ impl<'a, P, In: 'a, Out: 'a> Process<'a, In>
             node!(load(rcextout))
         )
     }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let (beg,end) = self.p.p.printDot(curNum);
+        let numbeg = *curNum;
+        let numend = numbeg +1;
+        *curNum += 2;
+        println!("{} [label = \"loop\"]",numbeg);
+        println!("{}:s -> {} [label = \"{}\"]",numbeg,beg,tname::<In>());
+        println!("{} [shape=diamond]",numend);
+        println!("{} -> {}:n [label = \"{}\"]",end,numend,tname::<ChoiceData<In,Out>>());
+        println!("{}:w -> {}:w [label = \"Continue: {}\"];",numend,numbeg,tname::<In>());
+        (numbeg,numend)
+    }
 }
 
 impl<'a, P, In: 'a, Out: 'a> Process<'a, In>
@@ -175,5 +242,17 @@ impl<'a, P, In: 'a, Out: 'a> Process<'a, In>
         trace!("");
         let pnio = self.p.p.compileIm(g);
         LoopIm(pnio)
+    }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let (beg,end) = self.p.p.printDot(curNum);
+        let numbeg = *curNum;
+        let numend = numbeg +1;
+        *curNum += 2;
+        println!("{} [label = \"loop\"]",numbeg);
+        println!("{}:s -> {} [label = \"{}\"]",numbeg,beg,tname::<In>());
+        println!("{} [shape=diamond]",numend);
+        println!("{} -> {}:n [label = \"{}\"]",end,numend,tname::<ChoiceData<In,Out>>());
+        println!("{}:w -> {}:w [label = \"Continue: {}\"];",numend,numbeg,tname::<In>());
+        (numbeg,numend)
     }
 }

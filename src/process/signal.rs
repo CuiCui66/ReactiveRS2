@@ -27,6 +27,12 @@ where
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
     }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"EmitD\"];",num);
+        (num,num)
+    }
 }
 
 impl<'a, E: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, E)> for EmitD
@@ -72,6 +78,12 @@ impl<'a, E: 'a, SV: 'a> Process<'a, Vec<(SignalRuntimeRef<SV>, E)>> for EmitD
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
     }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"EmitD\"];",num);
+        (num,num)
+    }
 }
 
 //  _____           _ _   ____
@@ -103,6 +115,12 @@ where
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitS(self.0, PhantomData)
     }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"EmitS\"];",num);
+        (num,num)
+    }
 }
 
 
@@ -118,6 +136,12 @@ where
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitS(self.0, PhantomData)
+    }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"EmitS\"];",num);
+        (num,num)
     }
 }
 
@@ -203,6 +227,12 @@ where
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVS(self.0, self.1)
     }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"EmitVS\"];",num);
+        (num,num)
+    }
 }
 
 
@@ -274,6 +304,12 @@ where
         let no = node!(load(rc2) >> NGetD {});
         (ni, out_id, no)
     }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"AwaitD\"];",num);
+        (num,num)
+    }
 }
 
 impl<'a, In: 'a, V: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, In)> for AwaitD
@@ -296,6 +332,12 @@ where
         let ni = node!(ni_first >> store(rc));
         let no = node!(load(rc2) >> NGetD{});
         (ni, out_id, no)
+    }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"AwaitD\"];",num);
+        (num,num)
     }
 }
 
@@ -327,6 +369,12 @@ where
         let no = node!( GenP >> (NGetS(self.0) || load(rc2)));
         (ni, out_id, no)
     }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"AwaitS\"];",num);
+        (num,num)
+    }
 }
 
 
@@ -357,6 +405,12 @@ impl<'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
         let out_id = g.reserve();
         (NAwaitImmediateD(out_id), out_id, Nothing {})
     }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"AwaitImmD\"];",num);
+        (num,num)
+    }
 }
 
 
@@ -380,6 +434,12 @@ impl<'a, In: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, In)> for AwaitImmedi
         let ni = <NSeq<NPar<NIdentity,RcStore<In>>,Ignore2> as Node<'a, (SignalRuntimeRef<SV>, In)>>::nseq(ni_second, NAwaitImmediateD(out_id));
         let no = load(rc2);
         (ni, out_id, no)
+    }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"AwaitImmD\"];",num);
+        (num,num)
     }
 }
 
@@ -412,6 +472,12 @@ impl<'a, In: 'a, V: 'a, SV: 'a> Process<'a, In> for AwaitImmediateS<SV>
         let ni = node!(store(rc) >> NAwaitImmediateS(self.0.clone(), out_id));
         let no = load(rc2);
         (ni, out_id, no)
+    }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"AwaitImmS\"];",num);
+        (num,num)
     }
 }
 
@@ -459,6 +525,12 @@ where
 
         (ni, out_id, load(rc_out))
     }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"Present\"];",num);
+        (num,num)
+    }
 }
 
 
@@ -493,6 +565,12 @@ for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>>
         };
 
         (ni, out_id, load(rc_out))
+    }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"Present\"];",num);
+        (num,num)
     }
 }
 
@@ -529,6 +607,12 @@ for PresentD<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>>
 
         (ni, out_id, load(rc_out))
     }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"Present\"];",num);
+        (num,num)
+    }
 }
 
 
@@ -562,5 +646,11 @@ for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>>
         };
 
         (ni, out_id, load(rc_out))
+    }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"Present\"];",num);
+        (num,num)
     }
 }

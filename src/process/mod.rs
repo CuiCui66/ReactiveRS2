@@ -2,6 +2,7 @@ use node::*;
 use engine::*;
 use std::marker::PhantomData;
 use signal::*;
+pub use std::intrinsics::type_name;
 
 mod base;
 pub use self::base::*;
@@ -29,7 +30,12 @@ impl Im for NotIm {}
 impl Im for IsIm {}
 
 
-pub trait Process<'a, In: 'a>: 'a + Sized {
+fn tname<T>()-> &'static str{
+    unsafe{type_name::<T>()}
+}
+
+
+pub trait Process<'a, In: 'a>: 'a + Sized{
     type Out: 'a;
     type NI: Node<'a, In, Out = ()> + Sized;
     type NO: Node<'a, (), Out = Self::Out> + Sized;
@@ -43,6 +49,12 @@ pub trait Process<'a, In: 'a>: 'a + Sized {
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         unreachable!();
     }
+
+    // pretty print
+
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize);
+
+    // process construction
 
     fn seq<P>(self, p: P) -> Seq<MarkedProcess<Self, Self::Mark>, MarkedProcess<P, P::Mark>>
     where
@@ -182,7 +194,7 @@ where
 // |  __/| |_) | (_) >  <
 // |_|   |____/ \___/_/\_\
 
-pub trait ProcessBox<'a, In: 'a>: 'a {
+pub trait ProcessBox<'a, In: 'a>: 'a{
     type Out: 'a;
     type NI: Node<'a, In, Out = ()> + Sized;
     type NO: Node<'a, (), Out = Self::Out> + Sized;
@@ -192,6 +204,10 @@ pub trait ProcessBox<'a, In: 'a>: 'a {
 
     type NIO: Node<'a, In, Out = Self::Out>;
     fn compileIm_box(self: Box<Self>, _: &mut Graph<'a>) -> Self::NIO;
+
+    // pretty print
+    fn printDot_box(self: &mut Self, curNum : &mut usize) -> (usize,usize);
+
 }
 
 impl<'a, In: 'a, P> ProcessBox<'a, In> for P
@@ -208,6 +224,9 @@ where
     }
     fn compileIm_box(self: Box<Self>, g: &mut Graph<'a>) -> Self::NIO {
         (*self).compileIm(g)
+    }
+    fn printDot_box(self: &mut Self, curNum : &mut usize) -> (usize,usize){
+        self.printDot(curNum)
     }
 }
 
@@ -233,7 +252,11 @@ where
     fn compileIm(self, g: &mut Graph<'a>) -> NIO {
         self.p.compileIm_box(g)
     }
+    fn printDot(&mut self, curNum : &mut usize) -> (usize,usize){
+        self.p.printDot_box(curNum)
+    }
 }
+
 
 
 //  _____                 _____
@@ -264,4 +287,22 @@ impl<In, Out> ForceType<In, Out> {
     {
         p
     }
+}
+
+
+//  ____       _       _    ____                 _
+// |  _ \ _ __(_)_ __ | |_ / ___|_ __ __ _ _ __ | |__
+// | |_) | '__| | '_ \| __| |  _| '__/ _` | '_ \| '_ \
+// |  __/| |  | | | | | |_| |_| | | | (_| | |_) | | | |
+// |_|   |_|  |_|_| |_|\__|\____|_|  \__,_| .__/|_| |_|
+//                                        |_|
+
+pub fn print_graph<'a,P>(p : &'a mut P)
+    where
+    P : Process<'a,(),Out =()>
+{
+    let mut val = 0;
+    println!("digraph {{");
+    p.printDot(&mut val);
+    println!("}}");
 }

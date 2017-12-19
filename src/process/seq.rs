@@ -2,7 +2,8 @@ use node::*;
 use super::*;
 
 
-pub struct Seq<P, Q> {
+pub struct Seq<P, Q>
+{
     pub(crate) p: P,
     pub(crate) q: Q,
 }
@@ -24,6 +25,12 @@ where
         g.set(pind, box node!(pno >> qni));
         (pni, qind, qno)
     }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let (beg,midup) = self.p.p.printDot(curNum);
+        let (middown,end) = self.q.p.printDot(curNum);
+        println!("{} -> {} [label = \"{}\"];",midup,middown,tname::<Mid>());
+        (beg,end)
+    }
 }
 
 impl<'a, P, Q, In: 'a, Mid: 'a, Out: 'a> Process<'a, In>
@@ -42,6 +49,12 @@ where
         let (qni, qind, qno) = self.q.p.compile(g);
         (node!(pnio >> qni), qind, qno)
 
+    }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let (beg,midup) = self.p.p.printDot(curNum);
+        let (middown,end) = self.q.p.printDot(curNum);
+        println!("{} -> {} [label = \"{}\"];",midup,middown,tname::<Mid>());
+        (beg,end)
     }
 }
 
@@ -62,6 +75,12 @@ where
         (pni, pind, node!(pno >> qnio))
 
     }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let (beg,midup) = self.p.p.printDot(curNum);
+        let (middown,end) = self.q.p.printDot(curNum);
+        println!("{} -> {} [label = \"{}\"];",midup,middown,tname::<Mid>());
+        (beg,end)
+    }
 }
 
 impl<'a, P, Q, In: 'a, Mid: 'a, Out: 'a> Process<'a, In>
@@ -79,5 +98,11 @@ where
         let pnio = self.p.p.compileIm(g);
         let qnio = self.q.p.compileIm(g);
         node!(pnio >> qnio)
+    }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let (beg,midup) = self.p.p.printDot(curNum);
+        let (middown,end) = self.q.p.printDot(curNum);
+        println!("{} -> {} [label = \"{}\"];",midup,middown,tname::<Mid>());
+        (beg,end)
     }
 }

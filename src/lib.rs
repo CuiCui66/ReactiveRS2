@@ -5,6 +5,8 @@
 #![feature(plugin)]
 #![feature(test)]
 #![plugin(promacros)]
+#![feature(core_intrinsics)]
+#![feature(arbitrary_self_types)]
 
 extern crate core;
 #[macro_use] extern crate log;

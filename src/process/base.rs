@@ -11,6 +11,7 @@ use super::*;
 
 pub struct PNothing {}
 
+
 impl<'a> Process<'a, ()> for PNothing {
     type Out = ();
     type NI = DummyN<()>;
@@ -20,6 +21,12 @@ impl<'a> Process<'a, ()> for PNothing {
         Nothing {}
     }
     type Mark = IsIm;
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"Nothing\"];",num);
+        (num,num)
+    }
 }
 
 //  _____      __  __       _
@@ -27,6 +34,7 @@ impl<'a> Process<'a, ()> for PNothing {
 // | |_ | '_ \| |\/| | | | | __|
 // |  _|| | | | |  | | |_| | |_
 // |_|  |_| |_|_|  |_|\__,_|\__|
+
 
 impl<'a, F: 'a, In: 'a, Out: 'a> Process<'a, In> for F
     where
@@ -43,7 +51,14 @@ impl<'a, F: 'a, In: 'a, Out: 'a> Process<'a, In> for F
         FnMutN(self)
     }
     type Mark = IsIm;
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"FnMut\"];",num);
+        (num,num)
+    }
 }
+
 
 //      _
 //     | |_   _ _ __ ___  _ __
@@ -71,6 +86,13 @@ impl<'a, In: 'a> Process<'a, In> for Jump {
         let out = g.reserve();
         (node!(store(rcin) >> jump(out)), out, load(rcout))
     }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"Jump\"];",num);
+        (num,num)
+    }
+
 }
 
 
@@ -98,5 +120,11 @@ impl<'a, In: 'a> Process<'a, In> for Pause {
         let rcout = rcin.clone();
         let out = g.reserve();
         (node!(store(rcin) >> pause(out)), out, load(rcout))
+    }
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"Pause\"];",num);
+        (num,num)
     }
 }
