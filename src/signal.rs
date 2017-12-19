@@ -14,19 +14,26 @@ use engine::{SubRuntime, Tasks};
 /// Structure representing a signal runtime
 pub(crate) struct SignalRuntime<SV>
 {
+
     /// Is used to be able to do passive waiting,
     /// every instant there is an emitted value, this id increase (modulo 2)
-    pub(crate) id: RefCell<i32>,
+    id: RefCell<i32>,
+
     /// Indicates if the signal is set or not at the current instant
     pub(crate) is_set: RefCell<bool>,
+
     /// Indicates if the signal was set or not at the last instant
     pub(crate) pre_set: RefCell<bool>,
+
     /// Contains the ids of the nodes that await the signal
     pub(crate) pending_await: RefCell<Vec<usize>>,
+
     /// Contains the ids of the nodes that await_immediate the signal
     pub(crate) pending_await_immediate: RefCell<Vec<usize>>,
+
     /// Contains the ids of the nodes that present the signal
     pub(crate) pending_present: RefCell<Vec<(usize,usize)>>,
+
     /// Contains the values of the signal
     pub(crate) values: SV
 }
@@ -35,7 +42,7 @@ pub(crate) struct SignalRuntime<SV>
 impl<SV> SignalRuntime<SV>
 {
     /// Create a new signal runtime, given a structure representing its value
-    pub fn new(signal_value: SV) -> Self {
+    fn new(signal_value: SV) -> Self {
         SignalRuntime {
             id: RefCell::new(0),
             is_set: RefCell::new(false),
@@ -50,7 +57,7 @@ impl<SV> SignalRuntime<SV>
 
 impl SignalRuntime<PureSignalValue> {
     /// Create a new signal runtime, that has no value
-    pub fn new_pure() -> Self {
+    fn new_pure() -> Self {
         SignalRuntime::new(PureSignalValue::new())
     }
 }
@@ -60,7 +67,7 @@ where
     V: Clone
 {
     /// Create a new signal runtime, which has a value that can be cloned
-    pub fn new_mc(default_value: V, gather: Box<FnMut(E, &mut V)>) -> Self {
+    fn new_mc(default_value: V, gather: Box<FnMut(E, &mut V)>) -> Self {
         SignalRuntime::new(MCSignalValue::new(default_value,gather))
     }
 }
@@ -75,14 +82,19 @@ where
 
 /// Trait used to represent the values stored in a signal runtime
 pub trait SignalValue {
+
     /// The type of the values that are emitted
     type E;
+
     /// The value of the signal that is stored
     type V;
+
     /// Get the value of the signal of the last instant
     fn get_pre_value(&self) -> Self::V;
+
     /// Gather the emitted value
     fn gather(&self, emit_value: Self::E);
+
     /// Reset the value stored by the signal,
     /// and stored the last one as the last instant value
     fn reset_value(&self);
@@ -123,12 +135,16 @@ impl SignalValue for PureSignalValue {
 
 /// Structure representing the values of a multi consumer signal
 pub struct MCSignalValue<E,V> {
+
     /// The default value of the signal
     default_value: V,
+
     /// The value of the signal for the current instant
     current_value: RefCell<V>,
+
     /// The value of the signal at the last instant
     pre_value: RefCell<V>,
+
     /// The function used to gather the signals
     gather: RefCell<Box<FnMut(E, &mut V)>>,
 }
