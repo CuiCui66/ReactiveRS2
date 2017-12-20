@@ -9,10 +9,10 @@ log = "0.3"
 env_logger = "0.3"
 time = "0.1.38"
 
-[[bin]]
-name = "gol"
-path = "src/gameoflife.rs"
+# [[bin]]
+# name = "gol"
+# path = "src/gameoflife.rs"
 
-[[bin]]
-name = "sb"
-path = "src/sandbox.rs"
+# [[bin]]
+# name = "sb"
+# path = "src/sandbox.rs"
