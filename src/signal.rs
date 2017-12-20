@@ -92,11 +92,11 @@ pub trait SignalValue {
     fn get_pre_value(&self) -> Self::V;
 
     /// Gather the emitted value
-    fn gather(&self, emit_value: Self::E);
+    fn gather(&mut self, emit_value: Self::E);
 
     /// Reset the value stored by the signal,
     /// and stored the last one as the last instant value
-    fn reset_value(&self);
+    fn reset_value(&mut self);
 }
 
 
@@ -120,8 +120,8 @@ impl SignalValue for PureSignalValue {
     type E = ();
     type V = ();
     fn get_pre_value(&self) -> () {}
-    fn gather(&self, _emit_value: ()) {}
-    fn reset_value(&self) {}
+    fn gather(&mut self, _emit_value: ()) {}
+    fn reset_value(&mut self) {}
 }
 
 
@@ -139,13 +139,13 @@ pub struct MCSignalValue<E,V> {
     default_value: V,
 
     /// The value of the signal for the current instant
-    current_value: RefCell<V>,
+    current_value: V,
 
     /// The value of the signal at the last instant
-    pre_value: RefCell<V>,
+    pre_value: V,
 
     /// The function used to gather the signals
-    gather: RefCell<Box<FnMut(E, &mut V)>>,
+    gather: Box<FnMut(E, &mut V)>,
 }
 
 impl<E,V> MCSignalValue<E,V>
@@ -156,9 +156,9 @@ where
     fn new(default_value: V, gather: Box<FnMut(E, &mut V)>) -> Self {
         MCSignalValue {
             default_value: default_value.clone(),
-            current_value: RefCell::new(default_value.clone()),
-            pre_value: RefCell::new(default_value),
-            gather: RefCell::new(gather),
+            current_value: default_value.clone(),
+            pre_value: default_value,
+            gather,
         }
     }
 }
@@ -170,17 +170,16 @@ where
     type E = E;
     type V = V;
     fn get_pre_value(&self) -> V {
-        self.pre_value.borrow().clone()
+        self.pre_value.clone()
     }
 
-    fn gather(&self, emit_value: E) {
-        (&mut *self.gather.borrow_mut())(emit_value, &mut *self.current_value.borrow_mut())
+    fn gather(&mut self, emit_value: E) {
+        (&mut self.gather)(emit_value, &mut self.current_value)
     }
 
-    fn reset_value(&self) {
-        let mut current_value = self.current_value.borrow_mut();
-        mem::swap(&mut *self.pre_value.borrow_mut(), &mut *current_value);
-        *current_value = self.default_value.clone();
+    fn reset_value(&mut self) {
+        mem::swap(&mut self.pre_value, &mut self.current_value);
+        self.current_value = self.default_value.clone();
     }
 }
 

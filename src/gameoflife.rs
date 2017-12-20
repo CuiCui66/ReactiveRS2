@@ -42,11 +42,11 @@ impl SignalValue for BoardData {
        self.data.clone()
     }
 
-    fn reset_value(&self) {
+    fn reset_value(&mut self) {
         self.data.borrow_mut().0 += 1;
     }
 
-    fn gather(&self, (i,j): (usize, usize)) {
+    fn gather(&mut self, (i,j): (usize, usize)) {
         let mut data = self.data.borrow_mut();
         data.1[i][j] = data.0;
     }
