@@ -94,6 +94,26 @@ where
 }
 
 
+// __     __    _
+// \ \   / /_ _| |_   _  ___
+//  \ \ / / _` | | | | |/ _ \
+//   \ V / (_| | | |_| |  __/
+//    \_/ \__,_|_|\__,_|\___|
+
+pub struct NValue<V>(pub V);
+
+impl<'a, V: 'a> Node<'a, ()> for NValue<V>
+where
+    V: Clone
+{
+    type Out = V;
+
+    fn call(&mut self, _: &mut SubRuntime<'a>, _: ()) -> V {
+        self.0.clone()
+    }
+
+}
+
 //  _____      __  __       _
 // |  ___| __ |  \/  |_   _| |_
 // | |_ | '_ \| |\/| | | | | __|

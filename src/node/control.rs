@@ -52,6 +52,7 @@ impl<'a> Node<'a, ()> for NPause {
 // | |___| | | | (_) | | (_|  __/
 //  \____|_| |_|\___/|_|\___\___|
 
+#[derive(Clone, Copy)]
 pub enum ChoiceData<T, F> {
     True(T),
     False(F),

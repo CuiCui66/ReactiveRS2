@@ -29,6 +29,40 @@ impl<'a> Process<'a, ()> for PNothing {
     }
 }
 
+// __     __    _
+// \ \   / /_ _| |_   _  ___
+//  \ \ / / _` | | | | |/ _ \
+//   \ V / (_| | | |_| |  __/
+//    \_/ \__,_|_|\__,_|\___|
+
+pub struct PValue<V>(pub V);
+
+pub fn value<V>(value: V) -> PValue<V> {
+    PValue(value)
+}
+
+impl<'a, V: 'a> Process<'a, ()> for PValue<V>
+where
+    V: Clone
+{
+    type Out = V;
+    type NI = DummyN<()>;
+    type NO = DummyN<V>;
+    type NIO = NValue<V>;
+    type Mark = IsIm;
+
+    fn compileIm(self, _: &mut Graph) -> Self::NIO {
+        NValue(self.0)
+    }
+
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"Value\"];",num);
+        (num,num)
+    }
+}
+
 //  _____      __  __       _
 // |  ___| __ |  \/  |_   _| |_
 // | |_ | '_ \| |\/| | | | | __|

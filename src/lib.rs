@@ -395,12 +395,10 @@ mod tests {
         let signal = SignalRuntimeRef::new_pure();
         let mut rt = rt! {
             loop {
-                |_| { (signal.clone(), ()) };
+                value((signal.clone(), ()));
                 EmitD;
                 Pause;
-                |_| {
-                    True(())
-                }
+                value(True(()))
             }
         };
 
@@ -416,12 +414,10 @@ mod tests {
         let signal = SignalRuntimeRef::new_pure();
         let mut rt = rt! {
             loop {
-                |_:()| { };
+                value(());
                 emit_value(signal.clone(),());
                 Pause;
-                |_| {
-                    True(())
-                }
+                value(True(()))
             }
         };
 
@@ -437,12 +433,10 @@ mod tests {
         let signal = SignalRuntimeRef::new_pure();
         let mut rt = rt! {
             loop {
-                |_| { ((signal.clone(), ()), signal.clone()) };
+                value(((signal.clone(), ()), signal.clone()));
                 EmitD;
                 AwaitD;
-                |_:()| {
-                    True(())
-                }
+                value(True(()))
             }
         };
 
@@ -459,7 +453,7 @@ mod tests {
         let signal = SignalRuntimeRef::new_pure();
         let mut rt = rt! {
             loop {
-                |_| {()};
+                value(());
                 emit_value(signal.clone(), ());
                 AwaitS(signal.clone());
                 |_:((),())| {
