@@ -13,16 +13,14 @@ use engine::{SubRuntime, Tasks, EndOfInstantCallback};
 /// Structure representing a signal runtime
 pub(crate) struct SignalRuntime<SV>
 {
+    /// The last instant where the signal was set
+    pub(crate) last_set: usize,
 
-    /// Indicates if the signal has set an end of instant callback
-    /// for the current instant
-    pub(crate) has_eoi_callback: bool,
+    /// The before last instant where the signal was set
+    pub(crate) pre_last_set: usize,
 
-    /// Indicates if the signal is set or not at the current instant
-    pub(crate) is_set: bool,
-
-    /// Indicates if the signal was set or not at the last instant
-    pub(crate) pre_set: bool,
+    /// The last instant where the values were updated
+    pub(crate) last_update: usize,
 
     /// Contains the ids of the nodes that await the signal
     pub(crate) pending_await: Vec<usize>,
@@ -43,9 +41,9 @@ impl<SV> SignalRuntime<SV>
     /// Create a new signal runtime, given a structure representing its value
     fn new(signal_value: SV) -> Self {
         SignalRuntime {
-            has_eoi_callback: false,
-            is_set: false,
-            pre_set: false,
+            last_set: 0,
+            pre_last_set: 0,
+            last_update: 2,
             pending_await: vec![],
             pending_await_immediate: vec![],
             pending_present: vec![],
@@ -270,47 +268,58 @@ where
         }
     }
 
+    /// Update the values
+    pub(crate) fn update_values(&self, current_instant: usize, signal_runtime: &mut RefMut<SignalRuntime<SV>>) {
+        if signal_runtime.last_update + 1 < current_instant {
+            signal_runtime.values.reset_value();
+            signal_runtime.values.reset_value();
+            signal_runtime.last_update = current_instant;
+        } else if signal_runtime.last_update < current_instant {
+            signal_runtime.values.reset_value();
+            signal_runtime.last_update = current_instant;
+        }
+    }
 
     /// Emit a value to the signal
     pub(crate) fn emit(&self, emit_value: E, sub_runtime: &mut SubRuntime<'a>) {
         let mut signal_runtime = self.signal_runtime.borrow_mut();
-        // We gather the emitted value
-        signal_runtime.values.gather(emit_value);
 
         // If the signal is already set, we are finished
-        if signal_runtime.is_set {
+        if signal_runtime.last_set == sub_runtime.current_instant {
+            signal_runtime.values.gather(emit_value);
             return;
         }
 
-        signal_runtime.is_set = true;
+        signal_runtime.pre_last_set = signal_runtime.last_set;
+        signal_runtime.last_set = sub_runtime.current_instant;
+
+        self.update_values(sub_runtime.current_instant, &mut signal_runtime);
+
+        signal_runtime.values.gather(emit_value);
 
         // We process the awaiting nodes
         self.process_pending_await_immediate(&mut sub_runtime.tasks, &mut signal_runtime);
         self.process_pending_await(&mut sub_runtime.tasks, &mut signal_runtime);
         self.process_pending_present(&mut sub_runtime.tasks, &mut signal_runtime);
-
-
-        if !signal_runtime.has_eoi_callback {
-            sub_runtime.eoi.pending.push(box (*self).clone());
-            signal_runtime.has_eoi_callback = true;
-        }
     }
 
     /// Await the signal to be emitted, and then execute the node at the next instant,
-    pub(crate) fn await(&self, tasks: &mut Tasks, node: usize) {
-        if self.signal_runtime.borrow().is_set {
-            tasks.next.push(node);
+    pub(crate) fn await(&self, sub_runtime: &mut SubRuntime<'a>, node: usize) {
+        let mut signal_runtime = self.signal_runtime.borrow_mut();
+        if signal_runtime.last_set == sub_runtime.current_instant {
+            sub_runtime.tasks.next.push(node);
         } else {
-            self.signal_runtime.borrow_mut().pending_await.push(node);
+            signal_runtime.pending_await.push(node);
         }
     }
 
     /// Await the signal to be emitted, and then exexute the node at the current instant
-    pub(crate) fn await_immediate(&self, tasks: &mut Tasks, node: usize) {
-        if self.signal_runtime.borrow().is_set {
-            tasks.current.push(node);
+    pub(crate) fn await_immediate(&self, sub_runtime: &mut SubRuntime<'a>, node: usize) {
+        let mut signal_runtime = self.signal_runtime.borrow_mut();
+        if signal_runtime.last_set == sub_runtime.current_instant {
+            sub_runtime.tasks.current.push(node);
         } else {
-            self.signal_runtime.borrow_mut().pending_await_immediate.push(node);
+            signal_runtime.pending_await_immediate.push(node);
         }
     }
 
@@ -319,27 +328,20 @@ where
     pub(crate) fn present(&self, sub_runtime: &mut SubRuntime<'a>, node_true: usize, node_false: usize) {
         let mut signal_runtime = self.signal_runtime.borrow_mut();
 
-        if signal_runtime.is_set {
+        if signal_runtime.last_set == sub_runtime.current_instant {
             sub_runtime.tasks.current.push(node_true);
         } else {
             signal_runtime.pending_present.push((node_true, node_false));
 
-            if !signal_runtime.has_eoi_callback {
+            if signal_runtime.pending_present.len() == 1 {
                 sub_runtime.eoi.pending.push(box (*self).clone());
-
-                signal_runtime.has_eoi_callback = true;
             }
         }
     }
 
-    /// Get the value of the signal of the last instant
-    pub fn pre(&self) -> V {
-        self.signal_runtime.borrow().values.get_pre_value()
-    }
-
     /// Return true if the signal was set at the last instant
-    pub fn pre_set(&self) -> bool {
-        self.signal_runtime.borrow().pre_set
+    pub fn pre_set(&self, current_instant: usize) -> bool {
+        self.signal_runtime.borrow().pre_last_set + 1 == current_instant
     }
 }
 
@@ -353,17 +355,6 @@ where
         let nodes = take(&mut signal_runtime.pending_present);
         for node in nodes {
             sub_runtime.tasks.current.push(node.1);
-        }
-
-        signal_runtime.values.reset_value();
-
-        if signal_runtime.is_set {
-            signal_runtime.is_set = false;
-            signal_runtime.pre_set = true;
-            sub_runtime.eoi.pending.push(box (*self).clone());
-        } else {
-            signal_runtime.has_eoi_callback = false;
-            signal_runtime.pre_set = false;
         }
     }
 }

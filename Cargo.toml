@@ -8,6 +8,7 @@ promacros = { path = "promacros"}
 log = "0.3"
 env_logger = "0.3"
 time = "0.1.38"
+cpuprofiler = "0.0.3"
 
 [[bin]]
 name = "gol"

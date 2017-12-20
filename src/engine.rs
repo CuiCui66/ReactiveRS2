@@ -88,6 +88,8 @@ pub struct SubRuntime<'a> {
     pub(crate) tasks: Tasks,
     /// The end of instant continuations.
     pub(crate) eoi: EndOfInstant<'a>,
+    /// The id of the current instant.
+    pub(crate) current_instant: usize,
 }
 
 
@@ -108,6 +110,7 @@ impl<'a> Runtime<'a> {
         Runtime::<'a> {
             nodes: vec![],
             sub_runtime: SubRuntime {
+                current_instant: 2,
                 tasks: Tasks {
                     current: vec![],
                     next: vec![],
@@ -177,6 +180,8 @@ impl<'a> Runtime<'a> {
         for eoi in eois {
             eoi.on_end_of_instant(&mut self.sub_runtime);
         }
+
+        self.sub_runtime.current_instant += 1;
 
         self.sub_runtime.tasks.current.len() > 0 || self.sub_runtime.eoi.pending.len() > 0
     }

@@ -4,6 +4,7 @@
 
 #[macro_use] extern crate ReactiveRS2;
 extern crate time;
+extern crate cpuprofiler;
 
 use ReactiveRS2::process::*;
 use ReactiveRS2::signal::*;
@@ -12,21 +13,18 @@ use ReactiveRS2::node::ChoiceData::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 use time::SteadyTime;
+use cpuprofiler::PROFILER;
 
 type CellSignal = SignalRuntimeRef<MCSignalValue<bool,(bool,usize)>>;
 type BoardSignal = SignalRuntimeRef<BoardData>;
 
 struct BoardData {
-    width: usize,
-    height: usize,
     data: Rc<RefCell<(usize, Vec<Vec<usize>>)>>,
 }
 
 impl BoardData {
     fn new(width: usize, height: usize) -> (BoardData, Rc<RefCell<(usize,Vec<Vec<usize>>)>>) {
         let board_data = BoardData {
-            width,
-            height,
             data: Rc::new(RefCell::new((1,vec![vec![0;width];height]))),
         };
         let board_values = board_data.data.clone();
@@ -187,18 +185,20 @@ fn main() {
 
         let mut rt = rt!(rt2; rt1);
 
-        let n = 10_000;
+        let n = 100_000;
         let start = SteadyTime::now();
+        PROFILER.lock().unwrap().start("./profile").unwrap();
         for _ in 0..n {
             rt.instant();
         }
+        PROFILER.lock().unwrap().stop().unwrap();
         println!("{}", n as f32 / ((SteadyTime::now() - start).num_nanoseconds().unwrap() as f32 / 1_000_000_000.))
     }
 
     let values = board_values.borrow();
     for i in 0..height {
         for j in 0..width {
-            if values.1[i][j] == values.0-1 {
+            if values.1[i][j] == values.0 {
                 print!("+");
             } else {
                 print!(" ");

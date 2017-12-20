@@ -235,9 +235,11 @@ where
 
     fn call(
         &mut self,
-        _: &mut SubRuntime<'a>,
+        sub_runtime: &mut SubRuntime<'a>,
         (sr, val): (SignalRuntimeRef<SV>, In),
     ) -> Self::Out {
+        let mut signal_runtime = sr.signal_runtime.borrow_mut();
+        sr.update_values(sub_runtime.current_instant, &mut signal_runtime);
         (sr.signal_runtime.borrow().values.get_pre_value(), val)
     }
 }
@@ -248,8 +250,10 @@ where
 {
     type Out = V;
 
-    fn call(&mut self, _: &mut SubRuntime<'a>, sr: SignalRuntimeRef<SV>) -> Self::Out {
-        sr.signal_runtime.borrow().values.get_pre_value()
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: SignalRuntimeRef<SV>) -> Self::Out {
+        let mut signal_runtime = sr.signal_runtime.borrow_mut();
+        sr.update_values(sub_runtime.current_instant, &mut signal_runtime);
+        signal_runtime.values.get_pre_value()
     }
 }
 
@@ -274,10 +278,12 @@ where
 
     fn call(
         &mut self,
-        _: &mut SubRuntime<'a>,
+        sub_runtime: &mut SubRuntime<'a>,
         _: (),
     ) -> Self::Out {
-        self.0.signal_runtime.borrow().values.get_pre_value()
+        let mut signal_runtime = self.0.signal_runtime.borrow_mut();
+        self.0.update_values(sub_runtime.current_instant, &mut signal_runtime);
+        signal_runtime.values.get_pre_value()
     }
 }
 
@@ -300,7 +306,7 @@ where
     type Out = SignalRuntimeRef<SV>;
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: SignalRuntimeRef<SV>) -> Self::Out {
-        sr.await(&mut sub_runtime.tasks, self.0);
+        sr.await(sub_runtime, self.0);
         sr
     }
 }
@@ -324,7 +330,7 @@ where
     type Out = ();
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, _: ()) -> Self::Out {
-        self.0.await(&mut sub_runtime.tasks, self.1);
+        self.0.await(sub_runtime, self.1);
     }
 }
 
@@ -347,7 +353,7 @@ impl<'a, SV: 'a> Node<'a, SignalRuntimeRef<SV>> for NAwaitImmediateD
     type Out = ();
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: SignalRuntimeRef<SV>) -> Self::Out {
-        sr.await_immediate(&mut sub_runtime.tasks, self.0);
+        sr.await_immediate(sub_runtime, self.0);
     }
 }
 
@@ -369,7 +375,7 @@ where
     type Out = ();
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, _: ()) -> Self::Out {
-        self.0.await_immediate(&mut sub_runtime.tasks, self.1);
+        self.0.await_immediate(sub_runtime, self.1);
     }
 }
 

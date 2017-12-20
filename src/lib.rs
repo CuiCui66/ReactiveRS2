@@ -322,27 +322,6 @@ mod tests {
     }
 
     #[test]
-    fn emit_pre() {
-        let mut value = 0;
-        let signal = SignalRuntimeRef::new_mc(1, box |e: i32, v: &mut i32| { *v *= e;});
-        {
-            run! {
-                |_| {
-                    ((signal.clone(),2),((signal.clone(),3),((signal.clone(),7), signal.clone())))
-                };
-                EmitD;
-                EmitD;
-                EmitD;
-                Pause;
-                |val| {
-                    value = signal.clone().pre();
-                }
-            }
-        }
-        assert_eq!(value, 42);
-    }
-
-    #[test]
     fn present_true() {
         let mut value = RefCell::new(0);
         let signal = SignalRuntimeRef::new_pure();
