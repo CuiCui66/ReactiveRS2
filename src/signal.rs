@@ -323,7 +323,7 @@ where
         if signal_runtime.is_set {
             sub_runtime.tasks.current.push(node_true);
         } else {
-            self.signal_runtime.borrow_mut().pending_present.push((node_true, node_false));
+            signal_runtime.pending_present.push((node_true, node_false));
 
             if !signal_runtime.has_eoi_callback {
                 sub_runtime.eoi.pending.push(box (*self).clone());
