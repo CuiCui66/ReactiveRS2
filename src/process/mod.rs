@@ -4,58 +4,138 @@ use std::marker::PhantomData;
 use signal::*;
 pub use std::intrinsics::type_name;
 
+/// Contains all basic struct of reactive processes, closure, Pause, ...
 mod base;
+#[doc(hidden)] // for private doc remove for public doc
 pub use self::base::*;
+
+/// Contains standard control structures : `if` and `loop`
 mod control;
+#[doc(hidden)]
 pub use self::control::*;
+
+/// Contains sequencing structure i.e `;`
 mod seq;
+#[doc(hidden)]
 pub use self::seq::*;
+
+/// Contains parallel structures i.e `||` and `BigPar`
 mod par;
+#[doc(hidden)]
 pub use self::par::*;
+
+/// Contains signal related control structures.
 mod signal;
+#[doc(hidden)]
 pub use self::signal::*;
 
-pub trait Is {
-    type Value;
-}
+// trait Is {
+//     type Value;
+// }
 
-impl<T> Is for T {
-    type Value = T;
-}
+// impl<T> Is for T {
+//     type Value = T;
+// }
 
-pub struct NotIm {}
-pub struct IsIm {}
+///[Im]: trait.Im.html
+///[iI]: struct.IsIm.html
+///[nI]: struct.NotIm.html
+
+/// Mark trait : it marks if the a process is immediate or not.
+///
+/// Only [`IsIm`][iI] and [`NotIm`][nI] should implement this trait.
 pub trait Im: Sized + 'static {}
+
+/// Marker associated to [`Im`](trait.Im.html) : marks the process as non-immediate.
+pub struct NotIm {}
 impl Im for NotIm {}
+
+/// Marker associated to [`Im`](trait.Im.html) : marks the process as immediate.
+pub struct IsIm {}
 impl Im for IsIm {}
 
 
-fn tname<T>()-> &'static str{
-    unsafe{type_name::<T>()}
-}
-
-
+/// General trait for representing a reactive process.
+///
+/// [Im]:  trait.Im.html
+/// [iI]:  struct.IsIm.html
+/// [noI]: struct.NotIm.html
+/// [NI]:  trait.Process.html#associatedtype.NI
+/// [NO]:  trait.Process.html#associatedtype.NO
+/// [NIO]: trait.Process.html#associatedtype.NIO
+/// [c]:   trait.Process.html#method.compile
+/// [cI]:  trait.Process.html#method.compileIm
+/// [Gr]:  ../engine/struct.Graph.html
+///
+/// A process represent any reactive calculation that takes an input value of type `In`
+/// and outputs a value of type `Out`. `()` is used to represent a no-value.
+/// A process when entering a Runtime, will be compiled to control-flow graph of Nodes.
+/// A process may represent a computation that spans on several instant or just a
+/// single instant :
+///
+/// There are to kinds of process: immediate and not-immediate.
+/// Because it is not possible to have the same static interface for both, I should have used two
+/// different traits but rust does not support overloading, so I need a single trait.
+/// As result the `Process` trait is a combination of two traits in one:
+///
+/// * If `Mark` is set to [`IsIm`][iI], the process is immediate, the compilation method is
+///   [`compileIm`][cI] which outputs a single Node of type [`NIO`][NIO].
+///   The type [`NI`][NI] and [`NO`][NO] have dummy values and [`compile`][c] will crash if called.
+///
+/// * If `Mark` is set to [`NotIm`][noI], the process is not immediate, the compilation method is
+///   [`compile`][c] which outputs an input Node of type [`NI`][NI],
+///   and an output Node of type [`NO`][NO]
+///   along with its id (see [`Graph`][Gr]).
+///   The type [`NIO`][NIO] has a dummy value and [`compileIm`][cI] will crash if called.
+///
+///Any other method will work in both cases.
 pub trait Process<'a, In: 'a>: 'a + Sized{
+    /// The output type of the process.
     type Out: 'a;
+
+    /// The input node when compiling in non-immediate mode
     type NI: Node<'a, In, Out = ()> + Sized;
+    /// The output node when compiling in non-immediate mode
     type NO: Node<'a, (), Out = Self::Out> + Sized;
-    /// If mark is set to IsIm, compile panics, if it is NotIm, compileIm panics
+
+    /// Determines the type of the process: immediate or not.
     type Mark: Im;
+
+    /// Compile a non-immediate process.
+    ///
+    /// This method is required if `Mark` = `NotIm`.
+    /// The process may be compiled to an arbitrary control-flow graph, which is set directly
+    /// in the mutable variable recieved as input.
+    /// `compile` only outputs both ends of the process's graph:
+    ///
+    /// * The input node which must be fed with the input value of the process, it will
+    ///   than probably call by id any node in the graph.
+    /// * The output node is given with an id. It will give the output value of the process
+    ///   when called during the normal execution of the runtime (i.e after another node has put
+    ///   its id in the runtime). This node must be placed (after adding other stuff behind) in
+    ///   the id slot given as middle value so other node can reference it.
     fn compile(self, _: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         unreachable!();
     }
 
+    ///The Input-Output node when compiling in immediate mode.
     type NIO: Node<'a, In, Out = Self::Out>;
+
+    /// Compile an immediate process
+    ///
+    /// It just outputs a node that do the whole computation represented by the process in a single instant.
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         unreachable!();
     }
 
-    // pretty print
-
+    /// Print this process as a control flow graph in dot language on stdout.
+    ///
+    /// The input ref is the first unused node id.
+    /// The two return value are the input and output of the graph representing the process.
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize);
 
-    // process construction
 
+    /// Build the sequence of two process.
     fn seq<P>(self, p: P) -> Seq<MarkedProcess<Self, Self::Mark>, MarkedProcess<P, P::Mark>>
     where
         P: Process<'a, Self::Out>,
@@ -66,6 +146,7 @@ pub trait Process<'a, In: 'a>: 'a + Sized{
         }
     }
 
+    /// Builds a process taking a ChoiceData value and choosing the right process to call with it.
     fn choice<PF, InF: 'a>(
         self,
         p: PF,
@@ -80,6 +161,7 @@ pub trait Process<'a, In: 'a>: 'a + Sized{
 
     }
 
+    /// Builds the present construct which takes a signal, see PresentD.
     fn present<PF>(
         self,
         p: PF,
@@ -93,10 +175,15 @@ pub trait Process<'a, In: 'a>: 'a + Sized{
         }
     }
 
-    fn ploop(self) -> PLoop<MarkedProcess<Self, Self::Mark>> {
+    /// The process must returns a ChoiceData Value,
+    fn ploop<ROut>(self) -> PLoop<MarkedProcess<Self, Self::Mark>>
+        where
+        Self: Process<'a, In,Out = ChoiceData<In,ROut>>
+    {
         PLoop { p: mp(self) }
     }
 
+    /// Put two processes in parallel
     fn join<InQ: 'a, Q>(
         self,
         q: Q,
@@ -110,11 +197,13 @@ pub trait Process<'a, In: 'a>: 'a + Sized{
         }
     }
 
+    /// Boxes a process to improve compile-time (rust compilation) performance.
     fn pbox(self) -> Pbox<'a, In, Self::Out, Self::NI, Self::NO, Self::NIO, Self::Mark> {
         Pbox { p: box self }
     }
 }
 
+/// Join N process in parallel, The input value must be `Copy` and the output value is `()`
 pub fn big_join<'a, In: 'a, P>(vp: Vec<P>) -> BigPar<MarkedProcess<P, P::Mark>>
 where
     P: Process<'a, In, Out = ()> + Sized,
@@ -136,16 +225,32 @@ where
 //   |_|\___|\___|_| |_|_| |_|_|\___\__,_|_|
 
 
-pub trait Graphfiller<'a> {
-    fn fill_graph(self, g: &mut Graph<'a>) -> usize;
-}
-
+/// This type is to mark a process with [`IsIm`](struct.IsIm.html) or `NotIm`(struct.NotIm.html).
+///
+/// I've introduced it to do type dispatch on processes:
+/// nearly all structures that should take a process, take a marked process instead to know how to use it.
 pub struct MarkedProcess<P, Mark: Im> {
     pub p: P,
     pd: PhantomData<Mark>,
 }
 
-impl<'a, P, Mark> Graphfiller<'a> for MarkedProcess<P, Mark>
+/// Marks a process with its [`Im`](trait.Im.html) tag
+pub fn mp<'a, In: 'a, P>(p: P) -> MarkedProcess<P, P::Mark>
+    where
+    P: Process<'a, In>,
+{
+    MarkedProcess {
+        p: p,
+        pd: PhantomData,
+    }
+}
+
+/// This is trait of an object that can be compiled to a control-flow [`Graph`](../engine/struct.Graph.html).
+pub trait GraphFiller<'a> {
+    fn fill_graph(self, g: &mut Graph<'a>) -> usize;
+}
+
+impl<'a, P, Mark> GraphFiller<'a> for MarkedProcess<P, Mark>
 where
     P: Process<'a, (), Out = ()>,
     Mark: Im,
@@ -156,7 +261,7 @@ where
 }
 
 
-impl<'a, P> Graphfiller<'a> for MarkedProcess<P, NotIm>
+impl<'a, P> GraphFiller<'a> for MarkedProcess<P, NotIm>
 where
     P: Process<'a, (), Out = ()>,
 {
@@ -167,23 +272,13 @@ where
     }
 }
 
-impl<'a, P> Graphfiller<'a> for MarkedProcess<P, IsIm>
+impl<'a, P> GraphFiller<'a> for MarkedProcess<P, IsIm>
 where
     P: Process<'a, (), Out = ()>,
 {
     fn fill_graph(self, g: &mut Graph<'a>) -> usize {
         let pnio = self.p.compileIm(g);
         g.add(box pnio)
-    }
-}
-
-pub fn mp<'a, In: 'a, P>(p: P) -> MarkedProcess<P, P::Mark>
-where
-    P: Process<'a, In>,
-{
-    MarkedProcess {
-        p: p,
-        pd: PhantomData,
     }
 }
 
@@ -296,6 +391,11 @@ impl<In, Out> ForceType<In, Out> {
 // |  __/| |  | | | | | |_| |_| | | | (_| | |_) | | | |
 // |_|   |_|  |_|_| |_|\__|\____|_|  \__,_| .__/|_| |_|
 //                                        |_|
+
+
+fn tname<T>()-> &'static str{
+    unsafe{type_name::<T>()}
+}
 
 pub fn print_graph<'a,P>(p : &'a mut P)
     where
