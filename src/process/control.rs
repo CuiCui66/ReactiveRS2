@@ -25,6 +25,8 @@ where
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
+    type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
+
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let (ptni, ptind, ptno) = self.pt.p.compile(g);
         let (pfni, pfind, pfno) = self.pf.p.compile(g);
@@ -63,6 +65,8 @@ where
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
+    type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
+
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let ptnio = self.pt.p.compileIm(g);
         let (pfni, pfind, pfno) = self.pf.p.compile(g);
@@ -106,6 +110,8 @@ where
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
+    type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
+
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let (ptni, ptind, ptno) = self.pt.p.compile(g);
         let pfnio = self.pf.p.compileIm(g);
@@ -147,6 +153,8 @@ where
     type NO = DummyN<Out>;
     type NIO = NChoice<PT::NIO, PF::NIO>;
     type Mark = IsIm;
+    type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
+
     fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
         let ptnio = self.pt.p.compileIm(g);
         let pfnio = self.pf.p.compileIm(g);
@@ -181,16 +189,19 @@ pub struct PLoop<P> {
     pub(crate) p: P,
 }
 
-impl<'a, P, In: 'a, Out: 'a> Process<'a, In>
+impl<'a, P, In: 'a, Out: 'a, OnceStruct> Process<'a, In>
     for PLoop<MarkedProcess<P,NotIm>>
     where
-    P: Process<'a, In, Out = ChoiceData<In,Out>>,
+    OnceStruct: NotOnce,
+    P: Process<'a, In, Out = ChoiceData<In,Out>, MarkOnce = OnceStruct>,
 {
     type Out = Out;
     type NI = NSeq<RcStore<In>,NJump>;
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
+    type MarkOnce = SNotOnce;
+
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI,usize,Self::NO){
         trace!("");
         let (pni, pind, pno) = self.p.p.compile(g);
@@ -227,16 +238,19 @@ impl<'a, P, In: 'a, Out: 'a> Process<'a, In>
     }
 }
 
-impl<'a, P, In: 'a, Out: 'a> Process<'a, In>
+impl<'a, P, In: 'a, Out: 'a, OnceStruct> Process<'a, In>
     for PLoop<MarkedProcess<P,IsIm>>
     where
-    P: Process<'a, In, Out = ChoiceData<In,Out>>,
+    OnceStruct: NotOnce,
+    P: Process<'a, In, Out = ChoiceData<In,Out>, MarkOnce = OnceStruct>,
 {
     type Out = Out;
     type NI = DummyN<()>;
     type NO = DummyN<Out>;
     type NIO = LoopIm<P::NIO>;
     type Mark = IsIm;
+    type MarkOnce = SNotOnce;
+
     fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO{
 
         trace!("");

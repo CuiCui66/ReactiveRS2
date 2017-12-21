@@ -389,6 +389,22 @@ mod tests {
         assert_eq!(*value.borrow(), 42);
     }
 
+    #[test]
+    fn fnonce() {
+        let value = Rc::new(RefCell::new(-3));
+        {
+            run!(
+                once(|_:()| {
+                    42
+                });
+                |v:i32| {
+                    *value.borrow_mut() = v;
+                }
+            );
+        }
+        assert_eq!(*value.borrow(), 42);
+    }
+
 
     #[bench]
     fn bench_emitd_pause(bencher: &mut Bencher) {

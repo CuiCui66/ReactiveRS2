@@ -55,6 +55,23 @@ pub struct IsIm {}
 impl Im for IsIm {}
 
 
+pub trait Once: Sized + 'static {}
+pub trait NotOnce: Once {}
+
+pub struct SOnce;
+impl Once for SOnce {}
+
+pub struct SNotOnce;
+impl Once for SNotOnce {}
+impl NotOnce for SNotOnce {}
+
+pub struct And<O1,O2>(pub O1, pub O2);
+impl<O1: Once, O2: Once> Once for And<O1,O2> {}
+
+impl<O1: NotOnce, O2: NotOnce> NotOnce for And<O1, O2> {}
+
+
+
 /// General trait for representing a reactive process.
 ///
 /// [Im]:  trait.Im.html
@@ -100,6 +117,9 @@ pub trait Process<'a, In: 'a>: 'a + Sized{
 
     /// Determines the type of the process: immediate or not.
     type Mark: Im;
+
+    /// Determines if the process can only be called one time
+    type MarkOnce: Once;
 
     /// Compile a non-immediate process.
     ///
@@ -198,7 +218,7 @@ pub trait Process<'a, In: 'a>: 'a + Sized{
     }
 
     /// Boxes a process to improve compile-time (rust compilation) performance.
-    fn pbox(self) -> Pbox<'a, In, Self::Out, Self::NI, Self::NO, Self::NIO, Self::Mark> {
+    fn pbox(self) -> Pbox<'a, In, Self::Out, Self::NI, Self::NO, Self::NIO, Self::Mark, Self::MarkOnce> {
         Pbox { p: box self }
     }
 }
@@ -295,6 +315,8 @@ pub trait ProcessBox<'a, In: 'a>: 'a{
     type NO: Node<'a, (), Out = Self::Out> + Sized;
     /// If mark is set to IsIm, compile panics, if it is NotIm, compileIm panics
     type Mark: Im;
+
+    type MarkOnce: Once;
     fn compile_box(self: Box<Self>, _: &mut Graph<'a>) -> (Self::NI, usize, Self::NO);
 
     type NIO: Node<'a, In, Out = Self::Out>;
@@ -314,6 +336,8 @@ where
     type NO = P::NO;
     type NIO = P::NIO;
     type Mark = P::Mark;
+    type MarkOnce = P::MarkOnce;
+
     fn compile_box(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         (*self).compile(g)
     }
@@ -325,12 +349,12 @@ where
     }
 }
 
-pub struct Pbox<'a, In, Out, NI, NO, NIO, Mark> {
-    p: Box<ProcessBox<'a, In, Out = Out, NI = NI, NO = NO, NIO = NIO, Mark = Mark>>,
+pub struct Pbox<'a, In, Out, NI, NO, NIO, Mark, MarkOnce> {
+    p: Box<ProcessBox<'a, In, Out = Out, NI = NI, NO = NO, NIO = NIO, Mark = Mark, MarkOnce = MarkOnce>>,
 }
 
-impl<'a, In: 'a, Out: 'a, NI, NO, NIO, Mark: Im + 'a> Process<'a, In>
-    for Pbox<'a, In, Out, NI, NO, NIO, Mark>
+impl<'a, In: 'a, Out: 'a, NI, NO, NIO, Mark: Im + 'a, MarkOnce: Once + 'a> Process<'a, In>
+    for Pbox<'a, In, Out, NI, NO, NIO, Mark, MarkOnce>
 where
     NI: Node<'a, In, Out = ()>,
     NO: Node<'a, (), Out = Out>,
@@ -341,6 +365,8 @@ where
     type NO = NO;
     type NIO = NIO;
     type Mark = Mark;
+    type MarkOnce = MarkOnce;
+
     fn compile(self, g: &mut Graph<'a>) -> (NI, usize, NO) {
         self.p.compile_box(g)
     }

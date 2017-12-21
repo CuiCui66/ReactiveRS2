@@ -17,10 +17,12 @@ impl<'a> Process<'a, ()> for PNothing {
     type NI = DummyN<()>;
     type NO = DummyN<()>;
     type NIO = Nothing;
+    type Mark = IsIm;
+    type MarkOnce = SNotOnce;
+
     fn compileIm(self, _: &mut Graph) -> Self::NIO {
         Nothing {}
     }
-    type Mark = IsIm;
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -50,6 +52,7 @@ where
     type NO = DummyN<V>;
     type NIO = NValue<V>;
     type Mark = IsIm;
+    type MarkOnce = SNotOnce;
 
     fn compileIm(self, _: &mut Graph) -> Self::NIO {
         NValue(self.0)
@@ -86,15 +89,16 @@ where
     type NO = DummyN<Out>;
     type NIO = NFnOnce<F>;
     type Mark = IsIm;
+    type MarkOnce = SOnce;
 
     fn compileIm(self, _: &mut Graph) -> Self::NIO {
-        NFnOnce(self.0)
+        NFnOnce(Some(self.0))
     }
 
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
         *curNum += 1;
-        pritnln!("{} [shape = box, label= \"FnOnce\"];",num);
+        println!("{} [shape = box, label= \"FnOnce\"];",num);
         (num,num)
     }
 }
@@ -114,13 +118,14 @@ impl<'a, F: 'a, In: 'a, Out: 'a> Process<'a, In> for F
     type NI = DummyN<()>;
     type NO = DummyN<Out>;
     type NIO = FnMutN<F>;
+    type Mark = IsIm;
+    type MarkOnce = SNotOnce;
 
 
 
     fn compileIm(self, _: &mut Graph) -> Self::NIO {
         FnMutN(self)
     }
-    type Mark = IsIm;
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -150,6 +155,8 @@ impl<'a, In: 'a> Process<'a, In> for Jump {
     type NO = RcLoad<In>;
     type NIO = DummyN<In>;
     type Mark = NotIm;
+    type MarkOnce = SNotOnce;
+
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let rcin = new_rcell();
         let rcout = rcin.clone();
@@ -185,6 +192,8 @@ impl<'a, In: 'a> Process<'a, In> for Pause {
     type NO = RcLoad<In>;
     type NIO = DummyN<In>;
     type Mark = NotIm;
+    type MarkOnce = SNotOnce;
+
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let rcin = new_rcell();
         let rcout = rcin.clone();

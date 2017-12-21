@@ -19,6 +19,8 @@ where
     type NO = Q::NO;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
+    type MarkOnce = And<P::MarkOnce, Q::MarkOnce>;
+
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let (pni, pind, pno) = self.p.p.compile(g);
         let (qni, qind, qno) = self.q.p.compile(g);
@@ -44,6 +46,7 @@ where
     type NO = Q::NO;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
+    type MarkOnce = And<P::MarkOnce, Q::MarkOnce>;
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let pnio = self.p.p.compileIm(g);
         let (qni, qind, qno) = self.q.p.compile(g);
@@ -69,6 +72,7 @@ where
     type NO = NSeq<P::NO, Q::NIO>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
+    type MarkOnce = And<P::MarkOnce, Q::MarkOnce>;
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let (pni, pind, pno) = self.p.p.compile(g);
         let qnio = self.q.p.compileIm(g);
@@ -94,6 +98,7 @@ where
     type NO = DummyN<Out>;
     type NIO = NSeq<P::NIO, Q::NIO>;
     type Mark = IsIm;
+    type MarkOnce = And<P::MarkOnce, Q::MarkOnce>;
     fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
         let pnio = self.p.p.compileIm(g);
         let qnio = self.q.p.compileIm(g);

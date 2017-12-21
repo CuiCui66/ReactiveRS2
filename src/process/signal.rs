@@ -24,6 +24,7 @@ where
     type Mark = IsIm;
     type NIO = NEmitD;
     type Out = In;
+    type MarkOnce = SNotOnce;
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
@@ -46,6 +47,7 @@ where
     type Mark = IsIm;
     type NIO = NEmitD;
     type Out = ();
+    type MarkOnce = SNotOnce;
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
@@ -68,6 +70,7 @@ impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, (Vec<(SignalRuntimeRef<SV>, E)>,In)>
     type Mark = IsIm;
     type NIO = NEmitD;
     type Out = In;
+    type MarkOnce = SNotOnce;
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
@@ -90,6 +93,7 @@ impl<'a, E: 'a, SV: 'a> Process<'a, Vec<(SignalRuntimeRef<SV>, E)>> for EmitD
     type Mark = IsIm;
     type NIO = NEmitD;
     type Out = ();
+    type MarkOnce = SNotOnce;
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
@@ -130,6 +134,7 @@ where
     type Mark = IsIm;
     type NIO = NEmitS<SV, E>;
     type Out = ();
+    type MarkOnce = SNotOnce;
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitS(self.0, PhantomData)
@@ -153,6 +158,7 @@ where
     type Out = In;
     type NIO = NEmitS<SV, E>;
     type Mark = IsIm;
+    type MarkOnce = SNotOnce;
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitS(self.0, PhantomData)
@@ -193,6 +199,7 @@ where
     type Mark = IsIm;
     type NIO = NEmitVecS<SV>;
     type Out = ();
+    type MarkOnce = SNotOnce;
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVecS(self.0)
@@ -216,6 +223,7 @@ where
     type Out = In;
     type NIO = NEmitVecS<SV>;
     type Mark = IsIm;
+    type MarkOnce = SNotOnce;
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVecS(self.0)
@@ -259,6 +267,7 @@ where
     type Mark = IsIm;
     type NIO = NEmitVS<SV, E>;
     type Out = In;
+    type MarkOnce = SNotOnce;
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVS(self.0, self.1)
@@ -303,6 +312,7 @@ impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, In> for EmitVVecS<SV, E>
     type Mark = IsIm;
     type NIO = NEmitVVecS<SV, E>;
     type Out = In;
+    type MarkOnce = SNotOnce;
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVVecS(self.0)
@@ -341,6 +351,7 @@ where
     type NIO = DummyN<V>;
     type NI = NSeq<NAwaitD, RcStore<SignalRuntimeRef<SV>>>;
     type NO = NSeq<RcLoad<SignalRuntimeRef<SV>>, NGetD>;
+    type MarkOnce = SNotOnce;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
@@ -369,6 +380,7 @@ where
     type NIO = DummyN<(V,In)>;
     type NI = NSeq<NPar<NAwaitD,NIdentity>,RcStore<(SignalRuntimeRef<SV>, In)>>;
     type NO = NSeq<RcLoad<(SignalRuntimeRef<SV>, In)>, NGetD>;
+    type MarkOnce = SNotOnce;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
@@ -411,6 +423,7 @@ where
     type NIO = DummyN<(V,In)>;
     type NI = NSeq<RcStore<In>,NAwaitS<SV>>;
     type NO = NSeq<GenP, NPar<NGetS<SV>, RcLoad<In>>>;
+    type MarkOnce = SNotOnce;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
@@ -455,6 +468,7 @@ impl<'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
     type NIO = DummyN<()>;
     type NI = NAwaitImmediateD;
     type NO = Nothing;
+    type MarkOnce = SNotOnce;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
@@ -479,6 +493,7 @@ impl<'a, In: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, In)> for AwaitImmedi
     type NIO = DummyN<In>;
     type NI = NSeq<NSeq<NPar<NIdentity,RcStore<In>>, Ignore2>,NAwaitImmediateD>;
     type NO = RcLoad<In>;
+    type MarkOnce = SNotOnce;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
@@ -522,6 +537,7 @@ impl<'a, In: 'a, V: 'a, SV: 'a> Process<'a, In> for AwaitImmediateS<SV>
     type NIO = DummyN<In>;
     type NI = NSeq<RcStore<In>,NAwaitImmediateS<SV>>;
     type NO = RcLoad<In>;
+    type MarkOnce = SNotOnce;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
@@ -567,6 +583,7 @@ where
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
+    type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let rct = new_rcell();
@@ -610,6 +627,7 @@ for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>>
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
+    type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let rct = new_rcell();
@@ -652,6 +670,7 @@ for PresentD<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>>
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
+    type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let rct = new_rcell();
@@ -694,6 +713,7 @@ for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>>
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
+    type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let rct = new_rcell();
@@ -749,6 +769,7 @@ for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>, SV>
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
+    type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let rct = new_rcell();
@@ -793,6 +814,7 @@ for PresentS<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>, SV>
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
+    type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let rct = new_rcell();
@@ -836,6 +858,7 @@ for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>, SV>
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
+    type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let rct = new_rcell();
@@ -879,6 +902,7 @@ for PresentS<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>, SV>
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
+    type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let rct = new_rcell();
