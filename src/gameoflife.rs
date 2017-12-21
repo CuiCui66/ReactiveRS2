@@ -15,14 +15,22 @@ use std::rc::Rc;
 use time::SteadyTime;
 use cpuprofiler::PROFILER;
 
+/// The type of the cell signal
 type CellSignal = SignalRuntimeRef<MCSignalValue<bool,(bool,usize)>>;
+
+/// The type of the board signal
 type BoardSignal = SignalRuntimeRef<BoardData>;
 
+/// The board data
+/// The first element represent the current instant number
+/// The elements in the vectors represent the last instant where the cell was set
+#[derive(Clone)]
 struct BoardData {
     data: Rc<RefCell<(usize, Vec<Vec<usize>>)>>,
 }
 
 impl BoardData {
+    /// Create a new board with given width and height
     fn new(width: usize, height: usize) -> (BoardData, Rc<RefCell<(usize,Vec<Vec<usize>>)>>) {
         let board_data = BoardData {
             data: Rc::new(RefCell::new((1,vec![vec![0;width];height]))),
@@ -31,6 +39,7 @@ impl BoardData {
         (board_data, board_values)
     }
 }
+
 
 impl SignalValue for BoardData {
     type E = (usize,usize);
@@ -50,10 +59,12 @@ impl SignalValue for BoardData {
     }
 }
 
+/// A board
 struct Board {
     width: usize,
     height: usize,
     signals: Vec<Vec<CellSignal>>,
+    data: BoardData,
 }
 
 impl Board {
