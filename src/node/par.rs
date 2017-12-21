@@ -1,5 +1,7 @@
 use engine::*;
 use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::Mutex;
 use std::cell::*;
 use take::take;
 use super::*;
@@ -91,16 +93,15 @@ pub struct JoinPoint<T1, T2> {
     o2: Option<T2>,
 }
 
-pub fn new_rcjp<T1, T2>() -> Rc<RefCell<JoinPoint<T1, T2>>> {
-    Rc::new(RefCell::new(JoinPoint::default()))
-}
-
 impl<T1, T2> Default for JoinPoint<T1, T2> {
     fn default() -> Self {
         JoinPoint { o1: None, o2: None }
     }
 }
 
+pub fn new_rcjp<T1, T2>() -> Rc<RefCell<JoinPoint<T1, T2>>> {
+    Rc::new(RefCell::new(JoinPoint::default()))
+}
 
 
 pub struct NSetVar1<T1, T2> {
@@ -109,7 +110,7 @@ pub struct NSetVar1<T1, T2> {
 }
 
 pub fn set1<T1, T2>(rc: Rc<RefCell<JoinPoint<T1, T2>>>, dest: usize) -> NSetVar1<T1, T2> {
-    NSetVar1 { rc: rc, dest: dest }
+    NSetVar1 { rc, dest }
 }
 
 impl<'a, T1: 'a, T2: 'a> Node<'a, T1> for NSetVar1<T1, T2> {
@@ -130,7 +131,7 @@ pub struct NSetVar2<T1, T2> {
 }
 
 pub fn set2<T1, T2>(rc: Rc<RefCell<JoinPoint<T1, T2>>>, dest: usize) -> NSetVar2<T1, T2> {
-    NSetVar2 { rc: rc, dest: dest }
+    NSetVar2 { rc, dest }
 }
 
 impl<'a, T1: 'a, T2: 'a> Node<'a, T2> for NSetVar2<T1, T2> {
@@ -157,6 +158,78 @@ impl<'a, T1: 'a, T2: 'a> Node<'a, ()> for NMerge<T1, T2> {
     type Out = (T1, T2);
     fn call(&mut self, _: &mut SubRuntime<'a>, _: ()) -> Self::Out {
         let jp = take(&mut *self.rc.borrow_mut());
+        (jp.o1.unwrap(), jp.o2.unwrap())
+    }
+}
+
+//  ____            ____
+// |  _ \ __ _ _ __|  _ \ __ _ _ __
+// | |_) / _` | '__| |_) / _` | '__|
+// |  __/ (_| | |  |  __/ (_| | |
+// |_|   \__,_|_|  |_|   \__,_|_|
+
+
+pub fn new_arcjp<T1, T2>() -> Arc<Mutex<JoinPoint<T1, T2>>> {
+    Arc::new(Mutex::new(JoinPoint::default()))
+}
+
+
+pub struct NSetVar1Par<T1, T2> {
+    arc: Arc<Mutex<JoinPoint<T1, T2>>>,
+    dest: usize,
+}
+
+pub fn set1_par<T1, T2>(arc: Arc<Mutex<JoinPoint<T1, T2>>>, dest: usize) -> NSetVar1Par<T1, T2> {
+    NSetVar1Par { arc, dest }
+}
+
+impl<'a, T1: 'a, T2: 'a> Node<'a, T1> for NSetVar1Par<T1, T2> {
+    type Out = ();
+    fn call(&mut self, t: &mut SubRuntime<'a>, val: T1) {
+        let mut arc = self.arc.lock().unwrap();
+        arc.o1 = Some(val);
+        if !arc.o2.is_none() {
+            t.tasks.current.push(self.dest);
+        }
+    }
+}
+
+
+
+pub struct NSetVar2Par<T1, T2> {
+    arc: Arc<Mutex<JoinPoint<T1, T2>>>,
+    dest: usize,
+}
+
+pub fn set2_par<T1, T2>(arc: Arc<Mutex<JoinPoint<T1, T2>>>, dest: usize) -> NSetVar2Par<T1, T2> {
+    NSetVar2Par { arc, dest }
+}
+
+impl<'a, T1: 'a, T2: 'a> Node<'a, T2> for NSetVar2Par<T1, T2> {
+    type Out = ();
+    fn call(&mut self, t: &mut SubRuntime<'a>, val: T2) {
+        let mut arc = self.arc.lock().unwrap();
+        arc.o2 = Some(val);
+        if !arc.o1.is_none() {
+            t.tasks.current.push(self.dest);
+        }
+    }
+}
+
+
+
+pub struct NMergePar<T1, T2> {
+    arc: Arc<Mutex<JoinPoint<T1, T2>>>,
+}
+
+pub fn merge_par<T1, T2>(arc: Arc<Mutex<JoinPoint<T1, T2>>>) -> NMergePar<T1, T2> {
+    NMergePar { arc }
+}
+
+impl<'a, T1: 'a, T2: 'a> Node<'a, ()> for NMergePar<T1, T2> {
+    type Out = (T1, T2);
+    fn call(&mut self, _: &mut SubRuntime<'a>, _: ()) -> Self::Out {
+        let jp = take(&mut *self.arc.lock().unwrap());
         (jp.o1.unwrap(), jp.o2.unwrap())
     }
 }
@@ -205,6 +278,40 @@ impl<'a> Node<'a, ()> for NBigMerge {
     type Out = ();
     fn call(&mut self, t: &mut SubRuntime<'a>, _: ()) -> Self::Out {
         let mut bjp = self.rc.borrow_mut();
+        bjp.nb += 1;
+        if bjp.nb == bjp.total {
+            bjp.nb = 0;
+            t.tasks.current.push(bjp.dest);
+        }
+    }
+}
+
+//  ____  _       ____
+// | __ )(_) __ _|  _ \ __ _ _ __
+// |  _ \| |/ _` | |_) / _` | '__|
+// | |_) | | (_| |  __/ (_| | |
+// |____/|_|\__, |_|   \__,_|_|
+//          |___/
+
+
+pub fn new_rcbjp_par(total: usize, dest: usize) -> Arc<Mutex<BigJoinPoint>> {
+    Arc::new(Mutex::new(BigJoinPoint { nb: 0, total, dest }))
+}
+
+
+pub struct NBigMergePar {
+    arc: Arc<Mutex<BigJoinPoint>>,
+}
+
+pub fn big_merge_par(arc: Arc<Mutex<BigJoinPoint>>) -> NBigMergePar {
+    NBigMergePar { arc }
+}
+
+
+impl<'a> Node<'a, ()> for NBigMergePar {
+    type Out = ();
+    fn call(&mut self, t: &mut SubRuntime<'a>, _: ()) -> Self::Out {
+        let mut bjp = self.arc.lock().unwrap();
         bjp.nb += 1;
         if bjp.nb == bjp.total {
             bjp.nb = 0;
