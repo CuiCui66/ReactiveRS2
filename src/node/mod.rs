@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use engine::*;
+use take::take;
 
 mod rcmanip;
 pub use self::rcmanip::*;
@@ -128,8 +129,31 @@ where
 {
     type Out = Out;
     fn call(&mut self, _: &mut SubRuntime<'a>, val: In) -> Out {
-        let &mut FnMutN(ref mut f) = self;
-        f(val)
+        (&mut self.0)(val)
+    }
+}
+
+//  _____       ___
+// |  ___| __  / _ \ _ __   ___ ___
+// | |_ | '_ \| | | | '_ \ / __/ _ \
+// |  _|| | | | |_| | | | | (_|  __/
+// |_|  |_| |_|\___/|_| |_|\___\___|
+
+pub struct NFnOnce<F>(pub Option<F>);
+
+impl<'a, F, In: 'a, Out: 'a> Node<'a, In> for NFnOnce<F>
+where
+    F: FnOnce(In) -> Out + 'a,
+{
+    type Out = Out;
+
+    fn call(&mut self, _: &mut SubRuntime<'a>, val: In) -> Out {
+        let option = take(&mut self.0);
+        if let Some(f) = option {
+            f(val)
+        } else {
+            panic!("NFnOnce was called twice!");
+        }
     }
 }
 

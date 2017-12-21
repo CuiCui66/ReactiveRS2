@@ -63,6 +63,42 @@ where
     }
 }
 
+
+//  _____       ___
+// |  ___| __  / _ \ _ __   ___ ___
+// | |_ | '_ \| | | | '_ \ / __/ _ \
+// |  _|| | | | |_| | | | | (_|  __/
+// |_|  |_| |_|\___/|_| |_|\___\___|
+
+
+pub struct PFnOnce<F>(pub F);
+
+pub fn once<F>(f: F) -> PFnOnce<F> {
+    PFnOnce(f)
+}
+
+impl<'a, F: 'a, In: 'a, Out: 'a> Process<'a, In> for PFnOnce<F>
+where
+    F: FnOnce(In) -> Out,
+{
+    type Out = Out;
+    type NI = DummyN<()>;
+    type NO = DummyN<Out>;
+    type NIO = NFnOnce<F>;
+    type Mark = IsIm;
+
+    fn compileIm(self, _: &mut Graph) -> Self::NIO {
+        NFnOnce(self.0)
+    }
+
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
+        let num = *curNum;
+        *curNum += 1;
+        pritnln!("{} [shape = box, label= \"FnOnce\"];",num);
+        (num,num)
+    }
+}
+
 //  _____      __  __       _
 // |  ___| __ |  \/  |_   _| |_
 // | |_ | '_ \| |\/| | | | | __|

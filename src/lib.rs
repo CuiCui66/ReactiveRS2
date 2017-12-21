@@ -235,7 +235,7 @@ mod tests {
 
     #[test]
     fn emitd_await() {
-        let mut value = RefCell::new(0);
+        let value = RefCell::new(0);
         let signal = SignalRuntimeRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e;});
         {
             let mut rt = rt! {
@@ -257,7 +257,7 @@ mod tests {
 
     #[test]
     fn emits_await() {
-        let mut value = RefCell::new(0);
+        let value = RefCell::new(0);
         let signal = SignalRuntimeRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e;});
         {
             let mut rt = rt! {
@@ -280,7 +280,7 @@ mod tests {
 
     #[test]
     fn emit_await_immediate() {
-        let mut value = RefCell::new(0);
+        let value = RefCell::new(0);
         let signal = SignalRuntimeRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e; });
         {
             let mut rt = rt! {
@@ -302,7 +302,7 @@ mod tests {
 
     #[test]
     fn non_await_immediate() {
-        let mut value = RefCell::new(0);
+        let value = RefCell::new(0);
         let signal = SignalRuntimeRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e; });
         {
             let mut rt = rt! {
@@ -323,7 +323,7 @@ mod tests {
 
     #[test]
     fn present_true() {
-        let mut value = RefCell::new(0);
+        let value = RefCell::new(0);
         let signal = SignalRuntimeRef::new_pure();
         {
             let mut rt = rt! {
@@ -346,7 +346,7 @@ mod tests {
 
     #[test]
     fn present_false() {
-        let mut value = RefCell::new(0);
+        let value = RefCell::new(0);
         let signal = SignalRuntimeRef::new_pure();
         {
             let mut rt = rt! {
@@ -403,7 +403,7 @@ mod tests {
         };
 
         bencher.iter(|| {
-            for i in 0..1000 {
+            for _ in 0..1000 {
                 rt.instant();
             }
         });
@@ -422,7 +422,7 @@ mod tests {
         };
 
         bencher.iter(|| {
-            for i in 0..1000 {
+            for _ in 0..1000 {
                 rt.instant();
             }
         });
@@ -441,7 +441,7 @@ mod tests {
         };
 
         bencher.iter(|| {
-            for i in 0..1000 {
+            for _ in 0..1000 {
                 rt.instant();
             }
         });
@@ -463,7 +463,7 @@ mod tests {
         };
 
         bencher.iter(|| {
-            for i in 0..1000 {
+            for _ in 0..1000 {
                 rt.instant();
             }
         });
