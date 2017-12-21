@@ -55,19 +55,28 @@ pub struct IsIm {}
 impl Im for IsIm {}
 
 
+/// MarkOnce trait : it marks if the process can be executed multiple times or not.
+///
+/// A process marked by Once but not by NotOnce can only be executed one time.
+/// A process marked by NotOnce can be executed multiple time.
 pub trait Once: Sized + 'static {}
 pub trait NotOnce: Once {}
 
+/// ZST implementing Once. Used to mark process which can only be executed one time.
 pub struct SOnce;
 impl Once for SOnce {}
 
+/// ZST implementing NotOnce.  Used to mark processes which can be executed multiple times.
 pub struct SNotOnce;
 impl Once for SNotOnce {}
 impl NotOnce for SNotOnce {}
 
+/// And represent the concatenation of two MarkOnce trait.
+/// It is used to mark processes.
+/// A process being marked by And can be executed multiple times only if both parts of
+/// the And structures are marked by NotOnce.
 pub struct And<O1,O2>(pub O1, pub O2);
 impl<O1: Once, O2: Once> Once for And<O1,O2> {}
-
 impl<O1: NotOnce, O2: NotOnce> NotOnce for And<O1, O2> {}
 
 
