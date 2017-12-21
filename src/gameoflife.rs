@@ -64,7 +64,6 @@ struct Board {
     width: usize,
     height: usize,
     signals: Vec<Vec<CellSignal>>,
-    data: BoardData,
 }
 
 impl Board {
