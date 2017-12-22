@@ -14,7 +14,6 @@ where
     PF: ProcessPar<'a, InF, Out = Out>,
     Out: Send + Sync,
 {
-    type Out = Out;
     type NI = NChoice<PT::NI, PF::NI>;
     type NO = ArcLoad<Out>;
     type NIO = DummyN<Out>;
@@ -32,20 +31,6 @@ where
         g.set(pfind, box node!(pfno >> store_par(rcf) >> jump(out)));
         (node!(choice ptni pfni), out, load_par(rcout))
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begt,endt) = self.pt.p.printDot(curNum);
-        let (begf,endf) = self.pf.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape=diamond, label=\"if\"]",numbeg);
-        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
-        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
-        println!("{} [size = 0.1]",numend);
-        println!("{} -> {}:w",endt,numend);
-        println!("{} -> {}:e",endf,numend);
-        (numbeg,numend)
-    }
 }
 
 impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> ProcessPar<'a, ChoiceData<InT, InF>>
@@ -55,7 +40,6 @@ where
     PF: ProcessPar<'a, InF, Out = Out>,
     Out: Send + Sync,
 {
-    type Out = Out;
     type NI = NChoice<NSeq<PT::NIO, NSeq<ArcStore<Out>, NJump>>, PF::NI>;
     type NO = ArcLoad<Out>;
     type NIO = DummyN<Out>;
@@ -77,20 +61,6 @@ where
         )
 
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begt,endt) = self.pt.p.printDot(curNum);
-        let (begf,endf) = self.pf.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape=diamond, label=\"if\"]",numbeg);
-        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
-        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
-        println!("{} [size = 0.1]",numend);
-        println!("{} -> {}:w",endt,numend);
-        println!("{} -> {}:e",endf,numend);
-        (numbeg,numend)
-    }
 }
 
 
@@ -101,7 +71,6 @@ where
     PF: ProcessPar<'a, InF, Out = Out>,
     Out: Send + Sync,
 {
-    type Out = Out;
     type NI = NChoice<PT::NI, NSeq<PF::NIO, NSeq<ArcStore<Out>, NJump>>>;
     type NO = ArcLoad<Out>;
     type NIO = DummyN<Out>;
@@ -122,20 +91,6 @@ where
             load_par(rcout),
         )
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begt,endt) = self.pt.p.printDot(curNum);
-        let (begf,endf) = self.pf.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape=diamond, label=\"if\"]",numbeg);
-        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
-        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
-        println!("{} [size = 0.1]",numend);
-        println!("{} -> {}:w",endt,numend);
-        println!("{} -> {}:e",endf,numend);
-        (numbeg,numend)
-    }
 }
 
 impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> ProcessPar<'a, ChoiceData<InT, InF>>
@@ -145,7 +100,6 @@ where
     PF: ProcessPar<'a, InF, Out = Out>,
     Out: Send + Sync,
 {
-    type Out = Out;
     type NI = DummyN<()>;
     type NO = DummyN<Out>;
     type NIO = NChoice<PT::NIO, PF::NIO>;
@@ -156,20 +110,6 @@ where
         let ptnio = self.pt.p.compileIm(g);
         let pfnio = self.pf.p.compileIm(g);
         node!(choice ptnio pfnio)
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begt,endt) = self.pt.p.printDot(curNum);
-        let (begf,endf) = self.pf.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape=diamond, label=\"if\"]",numbeg);
-        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
-        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
-        println!("{} [size = 0.1]",numend);
-        println!("{} -> {}:w",endt,numend);
-        println!("{} -> {}:e",endf,numend);
-        (numbeg,numend)
     }
 }
 
@@ -190,7 +130,6 @@ where
     Out: Send + Sync,
     In: Send + Sync,
 {
-    type Out = Out;
     type NI = NSeq<ArcStore<In>,NJump>;
     type NO = ArcLoad<Out>;
     type NIO = DummyN<Out>;
@@ -219,18 +158,6 @@ where
             node!(load_par(rcextout))
         )
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (beg,end) = self.p.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [label = \"loop\"]",numbeg);
-        println!("{}:s -> {} [label = \"{}\"]",numbeg,beg,tname::<In>());
-        println!("{} [shape=diamond]",numend);
-        println!("{} -> {}:n [label = \"{}\"]",end,numend,tname::<ChoiceData<In,Out>>());
-        println!("{}:w -> {}:w [label = \"Continue: {}\"];",numend,numbeg,tname::<In>());
-        (numbeg,numend)
-    }
 }
 
 impl<'a, P, In: 'a, Out: 'a, OnceStruct> ProcessPar<'a, In>
@@ -240,7 +167,6 @@ where
     P: ProcessPar<'a, In, Out = ChoiceData<In,Out>, MarkOnce = OnceStruct>,
     Out: Send + Sync,
 {
-    type Out = Out;
     type NI = DummyN<()>;
     type NO = DummyN<Out>;
     type NIO = LoopIm<P::NIO>;
@@ -251,17 +177,5 @@ where
         trace!("");
         let pnio = self.p.p.compileIm(g);
         LoopIm(pnio)
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (beg,end) = self.p.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [label = \"loop\"]",numbeg);
-        println!("{}:s -> {} [label = \"{}\"]",numbeg,beg,tname::<In>());
-        println!("{} [shape=diamond]",numend);
-        println!("{} -> {}:n [label = \"{}\"]",end,numend,tname::<ChoiceData<In,Out>>());
-        println!("{}:w -> {}:w [label = \"Continue: {}\"];",numend,numbeg,tname::<In>());
-        (numbeg,numend)
     }
 }

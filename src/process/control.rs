@@ -14,13 +14,37 @@ pub struct PChoice<PT, PF> {
     pub(crate) pt: PT,
     pub(crate) pf: PF,
 }
+
+impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> GProcess<'a, ChoiceData<InT, InF>>
+    for PChoice<PT,PF>
+where
+    PT: GProcess<'a, InT, Out = Out>,
+    PF: GProcess<'a, InF, Out = Out>,
+{
+    type Out = Out;
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let (begt,endt) = self.pt.printDot(curNum);
+        let (begf,endf) = self.pf.printDot(curNum);
+        let numbeg = *curNum;
+        let numend = numbeg +1;
+        *curNum += 2;
+        println!("{} [shape=diamond, label=\"if\"]",numbeg);
+        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
+        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
+        println!("{} [size = 0.1]",numend);
+        println!("{} -> {}:w",endt,numend);
+        println!("{} -> {}:e",endf,numend);
+        (numbeg,numend)
+    }
+}
+
+
 impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
     for PChoice<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>>
 where
     PT: Process<'a, InT, Out = Out>,
     PF: Process<'a, InF, Out = Out>,
 {
-    type Out = Out;
     type NI = NChoice<PT::NI, PF::NI>;
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
@@ -38,20 +62,6 @@ where
         g.set(pfind, box node!(pfno >> store(rcf) >> jump(out)));
         (node!(choice ptni pfni), out, load(rcout))
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begt,endt) = self.pt.p.printDot(curNum);
-        let (begf,endf) = self.pf.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape=diamond, label=\"if\"]",numbeg);
-        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
-        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
-        println!("{} [size = 0.1]",numend);
-        println!("{} -> {}:w",endt,numend);
-        println!("{} -> {}:e",endf,numend);
-        (numbeg,numend)
-    }
 }
 
 impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
@@ -60,7 +70,6 @@ where
     PT: Process<'a, InT, Out = Out>,
     PF: Process<'a, InF, Out = Out>,
 {
-    type Out = Out;
     type NI = NChoice<NSeq<PT::NIO, NSeq<RcStore<Out>, NJump>>, PF::NI>;
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
@@ -82,20 +91,6 @@ where
         )
 
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begt,endt) = self.pt.p.printDot(curNum);
-        let (begf,endf) = self.pf.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape=diamond, label=\"if\"]",numbeg);
-        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
-        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
-        println!("{} [size = 0.1]",numend);
-        println!("{} -> {}:w",endt,numend);
-        println!("{} -> {}:e",endf,numend);
-        (numbeg,numend)
-    }
 }
 
 
@@ -105,7 +100,6 @@ where
     PT: Process<'a, InT, Out = Out>,
     PF: Process<'a, InF, Out = Out>,
 {
-    type Out = Out;
     type NI = NChoice<PT::NI, NSeq<PF::NIO, NSeq<RcStore<Out>, NJump>>>;
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
@@ -126,20 +120,6 @@ where
             load(rcout),
         )
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begt,endt) = self.pt.p.printDot(curNum);
-        let (begf,endf) = self.pf.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape=diamond, label=\"if\"]",numbeg);
-        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
-        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
-        println!("{} [size = 0.1]",numend);
-        println!("{} -> {}:w",endt,numend);
-        println!("{} -> {}:e",endf,numend);
-        (numbeg,numend)
-    }
 }
 
 impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
@@ -148,7 +128,6 @@ where
     PT: Process<'a, InT, Out = Out>,
     PF: Process<'a, InF, Out = Out>,
 {
-    type Out = Out;
     type NI = DummyN<()>;
     type NO = DummyN<Out>;
     type NIO = NChoice<PT::NIO, PF::NIO>;
@@ -159,20 +138,6 @@ where
         let ptnio = self.pt.p.compileIm(g);
         let pfnio = self.pf.p.compileIm(g);
         node!(choice ptnio pfnio)
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begt,endt) = self.pt.p.printDot(curNum);
-        let (begf,endf) = self.pf.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape=diamond, label=\"if\"]",numbeg);
-        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
-        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
-        println!("{} [size = 0.1]",numend);
-        println!("{} -> {}:w",endt,numend);
-        println!("{} -> {}:e",endf,numend);
-        (numbeg,numend)
     }
 }
 
@@ -189,13 +154,33 @@ pub struct PLoop<P> {
     pub(crate) p: P,
 }
 
+impl<'a, P, In: 'a, Out: 'a> GProcess<'a, In>
+    for PLoop<P>
+    where
+    P: GProcess<'a, In, Out = ChoiceData<In,Out>>,
+{
+    type Out = Out;
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let (beg,end) = self.p.printDot(curNum);
+        let numbeg = *curNum;
+        let numend = numbeg +1;
+        *curNum += 2;
+        println!("{} [label = \"loop\"]",numbeg);
+        println!("{}:s -> {} [label = \"{}\"]",numbeg,beg,tname::<In>());
+        println!("{} [shape=diamond]",numend);
+        println!("{} -> {}:n [label = \"{}\"]",end,numend,tname::<ChoiceData<In,Out>>());
+        println!("{}:w -> {}:w [label = \"Continue: {}\"];",numend,numbeg,tname::<In>());
+        (numbeg,numend)
+    }
+}
+
+
 impl<'a, P, In: 'a, Out: 'a, OnceStruct> Process<'a, In>
     for PLoop<MarkedProcess<P,NotIm>>
     where
     OnceStruct: NotOnce,
     P: Process<'a, In, Out = ChoiceData<In,Out>, MarkOnce = OnceStruct>,
 {
-    type Out = Out;
     type NI = NSeq<RcStore<In>,NJump>;
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
@@ -203,7 +188,6 @@ impl<'a, P, In: 'a, Out: 'a, OnceStruct> Process<'a, In>
     type MarkOnce = SNotOnce;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI,usize,Self::NO){
-        trace!("");
         let (pni, pind, pno) = self.p.p.compile(g);
         let rcextin = new_rcell();
         let rcbegin = rcextin.clone();
@@ -224,18 +208,6 @@ impl<'a, P, In: 'a, Out: 'a, OnceStruct> Process<'a, In>
             node!(load(rcextout))
         )
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (beg,end) = self.p.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [label = \"loop\"]",numbeg);
-        println!("{}:s -> {} [label = \"{}\"]",numbeg,beg,tname::<In>());
-        println!("{} [shape=diamond]",numend);
-        println!("{} -> {}:n [label = \"{}\"]",end,numend,tname::<ChoiceData<In,Out>>());
-        println!("{}:w -> {}:w [label = \"Continue: {}\"];",numend,numbeg,tname::<In>());
-        (numbeg,numend)
-    }
 }
 
 impl<'a, P, In: 'a, Out: 'a, OnceStruct> Process<'a, In>
@@ -244,7 +216,6 @@ impl<'a, P, In: 'a, Out: 'a, OnceStruct> Process<'a, In>
     OnceStruct: NotOnce,
     P: Process<'a, In, Out = ChoiceData<In,Out>, MarkOnce = OnceStruct>,
 {
-    type Out = Out;
     type NI = DummyN<()>;
     type NO = DummyN<Out>;
     type NIO = LoopIm<P::NIO>;
@@ -252,21 +223,7 @@ impl<'a, P, In: 'a, Out: 'a, OnceStruct> Process<'a, In>
     type MarkOnce = SNotOnce;
 
     fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO{
-
-        trace!("");
         let pnio = self.p.p.compileIm(g);
         LoopIm(pnio)
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (beg,end) = self.p.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [label = \"loop\"]",numbeg);
-        println!("{}:s -> {} [label = \"{}\"]",numbeg,beg,tname::<In>());
-        println!("{} [shape=diamond]",numend);
-        println!("{} -> {}:n [label = \"{}\"]",end,numend,tname::<ChoiceData<In,Out>>());
-        println!("{}:w -> {}:w [label = \"Continue: {}\"];",numend,numbeg,tname::<In>());
-        (numbeg,numend)
     }
 }

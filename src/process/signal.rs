@@ -15,6 +15,19 @@ pub struct EmitD {}
 #[allow(non_upper_case_globals)]
 pub static EmitD: EmitD = EmitD {};
 
+impl<'a, In: 'a, E: 'a, SV: 'a> GProcess<'a, ((SignalRuntimeRef<SV>, E),In)> for EmitD
+    where
+    SV: SignalValue<E=E>,
+{
+    type Out = In;
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"EmitD\"];",num);
+        (num,num)
+    }
+}
+
 impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, ((SignalRuntimeRef<SV>, E),In)> for EmitD
 where
     SV: SignalValue<E=E>,
@@ -23,13 +36,17 @@ where
     type NO = DummyN<In>;
     type Mark = IsIm;
     type NIO = NEmitD;
-    type Out = In;
     type MarkOnce = SNotOnce;
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
     }
-
+}
+impl<'a, E: 'a, SV: 'a> GProcess<'a, (SignalRuntimeRef<SV>, E)> for EmitD
+    where
+    SV: SignalValue<E = E>,
+{
+    type Out = ();
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -46,13 +63,18 @@ where
     type NO = DummyN<()>;
     type Mark = IsIm;
     type NIO = NEmitD;
-    type Out = ();
     type MarkOnce = SNotOnce;
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
     }
+}
 
+impl<'a, In: 'a, E: 'a, SV: 'a> GProcess<'a, (Vec<(SignalRuntimeRef<SV>, E)>,In)> for EmitD
+    where
+    SV: SignalValue<E=E>,
+{
+    type Out = In;
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -60,6 +82,7 @@ where
         (num,num)
     }
 }
+
 
 impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, (Vec<(SignalRuntimeRef<SV>, E)>,In)> for EmitD
     where
@@ -69,13 +92,18 @@ impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, (Vec<(SignalRuntimeRef<SV>, E)>,In)>
     type NO = DummyN<In>;
     type Mark = IsIm;
     type NIO = NEmitD;
-    type Out = In;
     type MarkOnce = SNotOnce;
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
     }
+}
 
+impl<'a, E: 'a, SV: 'a> GProcess<'a, Vec<(SignalRuntimeRef<SV>, E)>> for EmitD
+    where
+    SV: SignalValue<E = E>,
+{
+    type Out = ();
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -83,6 +111,7 @@ impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, (Vec<(SignalRuntimeRef<SV>, E)>,In)>
         (num,num)
     }
 }
+
 
 impl<'a, E: 'a, SV: 'a> Process<'a, Vec<(SignalRuntimeRef<SV>, E)>> for EmitD
     where
@@ -92,18 +121,10 @@ impl<'a, E: 'a, SV: 'a> Process<'a, Vec<(SignalRuntimeRef<SV>, E)>> for EmitD
     type NO = DummyN<()>;
     type Mark = IsIm;
     type NIO = NEmitD;
-    type Out = ();
     type MarkOnce = SNotOnce;
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
-    }
-
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"EmitD\"];",num);
-        (num,num)
     }
 }
 
@@ -125,21 +146,11 @@ where
     EmitS(sr, PhantomData)
 }
 
-impl<'a, E: 'a, SV: 'a> Process<'a, E> for EmitS<SV, E>
-where
+impl<'a, E: 'a, SV: 'a> GProcess<'a, E> for EmitS<SV, E>
+    where
     SV: SignalValue<E = E>,
 {
-    type NI = DummyN<()>;
-    type NO = DummyN<()>;
-    type Mark = IsIm;
-    type NIO = NEmitS<SV, E>;
     type Out = ();
-    type MarkOnce = SNotOnce;
-
-    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
-        NEmitS(self.0, PhantomData)
-    }
-
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -149,25 +160,48 @@ where
 }
 
 
+impl<'a, E: 'a, SV: 'a> Process<'a, E> for EmitS<SV, E>
+where
+    SV: SignalValue<E = E>,
+{
+    type NI = DummyN<()>;
+    type NO = DummyN<()>;
+    type Mark = IsIm;
+    type NIO = NEmitS<SV, E>;
+    type MarkOnce = SNotOnce;
+
+    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
+        NEmitS(self.0, PhantomData)
+    }
+}
+
+impl<'a, SV: 'a, E: 'a, In: 'a> GProcess<'a, (E,In)> for EmitS<SV, E>
+    where
+    SV: SignalValue<E = E>,
+{
+    type Out = In;
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"EmitS\"];",num);
+        (num,num)
+    }
+}
+
+
+
 impl<'a, SV: 'a, E: 'a, In: 'a> Process<'a, (E,In)> for EmitS<SV, E>
 where
     SV: SignalValue<E = E>,
 {
     type NI = DummyN<()>;
     type NO = DummyN<In>;
-    type Out = In;
     type NIO = NEmitS<SV, E>;
     type Mark = IsIm;
     type MarkOnce = SNotOnce;
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitS(self.0, PhantomData)
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"EmitS\"];",num);
-        (num,num)
     }
 }
 
@@ -190,21 +224,11 @@ where
     EmitVecS(sr)
 }
 
-impl<'a, E: 'a, SV: 'a> Process<'a, Vec<E>> for EmitVecS<SV>
-where
+impl<'a, E: 'a, SV: 'a> GProcess<'a, Vec<E>> for EmitVecS<SV>
+    where
     SV: SignalValue<E = E>,
 {
-    type NI = DummyN<()>;
-    type NO = DummyN<()>;
-    type Mark = IsIm;
-    type NIO = NEmitVecS<SV>;
     type Out = ();
-    type MarkOnce = SNotOnce;
-
-    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
-        NEmitVecS(self.0)
-    }
-
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -214,25 +238,48 @@ where
 }
 
 
+impl<'a, E: 'a, SV: 'a> Process<'a, Vec<E>> for EmitVecS<SV>
+where
+    SV: SignalValue<E = E>,
+{
+    type NI = DummyN<()>;
+    type NO = DummyN<()>;
+    type Mark = IsIm;
+    type NIO = NEmitVecS<SV>;
+    type MarkOnce = SNotOnce;
+
+    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
+        NEmitVecS(self.0)
+    }
+}
+
+impl<'a, SV: 'a, E: 'a, In: 'a> GProcess<'a, (Vec<E>,In)> for EmitVecS<SV>
+    where
+    SV: SignalValue<E = E>,
+{
+    type Out = In;
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"EmitVecS\"];",num);
+        (num,num)
+    }
+}
+
+
+
 impl<'a, SV: 'a, E: 'a, In: 'a> Process<'a, (Vec<E>,In)> for EmitVecS<SV>
 where
     SV: SignalValue<E = E>,
 {
     type NI = DummyN<()>;
     type NO = DummyN<In>;
-    type Out = In;
     type NIO = NEmitVecS<SV>;
     type Mark = IsIm;
     type MarkOnce = SNotOnce;
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVecS(self.0)
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"EmitVecS\"];",num);
-        (num,num)
     }
 }
 
@@ -257,6 +304,22 @@ E: Clone,
     EmitVS(sr, value)
 }
 
+impl<'a, In: 'a, E: 'a, SV: 'a> GProcess<'a, In> for EmitVS<SV, E>
+    where
+    SV: SignalValue<E = E>,
+    E: Clone,
+{
+    type Out = In;
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"EmitVS\"];",num);
+        (num,num)
+    }
+}
+
+
+
 impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, In> for EmitVS<SV, E>
 where
     SV: SignalValue<E = E>,
@@ -266,18 +329,10 @@ where
     type NO = DummyN<In>;
     type Mark = IsIm;
     type NIO = NEmitVS<SV, E>;
-    type Out = In;
     type MarkOnce = SNotOnce;
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVS(self.0, self.1)
-    }
-
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"EmitVS\"];",num);
-        (num,num)
     }
 }
 
@@ -302,6 +357,22 @@ pub fn emit_value_vec<SV, E>(values: Vec<(SignalRuntimeRef<SV>,E)>) -> EmitVVecS
     EmitVVecS(values)
 }
 
+impl<'a, In: 'a, E: 'a, SV: 'a> GProcess<'a, In> for EmitVVecS<SV, E>
+    where
+    SV: SignalValue<E = E>,
+    E: Clone,
+{
+    type Out = In;
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"EmitVVecS\"];",num);
+        (num,num)
+    }
+}
+
+
+
 impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, In> for EmitVVecS<SV, E>
     where
         SV: SignalValue<E = E>,
@@ -311,18 +382,10 @@ impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, In> for EmitVVecS<SV, E>
     type NO = DummyN<In>;
     type Mark = IsIm;
     type NIO = NEmitVVecS<SV, E>;
-    type Out = In;
     type MarkOnce = SNotOnce;
 
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVVecS(self.0)
-    }
-
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"EmitVVecS\"];",num);
-        (num,num)
     }
 }
 
@@ -342,17 +405,30 @@ pub struct AwaitD {}
 #[allow(non_upper_case_globals)]
 pub static AwaitD: AwaitD = AwaitD {};
 
+impl<'a, V: 'a, SV: 'a> GProcess<'a, SignalRuntimeRef<SV>> for AwaitD
+    where
+    SV: SignalValue<V = V>,
+{
+    type Out = V;
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"AwaitD\"];",num);
+        (num,num)
+    }
+}
+
+
+
 impl<'a, V: 'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for AwaitD
 where
     SV: SignalValue<V = V>,
 {
-    type Out = V;
     type Mark = NotIm;
     type NIO = DummyN<V>;
     type NI = NSeq<NAwaitD, RcStore<SignalRuntimeRef<SV>>>;
     type NO = NSeq<RcLoad<SignalRuntimeRef<SV>>, NGetD>;
     type MarkOnce = SNotOnce;
-
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
         let rc = new_rcell();
@@ -362,7 +438,13 @@ where
         let no = node!(load(rc2) >> NGetD {});
         (ni, out_id, no)
     }
+}
 
+impl<'a, In: 'a, V: 'a, SV: 'a> GProcess<'a, (SignalRuntimeRef<SV>, In)> for AwaitD
+where
+    SV: SignalValue<V=V>,
+{
+    type Out = (V,In);
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -371,11 +453,12 @@ where
     }
 }
 
+
+
 impl<'a, In: 'a, V: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, In)> for AwaitD
 where
     SV: SignalValue<V=V>,
 {
-    type Out = (V,In);
     type Mark = NotIm;
     type NIO = DummyN<(V,In)>;
     type NI = NSeq<NPar<NAwaitD,NIdentity>,RcStore<(SignalRuntimeRef<SV>, In)>>;
@@ -393,13 +476,6 @@ where
         let no = node!(load(rc2) >> NGetD{});
         (ni, out_id, no)
     }
-
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"AwaitD\"];",num);
-        (num,num)
-    }
 }
 
 //     _                _ _   ____
@@ -414,11 +490,24 @@ where
 #[derive(Clone)]
 pub struct AwaitS<SV>(pub SignalRuntimeRef<SV>);
 
+impl<'a, In: 'a, V: 'a, SV: 'a> GProcess<'a, In> for AwaitS<SV>
+    where
+    SV: SignalValue<V=V>,
+{
+    type Out = (V,In);
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"AwaitS\"];",num);
+        (num,num)
+    }
+}
+
+
 impl<'a, In: 'a, V: 'a, SV: 'a> Process<'a, In> for AwaitS<SV>
 where
     SV: SignalValue<V=V>,
 {
-    type Out = (V,In);
     type Mark = NotIm;
     type NIO = DummyN<(V,In)>;
     type NI = NSeq<RcStore<In>,NAwaitS<SV>>;
@@ -433,13 +522,6 @@ where
         let ni = node!(store(rc) >> NAwaitS(self.0.clone(), out_id));
         let no = node!( GenP >> (NGetS(self.0) || load(rc2)));
         (ni, out_id, no)
-    }
-
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"AwaitS\"];",num);
-        (num,num)
     }
 }
 
@@ -459,11 +541,23 @@ pub struct AwaitImmediateD {}
 #[allow(non_upper_case_globals)]
 pub static AwaitImmediateD: AwaitImmediateD = AwaitImmediateD {};
 
-impl<'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
+impl<'a, SV: 'a> GProcess<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
     where
         SV: SignalValue,
 {
     type Out = ();
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"AwaitImmD\"];",num);
+        (num,num)
+    }
+}
+
+impl<'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
+    where
+    SV: SignalValue,
+{
     type Mark = NotIm;
     type NIO = DummyN<()>;
     type NI = NAwaitImmediateD;
@@ -474,7 +568,13 @@ impl<'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
         let out_id = g.reserve();
         (NAwaitImmediateD(out_id), out_id, Nothing {})
     }
+}
 
+impl<'a, In: 'a, SV: 'a> GProcess<'a, (SignalRuntimeRef<SV>, In)> for AwaitImmediateD
+    where
+        SV: SignalValue,
+{
+    type Out = In;
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -488,7 +588,6 @@ impl<'a, In: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, In)> for AwaitImmedi
     where
         SV: SignalValue,
 {
-    type Out = In;
     type Mark = NotIm;
     type NIO = DummyN<In>;
     type NI = NSeq<NSeq<NPar<NIdentity,RcStore<In>>, Ignore2>,NAwaitImmediateD>;
@@ -506,13 +605,6 @@ impl<'a, In: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, In)> for AwaitImmedi
         let no = load(rc2);
         (ni, out_id, no)
     }
-
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"AwaitImmD\"];",num);
-        (num,num)
-    }
 }
 
 //     _                _ _   ___                              _ _       _       ____
@@ -528,27 +620,11 @@ impl<'a, In: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, In)> for AwaitImmedi
 pub struct AwaitImmediateS<SV>(pub SignalRuntimeRef<SV>);
 
 
-impl<'a, In: 'a, V: 'a, SV: 'a> Process<'a, In> for AwaitImmediateS<SV>
+impl<'a, In: 'a, V: 'a, SV: 'a> GProcess<'a, In> for AwaitImmediateS<SV>
     where
         SV: SignalValue<V=V>,
 {
     type Out = In;
-    type Mark = NotIm;
-    type NIO = DummyN<In>;
-    type NI = NSeq<RcStore<In>,NAwaitImmediateS<SV>>;
-    type NO = RcLoad<In>;
-    type MarkOnce = SNotOnce;
-
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let out_id = g.reserve();
-        let rc = new_rcell();
-        let rc2 = rc.clone();
-
-        let ni = node!(store(rc) >> NAwaitImmediateS(self.0.clone(), out_id));
-        let no = load(rc2);
-        (ni, out_id, no)
-    }
-
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
         *curNum +=1;
@@ -571,6 +647,23 @@ pub struct PresentD<PT, PF> {
     pub(crate) pf: PF,
 }
 
+impl<'a, PT, PF, SV: 'a, Out: 'a> GProcess<'a, SignalRuntimeRef<SV>>
+    for PresentD<PT, PF>
+where
+    PT: GProcess<'a, (), Out=Out>,
+    PF: GProcess<'a, (), Out=Out>,
+    SV: SignalValue,
+{
+    type Out = Out;
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"PresentD\"];",num);
+        (num,num)
+    }
+}
+
+
 impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, SignalRuntimeRef<SV>>
     for PresentD<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>>
 where
@@ -578,7 +671,6 @@ where
     PF: Process<'a, (), Out=Out>,
     SV: SignalValue,
 {
-    type Out = Out;
     type NI = NPresentD;
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
@@ -605,15 +697,7 @@ where
 
         (ni, out_id, load(rc_out))
     }
-
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"PresentD\"];",num);
-        (num,num)
-    }
 }
-
 
 impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, SignalRuntimeRef<SV>>
 for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>>
@@ -622,7 +706,6 @@ for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>>
         PF: Process<'a, (), Out=Out>,
         SV: SignalValue,
 {
-    type Out = Out;
     type NI = NPresentD;
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
@@ -648,15 +731,7 @@ for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>>
 
         (ni, out_id, load(rc_out))
     }
-
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"PresentD\"];",num);
-        (num,num)
-    }
 }
-
 
 impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, SignalRuntimeRef<SV>>
 for PresentD<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>>
@@ -665,7 +740,6 @@ for PresentD<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>>
         PF: Process<'a, (), Out=Out>,
         SV: SignalValue,
 {
-    type Out = Out;
     type NI = NPresentD;
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
@@ -690,13 +764,6 @@ for PresentD<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>>
         };
 
         (ni, out_id, load(rc_out))
-    }
-
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"PresentD\"];",num);
-        (num,num)
     }
 }
 
@@ -708,7 +775,6 @@ for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>>
         PF: Process<'a, (), Out=Out>,
         SV: SignalValue,
 {
-    type Out = Out;
     type NI = NPresentD;
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
@@ -732,13 +798,6 @@ for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>>
         };
 
         (ni, out_id, load(rc_out))
-    }
-
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"PresentD\"];",num);
-        (num,num)
     }
 }
 
@@ -757,6 +816,23 @@ pub struct PresentS<PT,PF,SV> {
     pub(crate) signal_runtime: SignalRuntimeRef<SV>,
 }
 
+impl<'a, PT, PF, SV: 'a, Out: 'a> GProcess<'a, ()>
+for PresentS<PT, PF, SV>
+    where
+        PT: GProcess<'a, (), Out=Out>,
+        PF: GProcess<'a, (), Out=Out>,
+        SV: SignalValue,
+{
+    type Out = Out;
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"PresentS\"];",num);
+        (num,num)
+    }
+}
+
+
 impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, ()>
 for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>, SV>
     where
@@ -764,7 +840,6 @@ for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>, SV>
         PF: Process<'a, (), Out=Out>,
         SV: SignalValue,
 {
-    type Out = Out;
     type NI = NPresentS<SV>;
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
@@ -791,13 +866,6 @@ for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>, SV>
         };
 
         (ni, out_id, load(rc_out))
-    }
-
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"PresentS\"];",num);
-        (num,num)
     }
 }
 
@@ -809,7 +877,6 @@ for PresentS<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>, SV>
         PF: Process<'a, (), Out=Out>,
         SV: SignalValue,
 {
-    type Out = Out;
     type NI = NPresentS<SV>;
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
@@ -836,13 +903,6 @@ for PresentS<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>, SV>
 
         (ni, out_id, load(rc_out))
     }
-
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"PresentS\"];",num);
-        (num,num)
-    }
 }
 
 
@@ -853,7 +913,6 @@ for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>, SV>
         PF: Process<'a, (), Out=Out>,
         SV: SignalValue,
 {
-    type Out = Out;
     type NI = NPresentS<SV>;
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
@@ -880,13 +939,6 @@ for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>, SV>
 
         (ni, out_id, load(rc_out))
     }
-
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"PresentS\"];",num);
-        (num,num)
-    }
 }
 
 
@@ -897,7 +949,6 @@ for PresentS<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>, SV>
         PF: Process<'a, (), Out=Out>,
         SV: SignalValue,
 {
-    type Out = Out;
     type NI = NPresentS<SV>;
     type NO = RcLoad<Out>;
     type NIO = DummyN<Out>;
@@ -922,12 +973,5 @@ for PresentS<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>, SV>
         };
 
         (ni, out_id, load(rc_out))
-    }
-
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"PresentS\"];",num);
-        (num,num)
     }
 }

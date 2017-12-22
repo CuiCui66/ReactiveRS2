@@ -66,10 +66,7 @@ pub use self::signal::*;*/
 ///   The type [`NIO`][NIO] has a dummy value and [`compileIm`][cI] will crash if called.
 ///
 ///Any other method will work in both cases.
-pub trait ProcessPar<'a, In: 'a>: 'a + Sized{
-    /// The output type of the process.
-    type Out: 'a;
-
+pub trait ProcessPar<'a, In: 'a>: Sized + GProcess<'a,In>{
     /// The input node when compiling in non-immediate mode
     type NI: Node<'a, In, Out = ()> + Sized + Send + Sync;
     /// The output node when compiling in non-immediate mode
@@ -107,12 +104,6 @@ pub trait ProcessPar<'a, In: 'a>: 'a + Sized{
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         unreachable!();
     }
-
-    /// Print this process as a control flow graph in dot language on stdout.
-    ///
-    /// The input ref is the first unused node id.
-    /// The two return value are the input and output of the graph representing the process.
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize);
 
 
     /// Build the sequence of two process.
@@ -157,7 +148,7 @@ pub trait ProcessPar<'a, In: 'a>: 'a + Sized{
     }*/
 
     /// The process must returns a ChoiceData Value,
-    fn ploop<ROut>(self) -> PLoop<MarkedProcessPar<Self, Self::Mark>>
+    fn ploop<ROut :'a>(self) -> PLoop<MarkedProcessPar<Self, Self::Mark>>
         where
         Self: ProcessPar<'a, In,Out = ChoiceData<In,ROut>>
     {
@@ -225,6 +216,19 @@ pub fn mp_par<'a, In: 'a, P>(p: P) -> MarkedProcessPar<P, P::Mark>
         pd: PhantomData,
     }
 }
+
+impl<'a, In :'a, P, M> GProcess<'a, In> for MarkedProcessPar<P, M>
+    where
+    P: ProcessPar<'a, In>,
+    M: Im,
+{
+    type Out = P::Out;
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        self.p.printDot(curNum)
+    }
+}
+
+
 
 impl<'a, P, Mark> GraphFiller<'a> for MarkedProcessPar<P, Mark>
 where
@@ -309,6 +313,20 @@ pub struct PboxPar<'a, In, Out, NI, NO, NIO, Mark, MarkOnce> {
     p: Box<ProcessBoxPar<'a, In, Out = Out, NI = NI, NO = NO, NIO = NIO, Mark = Mark, MarkOnce = MarkOnce>>,
 }
 
+impl<'a, In: 'a, Out: 'a, NI, NO, NIO, Mark: Im + 'a, MarkOnce: Once + 'a> GProcess<'a, In>
+    for PboxPar<'a, In, Out, NI, NO, NIO, Mark, MarkOnce>
+    where
+    NI: Node<'a, In, Out = ()> + Send + Sync,
+    NO: Node<'a, (), Out = Out> + Send + Sync,
+    NIO: Node<'a, In, Out = Out> + Send + Sync,
+{
+    type Out = Out;
+    fn printDot(&mut self, curNum : &mut usize) -> (usize,usize){
+        self.p.printDot_box(curNum)
+    }
+}
+
+
 impl<'a, In: 'a, Out: 'a, NI, NO, NIO, Mark: Im + 'a, MarkOnce: Once + 'a> ProcessPar<'a, In>
     for PboxPar<'a, In, Out, NI, NO, NIO, Mark, MarkOnce>
 where
@@ -316,7 +334,6 @@ where
     NO: Node<'a, (), Out = Out> + Send + Sync,
     NIO: Node<'a, In, Out = Out> + Send + Sync,
 {
-    type Out = Out;
     type NI = NI;
     type NO = NO;
     type NIO = NIO;
@@ -328,9 +345,6 @@ where
     }
     fn compileIm(self, g: &mut Graph<'a>) -> NIO {
         self.p.compileIm_box(g)
-    }
-    fn printDot(&mut self, curNum : &mut usize) -> (usize,usize){
-        self.p.printDot_box(curNum)
     }
 }
 

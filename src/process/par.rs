@@ -7,13 +7,37 @@ pub struct Par<P, Q> {
     pub(crate) q: Q,
 }
 
+impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> GProcess<'a, (InP, InQ)>
+    for Par<P,Q>
+where
+    P: GProcess<'a, InP, Out = OutP>,
+    Q: GProcess<'a, InQ, Out = OutQ>,
+{
+    type Out = (OutP, OutQ);
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let (begp,endp) = self.p.printDot(curNum);
+        let (begq,endq) = self.q.printDot(curNum);
+        let numbeg = *curNum;
+        let numend = numbeg +1;
+        *curNum += 2;
+        println!("{} [shape = triangle, label = \"\"]",numbeg);
+        println!("{}:sw -> {}:n [label = \"{}\"]",numbeg,begp,tname::<InP>());
+        println!("{}:se -> {}:n [label = \"{}\"]",numbeg,begq,tname::<InQ>());
+        println!("{} [shape= invtriangle, label = \"\"]",numend);
+        println!("{}:s -> {}:nw [label = \"{}\"]",endp,numend,tname::<OutP>());
+        println!("{}:s -> {}:ne [label = \"{}\"]",endq,numend,tname::<OutQ>());
+        (numbeg,numend)
+    }
+}
+
+
+
 impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> Process<'a, (InP, InQ)>
     for Par<MarkedProcess<P, NotIm>, MarkedProcess<Q, NotIm>>
 where
     P: Process<'a, InP, Out = OutP>,
     Q: Process<'a, InQ, Out = OutQ>,
 {
-    type Out = (OutP, OutQ);
     type NI = NSeq<NPar<P::NI, Q::NI>, Ignore>;
     type NO = NMerge<P::Out, Q::Out>;
     type NIO = DummyN<Self::Out>;
@@ -30,20 +54,6 @@ where
         g.set(qind, box node!(qno >> set2(rc2, out_ind)));
         (nodei!(pni || qni), out_ind, merge(rcout))
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begp,endp) = self.p.p.printDot(curNum);
-        let (begq,endq) = self.q.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape = triangle, label = \"\"]",numbeg);
-        println!("{}:sw -> {}:n [label = \"{}\"]",numbeg,begp,tname::<InP>());
-        println!("{}:se -> {}:n [label = \"{}\"]",numbeg,begq,tname::<InQ>());
-        println!("{} [shape= invtriangle, label = \"\"]",numend);
-        println!("{}:s -> {}:nw [label = \"{}\"]",endp,numend,tname::<OutP>());
-        println!("{}:s -> {}:ne [label = \"{}\"]",endq,numend,tname::<OutQ>());
-        (numbeg,numend)
-    }
 }
 
 impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> Process<'a, (InP, InQ)>
@@ -52,7 +62,6 @@ where
     P: Process<'a, InP, Out = OutP>,
     Q: Process<'a, InQ, Out = OutQ>,
 {
-    type Out = (OutP, OutQ);
     type NI = NSeq<NPar<NSeq<P::NIO, RcStore<OutP>>, Q::NI>, Ignore>;
     type NO = NSeq<GenP, NPar<RcLoad<OutP>, Q::NO>>;
     type NIO = DummyN<Self::Out>;
@@ -70,20 +79,6 @@ where
         )
 
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begp,endp) = self.p.p.printDot(curNum);
-        let (begq,endq) = self.q.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape = triangle, label = \"\"]",numbeg);
-        println!("{} -> {}:n [label = \"{}\"]",numbeg,begp,tname::<InP>());
-        println!("{} -> {}:n [label = \"{}\"]",numbeg,begq,tname::<InQ>());
-        println!("{} [shape= invtriangle, label = \"\"]",numend);
-        println!("{} -> {}:n [label = \"{}\"]",endp,numend,tname::<OutP>());
-        println!("{} -> {}:n [label = \"{}\"]",endq,numend,tname::<OutQ>());
-        (numbeg,numend)
-    }
 }
 
 impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> Process<'a, (InP, InQ)>
@@ -92,7 +87,6 @@ where
     P: Process<'a, InP, Out = OutP>,
     Q: Process<'a, InQ, Out = OutQ>,
 {
-    type Out = (OutP, OutQ);
     type NI = NSeq<NPar<P::NI, NSeq<Q::NIO, RcStore<OutQ>>>, Ignore>;
     type NO = NSeq<GenP, NPar<P::NO, RcLoad<OutQ>>>;
     type NIO = DummyN<Self::Out>;
@@ -110,20 +104,6 @@ where
         )
 
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begp,endp) = self.p.p.printDot(curNum);
-        let (begq,endq) = self.q.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape = triangle, label = \"\"]",numbeg);
-        println!("{} -> {}:n [label = \"{}\"]",numbeg,begp,tname::<InP>());
-        println!("{} -> {}:n [label = \"{}\"]",numbeg,begq,tname::<InQ>());
-        println!("{} [shape= invtriangle, label = \"\"]",numend);
-        println!("{} -> {}:n [label = \"{}\"]",endp,numend,tname::<OutP>());
-        println!("{} -> {}:n [label = \"{}\"]",endq,numend,tname::<OutQ>());
-        (numbeg,numend)
-    }
 }
 
 impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> Process<'a, (InP, InQ)>
@@ -132,7 +112,6 @@ where
     P: Process<'a, InP, Out = OutP>,
     Q: Process<'a, InQ, Out = OutQ>,
 {
-    type Out = (OutP, OutQ);
     type NI = DummyN<()>;
     type NO = DummyN<Self::Out>;
     type NIO = NPar<P::NIO, Q::NIO>;
@@ -142,20 +121,6 @@ where
         let pnio = self.p.p.compileIm(g);
         let qnio = self.q.p.compileIm(g);
         node!(pnio || qnio)
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begp,endp) = self.p.p.printDot(curNum);
-        let (begq,endq) = self.q.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape = triangle, label = \"\"]",numbeg);
-        println!("{} -> {}:n [label = \"{}\"]",numbeg,begp,tname::<InP>());
-        println!("{} -> {}:n [label = \"{}\"]",numbeg,begq,tname::<InQ>());
-        println!("{} [shape= invtriangle, label = \"\"]",numend);
-        println!("{} -> {}:n [label = \"{}\"]",endp,numend,tname::<OutP>());
-        println!("{} -> {}:n [label = \"{}\"]",endq,numend,tname::<OutQ>());
-        (numbeg,numend)
     }
 }
 
@@ -171,12 +136,25 @@ pub struct BigPar<P> {
     pub(crate) vp: Vec<P>,
 }
 
+impl<'a, P, In: 'a> GProcess<'a, In> for BigPar<P>
+where
+    P: GProcess<'a, In, Out = ()>,
+    In: Copy
+{
+    type Out = ();
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"BigPar\"];",num);
+        (num,num)
+    }
+}
+
 impl<'a, P, In: 'a> Process<'a, In> for BigPar<MarkedProcess<P, NotIm>>
 where
     P: Process<'a, In, Out = ()>,
     In: Copy
 {
-    type Out = ();
     type NI = NSeq<RcStore<In>,NBigPar>;
     type NO = Nothing;
     type NIO = DummyN<Self::Out>;
@@ -194,10 +172,5 @@ where
         };
         (node!(store(rcin) >> NBigPar{dests}),end_point,Nothing)
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"BigPar\"];",num);
-        (num,num)
-    }
 }
+

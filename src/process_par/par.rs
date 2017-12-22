@@ -10,7 +10,6 @@ where
     OutP: Send + Sync,
     OutQ: Send + Sync,
 {
-    type Out = (OutP, OutQ);
     type NI = NSeq<NPar<P::NI, Q::NI>, Ignore>;
     type NO = NMergePar<P::Out, Q::Out>;
     type NIO = DummyN<Self::Out>;
@@ -27,20 +26,6 @@ where
         g.set(qind, box node!(qno >> set2_par(rc2, out_ind)));
         (nodei!(pni || qni), out_ind, merge_par(rcout))
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begp,endp) = self.p.p.printDot(curNum);
-        let (begq,endq) = self.q.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape = triangle, label = \"\"]",numbeg);
-        println!("{}:sw -> {}:n [label = \"{}\"]",numbeg,begp,tname::<InP>());
-        println!("{}:se -> {}:n [label = \"{}\"]",numbeg,begq,tname::<InQ>());
-        println!("{} [shape= invtriangle, label = \"\"]",numend);
-        println!("{}:s -> {}:nw [label = \"{}\"]",endp,numend,tname::<OutP>());
-        println!("{}:s -> {}:ne [label = \"{}\"]",endq,numend,tname::<OutQ>());
-        (numbeg,numend)
-    }
 }
 
 impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> ProcessPar<'a, (InP, InQ)>
@@ -51,7 +36,6 @@ where
     OutP: Send + Sync,
     OutQ: Send + Sync,
 {
-    type Out = (OutP, OutQ);
     type NI = NSeq<NPar<NSeq<P::NIO, ArcStore<OutP>>, Q::NI>, Ignore>;
     type NO = NSeq<GenP, NPar<ArcLoad<OutP>, Q::NO>>;
     type NIO = DummyN<Self::Out>;
@@ -69,20 +53,6 @@ where
         )
 
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begp,endp) = self.p.p.printDot(curNum);
-        let (begq,endq) = self.q.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape = triangle, label = \"\"]",numbeg);
-        println!("{} -> {}:n [label = \"{}\"]",numbeg,begp,tname::<InP>());
-        println!("{} -> {}:n [label = \"{}\"]",numbeg,begq,tname::<InQ>());
-        println!("{} [shape= invtriangle, label = \"\"]",numend);
-        println!("{} -> {}:n [label = \"{}\"]",endp,numend,tname::<OutP>());
-        println!("{} -> {}:n [label = \"{}\"]",endq,numend,tname::<OutQ>());
-        (numbeg,numend)
-    }
 }
 
 impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> ProcessPar<'a, (InP, InQ)>
@@ -93,7 +63,6 @@ where
     OutP: Send + Sync,
     OutQ: Send + Sync,
 {
-    type Out = (OutP, OutQ);
     type NI = NSeq<NPar<P::NI, NSeq<Q::NIO, ArcStore<OutQ>>>, Ignore>;
     type NO = NSeq<GenP, NPar<P::NO, ArcLoad<OutQ>>>;
     type NIO = DummyN<Self::Out>;
@@ -111,20 +80,6 @@ where
         )
 
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begp,endp) = self.p.p.printDot(curNum);
-        let (begq,endq) = self.q.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape = triangle, label = \"\"]",numbeg);
-        println!("{} -> {}:n [label = \"{}\"]",numbeg,begp,tname::<InP>());
-        println!("{} -> {}:n [label = \"{}\"]",numbeg,begq,tname::<InQ>());
-        println!("{} [shape= invtriangle, label = \"\"]",numend);
-        println!("{} -> {}:n [label = \"{}\"]",endp,numend,tname::<OutP>());
-        println!("{} -> {}:n [label = \"{}\"]",endq,numend,tname::<OutQ>());
-        (numbeg,numend)
-    }
 }
 
 impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> ProcessPar<'a, (InP, InQ)>
@@ -135,7 +90,6 @@ where
     OutP: Send + Sync,
     OutQ: Send + Sync,
 {
-    type Out = (OutP, OutQ);
     type NI = DummyN<()>;
     type NO = DummyN<Self::Out>;
     type NIO = NPar<P::NIO, Q::NIO>;
@@ -145,20 +99,6 @@ where
         let pnio = self.p.p.compileIm(g);
         let qnio = self.q.p.compileIm(g);
         node!(pnio || qnio)
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begp,endp) = self.p.p.printDot(curNum);
-        let (begq,endq) = self.q.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape = triangle, label = \"\"]",numbeg);
-        println!("{} -> {}:n [label = \"{}\"]",numbeg,begp,tname::<InP>());
-        println!("{} -> {}:n [label = \"{}\"]",numbeg,begq,tname::<InQ>());
-        println!("{} [shape= invtriangle, label = \"\"]",numend);
-        println!("{} -> {}:n [label = \"{}\"]",endp,numend,tname::<OutP>());
-        println!("{} -> {}:n [label = \"{}\"]",endq,numend,tname::<OutQ>());
-        (numbeg,numend)
     }
 }
 
@@ -175,7 +115,6 @@ where
     P: ProcessPar<'a, In, Out = ()>,
     In: Copy + Send + Sync,
 {
-    type Out = ();
     type NI = NSeq<ArcStore<In>,NBigPar>;
     type NO = Nothing;
     type NIO = DummyN<Self::Out>;
@@ -192,11 +131,5 @@ where
             dests.push(g.add(box node!(load_copy_par(arcin.clone()) >> pni)));
         };
         (node!(store_par(arcin) >> NBigPar{dests}),end_point,Nothing)
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"BigPar\"];",num);
-        (num,num)
     }
 }

@@ -8,7 +8,6 @@ where
     Q: ProcessPar<'a, Mid, Out = Out>,
     Out: Send + Sync,
 {
-    type Out = Q::Out;
     type NI = P::NI;
     type NO = Q::NO;
     type NIO = DummyN<Out>;
@@ -21,12 +20,6 @@ where
         g.set(pind, box node!(pno >> qni));
         (pni, qind, qno)
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (beg,midup) = self.p.p.printDot(curNum);
-        let (middown,end) = self.q.p.printDot(curNum);
-        println!("{} -> {} [label = \"{}\"];",midup,middown,tname::<Mid>());
-        (beg,end)
-    }
 }
 
 impl<'a, P, Q, In: 'a, Mid: 'a, Out: 'a> ProcessPar<'a, In>
@@ -36,7 +29,6 @@ where
     Q: ProcessPar<'a, Mid, Out = Out>,
     Out: Send + Sync,
 {
-    type Out = Q::Out;
     type NI = NSeq<P::NIO, Q::NI>;
     type NO = Q::NO;
     type NIO = DummyN<Out>;
@@ -48,12 +40,6 @@ where
         (node!(pnio >> qni), qind, qno)
 
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (beg,midup) = self.p.p.printDot(curNum);
-        let (middown,end) = self.q.p.printDot(curNum);
-        println!("{} -> {} [label = \"{}\"];",midup,middown,tname::<Mid>());
-        (beg,end)
-    }
 }
 
 impl<'a, P, Q, In: 'a, Mid: 'a, Out: 'a> ProcessPar<'a, In>
@@ -63,7 +49,6 @@ where
     Q: ProcessPar<'a, Mid, Out = Out>,
     Out: Send + Sync,
 {
-    type Out = Q::Out;
     type NI = P::NI;
     type NO = NSeq<P::NO, Q::NIO>;
     type NIO = DummyN<Out>;
@@ -75,12 +60,6 @@ where
         (pni, pind, node!(pno >> qnio))
 
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (beg,midup) = self.p.p.printDot(curNum);
-        let (middown,end) = self.q.p.printDot(curNum);
-        println!("{} -> {} [label = \"{}\"];",midup,middown,tname::<Mid>());
-        (beg,end)
-    }
 }
 
 impl<'a, P, Q, In: 'a, Mid: 'a, Out: 'a> ProcessPar<'a, In>
@@ -90,7 +69,6 @@ where
     Q: ProcessPar<'a, Mid, Out = Out>,
     Out: Send + Sync,
 {
-    type Out = Q::Out;
     type NI = DummyN<()>;
     type NO = DummyN<Out>;
     type NIO = NSeq<P::NIO, Q::NIO>;
@@ -100,11 +78,5 @@ where
         let pnio = self.p.p.compileIm(g);
         let qnio = self.q.p.compileIm(g);
         node!(pnio >> qnio)
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (beg,midup) = self.p.p.printDot(curNum);
-        let (middown,end) = self.q.p.printDot(curNum);
-        println!("{} -> {} [label = \"{}\"];",midup,middown,tname::<Mid>());
-        (beg,end)
     }
 }

@@ -11,9 +11,18 @@ use super::*;
 
 pub struct PNothing {}
 
+impl<'a> GProcess<'a, ()> for PNothing {
+    type Out = ();
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"Nothing\"];",num);
+        (num,num)
+    }
+}
+
 
 impl<'a> Process<'a, ()> for PNothing {
-    type Out = ();
     type NI = DummyN<()>;
     type NO = DummyN<()>;
     type NIO = Nothing;
@@ -22,12 +31,6 @@ impl<'a> Process<'a, ()> for PNothing {
 
     fn compileIm(self, _: &mut Graph) -> Self::NIO {
         Nothing {}
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"Nothing\"];",num);
-        (num,num)
     }
 }
 
@@ -43,11 +46,24 @@ pub fn value<V>(value: V) -> PValue<V> {
     PValue(value)
 }
 
+impl<'a, V: 'a> GProcess<'a, ()> for PValue<V>
+    where
+    V: Clone
+{
+    type Out = V;
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"Value\"];",num);
+        (num,num)
+    }
+}
+
+
 impl<'a, V: 'a> Process<'a, ()> for PValue<V>
 where
     V: Clone
 {
-    type Out = V;
     type NI = DummyN<()>;
     type NO = DummyN<V>;
     type NIO = NValue<V>;
@@ -56,13 +72,6 @@ where
 
     fn compileIm(self, _: &mut Graph) -> Self::NIO {
         NValue(self.0)
-    }
-
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"Value\"];",num);
-        (num,num)
     }
 }
 
@@ -79,12 +88,23 @@ pub struct PFnOnce<F>(pub F);
 pub fn once<F>(f: F) -> PFnOnce<F> {
     PFnOnce(f)
 }
+impl<'a, F: 'a, In: 'a, Out: 'a> GProcess<'a, In> for PFnOnce<F>
+    where
+    F: FnOnce(In) -> Out,
+{
+    type Out = Out;
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
+        let num = *curNum;
+        *curNum += 1;
+        println!("{} [shape = box, label= \"FnOnce\"];",num);
+        (num,num)
+    }
+}
 
 impl<'a, F: 'a, In: 'a, Out: 'a> Process<'a, In> for PFnOnce<F>
 where
     F: FnOnce(In) -> Out,
 {
-    type Out = Out;
     type NI = DummyN<()>;
     type NO = DummyN<Out>;
     type NIO = NFnOnce<F>;
@@ -94,13 +114,6 @@ where
     fn compileIm(self, _: &mut Graph) -> Self::NIO {
         NFnOnce(Some(self.0))
     }
-
-    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
-        let num = *curNum;
-        *curNum += 1;
-        println!("{} [shape = box, label= \"FnOnce\"];",num);
-        (num,num)
-    }
 }
 
 //  _____      __  __       _
@@ -109,12 +122,23 @@ where
 // |  _|| | | | |  | | |_| | |_
 // |_|  |_| |_|_|  |_|\__,_|\__|
 
+impl<'a, F: 'a, In: 'a, Out: 'a> GProcess<'a, In> for F
+    where
+    F: FnMut(In) -> Out,
+{
+    type Out = Out;
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"FnMut\"];",num);
+        (num,num)
+    }
+}
 
 impl<'a, F: 'a, In: 'a, Out: 'a> Process<'a, In> for F
     where
     F: FnMut(In) -> Out,
 {
-    type Out = Out;
     type NI = DummyN<()>;
     type NO = DummyN<Out>;
     type NIO = FnMutN<F>;
@@ -125,12 +149,6 @@ impl<'a, F: 'a, In: 'a, Out: 'a> Process<'a, In> for F
 
     fn compileIm(self, _: &mut Graph) -> Self::NIO {
         FnMutN(self)
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"FnMut\"];",num);
-        (num,num)
     }
 }
 
@@ -149,8 +167,18 @@ pub struct Jump {}
 #[allow(non_upper_case_globals)]
 pub static Jump: Jump = Jump {};
 
-impl<'a, In: 'a> Process<'a, In> for Jump {
+impl<'a, In: 'a> GProcess<'a, In> for Jump {
     type Out = In;
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"Jump\"];",num);
+        (num,num)
+    }
+}
+
+
+impl<'a, In: 'a> Process<'a, In> for Jump {
     type NI = NSeq<RcStore<In>, NJump>;
     type NO = RcLoad<In>;
     type NIO = DummyN<In>;
@@ -163,13 +191,6 @@ impl<'a, In: 'a> Process<'a, In> for Jump {
         let out = g.reserve();
         (node!(store(rcin) >> jump(out)), out, load(rcout))
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"Jump\"];",num);
-        (num,num)
-    }
-
 }
 
 
@@ -186,8 +207,18 @@ pub struct Pause {}
 #[allow(non_upper_case_globals)]
 pub static Pause: Pause = Pause {};
 
-impl<'a, In: 'a> Process<'a, In> for Pause {
+
+impl<'a, In: 'a> GProcess<'a, In> for Pause {
     type Out = In;
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        let num = *curNum;
+        *curNum +=1;
+        println!("{} [shape = box, label= \"Pause\"];",num);
+        (num,num)
+    }
+}
+
+impl<'a, In: 'a> Process<'a, In> for Pause {
     type NI = NSeq<RcStore<In>, NPause>;
     type NO = RcLoad<In>;
     type NIO = DummyN<In>;
@@ -199,11 +230,5 @@ impl<'a, In: 'a> Process<'a, In> for Pause {
         let rcout = rcin.clone();
         let out = g.reserve();
         (node!(store(rcin) >> pause(out)), out, load(rcout))
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"Pause\"];",num);
-        (num,num)
     }
 }

@@ -9,7 +9,6 @@ use super::*;
 //                                |___/
 
 impl<'a> ProcessPar<'a, ()> for PNothing {
-    type Out = ();
     type NI = DummyN<()>;
     type NO = DummyN<()>;
     type NIO = Nothing;
@@ -18,12 +17,6 @@ impl<'a> ProcessPar<'a, ()> for PNothing {
 
     fn compileIm(self, _: &mut Graph) -> Self::NIO {
         Nothing {}
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"Nothing\"];",num);
-        (num,num)
     }
 }
 
@@ -37,7 +30,6 @@ impl<'a, V: 'a> ProcessPar<'a, ()> for PValue<V>
 where
     V: Clone + Send + Sync
 {
-    type Out = V;
     type NI = DummyN<()>;
     type NO = DummyN<V>;
     type NIO = NValue<V>;
@@ -46,13 +38,6 @@ where
 
     fn compileIm(self, _: &mut Graph) -> Self::NIO {
         NValue(self.0)
-    }
-
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"Value\"];",num);
-        (num,num)
     }
 }
 
@@ -68,7 +53,6 @@ where
     F: FnOnce(In) -> Out + Send + Sync,
     Out: Send + Sync,
 {
-    type Out = Out;
     type NI = DummyN<()>;
     type NO = DummyN<Out>;
     type NIO = NFnOnce<F>;
@@ -77,13 +61,6 @@ where
 
     fn compileIm(self, _: &mut Graph) -> Self::NIO {
         NFnOnce(Some(self.0))
-    }
-
-    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
-        let num = *curNum;
-        *curNum += 1;
-        println!("{} [shape = box, label= \"FnOnce\"];",num);
-        (num,num)
     }
 }
 
@@ -99,23 +76,14 @@ where
     F: FnMut(In) -> Out + Send + Sync,
     Out: Send + Sync,
 {
-    type Out = Out;
     type NI = DummyN<()>;
     type NO = DummyN<Out>;
     type NIO = FnMutN<F>;
     type Mark = IsIm;
     type MarkOnce = SNotOnce;
 
-
-
     fn compileIm(self, _: &mut Graph) -> Self::NIO {
         FnMutN(self)
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"FnMut\"];",num);
-        (num,num)
     }
 }
 
@@ -131,7 +99,6 @@ impl<'a, In: 'a> ProcessPar<'a, In> for Jump
 where
     In: Send + Sync,
 {
-    type Out = In;
     type NI = NSeq<ArcStore<In>, NJump>;
     type NO = ArcLoad<In>;
     type NIO = DummyN<In>;
@@ -144,13 +111,6 @@ where
         let out = g.reserve();
         (node!(store_par(arcin) >> jump(out)), out, load_par(arcout))
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"Jump\"];",num);
-        (num,num)
-    }
-
 }
 
 
@@ -165,7 +125,6 @@ impl<'a, In: 'a> ProcessPar<'a, In> for Pause
 where
     In: Send + Sync,
 {
-    type Out = In;
     type NI = NSeq<ArcStore<In>, NPause>;
     type NO = ArcLoad<In>;
     type NIO = DummyN<In>;
@@ -177,11 +136,5 @@ where
         let rcout = rcin.clone();
         let out = g.reserve();
         (node!(store_par(rcin) >> pause(out)), out, load_par(rcout))
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"Pause\"];",num);
-        (num,num)
     }
 }

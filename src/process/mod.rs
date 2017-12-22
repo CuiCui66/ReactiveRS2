@@ -37,6 +37,17 @@ pub use self::signal::*;
 //     type Value = T;
 // }
 
+
+
+//  ___
+// |_ _|_ __ ___
+//  | || '_ ` _ \
+//  | || | | | | |
+// |___|_| |_| |_|
+
+
+
+
 ///[Im]: trait.Im.html
 ///[iI]: struct.IsIm.html
 ///[nI]: struct.NotIm.html
@@ -53,6 +64,17 @@ impl Im for NotIm {}
 /// Marker associated to [`Im`](trait.Im.html) : marks the process as immediate.
 pub struct IsIm {}
 impl Im for IsIm {}
+
+
+
+
+
+//   ___
+//  / _ \ _ __   ___ ___
+// | | | | '_ \ / __/ _ \
+// | |_| | | | | (_|  __/
+//  \___/|_| |_|\___\___|
+
 
 
 /// MarkOnce trait : it marks if the process can be executed multiple times or not.
@@ -75,9 +97,23 @@ impl NotOnce for SNotOnce {}
 /// It is used to mark processes.
 /// A process being marked by And can be executed multiple times only if both parts of
 /// the And structures are marked by NotOnce.
-pub struct And<O1,O2>(pub O1, pub O2);
-impl<O1: Once, O2: Once> Once for And<O1,O2> {}
+pub struct And<O1, O2>(pub O1, pub O2);
+impl<O1: Once, O2: Once> Once for And<O1, O2> {}
 impl<O1: NotOnce, O2: NotOnce> NotOnce for And<O1, O2> {}
+
+
+
+
+//  ____
+// |  _ \ _ __ ___   ___ ___  ___ ___
+// | |_) | '__/ _ \ / __/ _ \/ __/ __|
+// |  __/| | | (_) | (_|  __/\__ \__ \
+// |_|   |_|  \___/ \___\___||___/___/
+
+pub trait GProcess<'a, In: 'a> : 'a {
+    type Out :'a ;
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize);
+}
 
 
 
@@ -115,10 +151,9 @@ impl<O1: NotOnce, O2: NotOnce> NotOnce for And<O1, O2> {}
 ///   The type [`NIO`][NIO] has a dummy value and [`compileIm`][cI] will crash if called.
 ///
 ///Any other method will work in both cases.
-pub trait Process<'a, In: 'a>: 'a + Sized{
+pub trait Process<'a, In: 'a>: Sized + GProcess<'a, In> {
     /// The output type of the process.
-    type Out: 'a;
-
+    //type Out: 'a;
     /// The input node when compiling in non-immediate mode
     type NI: Node<'a, In, Out = ()> + Sized;
     /// The output node when compiling in non-immediate mode
@@ -152,7 +187,8 @@ pub trait Process<'a, In: 'a>: 'a + Sized{
 
     /// Compile an immediate process
     ///
-    /// It just outputs a node that do the whole computation represented by the process in a single instant.
+    /// It just outputs a node that do the whole computation represented by the
+    /// process in a single instant.
     fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
         unreachable!();
     }
@@ -161,9 +197,7 @@ pub trait Process<'a, In: 'a>: 'a + Sized{
     ///
     /// The input ref is the first unused node id.
     /// The two return value are the input and output of the graph representing the process.
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize);
-
-
+    //fn printDot(&mut self,curNum : &mut usize) -> (usize,usize);
     /// Build the sequence of two process.
     fn seq<P>(self, p: P) -> Seq<MarkedProcess<Self, Self::Mark>, MarkedProcess<P, P::Mark>>
     where
@@ -205,9 +239,9 @@ pub trait Process<'a, In: 'a>: 'a + Sized{
     }
 
     /// The process must returns a ChoiceData Value,
-    fn ploop<ROut>(self) -> PLoop<MarkedProcess<Self, Self::Mark>>
-        where
-        Self: Process<'a, In,Out = ChoiceData<In,ROut>>
+    fn ploop<ROut: 'a>(self) -> PLoop<MarkedProcess<Self, Self::Mark>>
+    where
+        Self: Process<'a, In, Out = ChoiceData<In, ROut>>,
     {
         PLoop { p: mp(self) }
     }
@@ -227,7 +261,9 @@ pub trait Process<'a, In: 'a>: 'a + Sized{
     }
 
     /// Boxes a process to improve compile-time (rust compilation) performance.
-    fn pbox(self) -> Pbox<'a, In, Self::Out, Self::NI, Self::NO, Self::NIO, Self::Mark, Self::MarkOnce> {
+    fn pbox(
+        self,
+    ) -> Pbox<'a, In, Self::Out, Self::NI, Self::NO, Self::NIO, Self::Mark, Self::MarkOnce> {
         Pbox { p: box self }
     }
 }
@@ -265,12 +301,23 @@ pub struct MarkedProcess<P, Mark: Im> {
 
 /// Marks a process with its [`Im`](trait.Im.html) tag
 pub fn mp<'a, In: 'a, P>(p: P) -> MarkedProcess<P, P::Mark>
-    where
+where
     P: Process<'a, In>,
 {
     MarkedProcess {
         p: p,
         pd: PhantomData,
+    }
+}
+
+impl<'a, In :'a, P, M> GProcess<'a, In> for MarkedProcess<P, M>
+where
+    P: Process<'a, In>,
+    M: Im,
+{
+    type Out = P::Out;
+    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+        self.p.printDot(curNum)
     }
 }
 
@@ -318,7 +365,7 @@ where
 // |  __/| |_) | (_) >  <
 // |_|   |____/ \___/_/\_\
 
-pub trait ProcessBox<'a, In: 'a>: 'a{
+pub trait ProcessBox<'a, In: 'a>: 'a {
     type Out: 'a;
     type NI: Node<'a, In, Out = ()> + Sized;
     type NO: Node<'a, (), Out = Self::Out> + Sized;
@@ -332,8 +379,7 @@ pub trait ProcessBox<'a, In: 'a>: 'a{
     fn compileIm_box(self: Box<Self>, _: &mut Graph<'a>) -> Self::NIO;
 
     // pretty print
-    fn printDot_box(self: &mut Self, curNum : &mut usize) -> (usize,usize);
-
+    fn printDot_box(self: &mut Self, curNum: &mut usize) -> (usize, usize);
 }
 
 impl<'a, In: 'a, P> ProcessBox<'a, In> for P
@@ -353,23 +399,47 @@ where
     fn compileIm_box(self: Box<Self>, g: &mut Graph<'a>) -> Self::NIO {
         (*self).compileIm(g)
     }
-    fn printDot_box(self: &mut Self, curNum : &mut usize) -> (usize,usize){
+    fn printDot_box(self: &mut Self, curNum: &mut usize) -> (usize, usize) {
         self.printDot(curNum)
     }
 }
 
 pub struct Pbox<'a, In, Out, NI, NO, NIO, Mark, MarkOnce> {
-    p: Box<ProcessBox<'a, In, Out = Out, NI = NI, NO = NO, NIO = NIO, Mark = Mark, MarkOnce = MarkOnce>>,
+    p: Box<
+        ProcessBox<
+            'a,
+            In,
+            Out = Out,
+            NI = NI,
+            NO = NO,
+            NIO = NIO,
+            Mark = Mark,
+            MarkOnce = MarkOnce,
+        >,
+    >,
 }
 
-impl<'a, In: 'a, Out: 'a, NI, NO, NIO, Mark: Im + 'a, MarkOnce: Once + 'a> Process<'a, In>
+impl<'a, In: 'a, Out: 'a, NI, NO, NIO, Mark: Im, MarkOnce: Once> GProcess<'a, In>
+    for Pbox<'a, In, Out, NI, NO, NIO, Mark, MarkOnce>
+    where
+    NI: Node<'a, In, Out = ()>,
+    NO: Node<'a, (), Out = Out>,
+    NIO: Node<'a, In, Out = Out>,
+{
+    type Out = Out;
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
+        self.p.printDot_box(curNum)
+    }
+}
+
+
+impl<'a, In: 'a, Out: 'a, NI, NO, NIO, Mark: Im, MarkOnce: Once> Process<'a, In>
     for Pbox<'a, In, Out, NI, NO, NIO, Mark, MarkOnce>
 where
     NI: Node<'a, In, Out = ()>,
     NO: Node<'a, (), Out = Out>,
     NIO: Node<'a, In, Out = Out>,
 {
-    type Out = Out;
     type NI = NI;
     type NO = NO;
     type NIO = NIO;
@@ -381,9 +451,6 @@ where
     }
     fn compileIm(self, g: &mut Graph<'a>) -> NIO {
         self.p.compileIm_box(g)
-    }
-    fn printDot(&mut self, curNum : &mut usize) -> (usize,usize){
-        self.p.printDot_box(curNum)
     }
 }
 
@@ -428,13 +495,13 @@ impl<In, Out> ForceType<In, Out> {
 //                                        |_|
 
 
-fn tname<T>()-> &'static str{
-    unsafe{type_name::<T>()}
+fn tname<T>() -> &'static str {
+    unsafe { type_name::<T>() }
 }
 
-pub fn print_graph<'a,P>(p : &'a mut P)
-    where
-    P : Process<'a,(),Out =()>
+pub fn print_graph<'a, P>(p: &'a mut P)
+where
+    P: GProcess<'a, (), Out = ()>,
 {
     let mut val = 0;
     println!("digraph {{");
