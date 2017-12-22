@@ -19,7 +19,9 @@ pub mod macros;
 pub mod engine;
 pub mod node;
 pub mod process;
+pub mod process_par;
 pub mod signal;
+pub mod signal_par;
 mod take;
 
 

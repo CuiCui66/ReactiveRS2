@@ -294,7 +294,7 @@ impl<'a> Node<'a, ()> for NBigMerge {
 //          |___/
 
 
-pub fn new_rcbjp_par(total: usize, dest: usize) -> Arc<Mutex<BigJoinPoint>> {
+pub fn new_arcbjp(total: usize, dest: usize) -> Arc<Mutex<BigJoinPoint>> {
     Arc::new(Mutex::new(BigJoinPoint { nb: 0, total, dest }))
 }
 

@@ -1,7 +1,6 @@
 use engine::*;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::cell::*;
 use super::*;
 
 
@@ -40,7 +39,7 @@ pub fn load_par<T>(rc: AMutex<T>) -> ArcLoad<T> {
 impl<'a, T: 'a> Node<'a, ()> for ArcLoad<T> {
     type Out = T;
     fn call(&mut self, _: &mut SubRuntime<'a>, _: ()) -> T {
-        *self.p.lock().unwrap()
+        (*self.p.lock().unwrap()).take().unwrap()
     }
 }
 
@@ -61,6 +60,6 @@ where
 {
     type Out = T;
     fn call(&mut self, _: &mut SubRuntime<'a>, _: ()) -> T {
-        *self.p.lock().unwrap().copy()
+        (*self.p.lock().unwrap()).unwrap()
     }
 }

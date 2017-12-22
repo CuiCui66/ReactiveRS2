@@ -5,6 +5,8 @@ use take::take;
 
 mod rcmanip;
 pub use self::rcmanip::*;
+mod arcmanip;
+pub use self::arcmanip::*;
 mod control;
 pub use self::control::*;
 mod par;

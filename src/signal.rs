@@ -39,7 +39,7 @@ pub(crate) struct SignalRuntime<SV>
 impl<SV> SignalRuntime<SV>
 {
     /// Create a new signal runtime, given a structure representing its value
-    fn new(signal_value: SV) -> Self {
+    pub(crate) fn new(signal_value: SV) -> Self {
         SignalRuntime {
             last_set: 0,
             pre_last_set: 0,
@@ -54,7 +54,7 @@ impl<SV> SignalRuntime<SV>
 
 impl SignalRuntime<PureSignalValue> {
     /// Create a new signal runtime, that has no value
-    fn new_pure() -> Self {
+    pub(crate) fn new_pure() -> Self {
         SignalRuntime::new(PureSignalValue::new())
     }
 }
@@ -64,7 +64,7 @@ where
     V: Clone
 {
     /// Create a new signal runtime, which has a value that can be cloned
-    fn new_mc(default_value: V, gather: Box<FnMut(E, &mut V)>) -> Self {
+    pub(crate) fn new_mc(default_value: V, gather: Box<FnMut(E, &mut V)>) -> Self {
         SignalRuntime::new(MCSignalValue::new(default_value,gather))
     }
 }
