@@ -543,13 +543,12 @@ mod tests {
         }
     }
 
-
     #[test]
     fn emit_await_immediate_par() {
         let value = Mutex::new(0);
         let signal = SignalRuntimeParRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e; });
         {
-            let mut rt = rt! {
+            let mut rt = rtp! {
                 |_| {
                     let signal2 = signal.clone();
                     let signal3 = signal.clone();
@@ -593,7 +592,7 @@ mod tests {
         let value = Mutex::new(0);
         let signal = SignalRuntimeParRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e; });
         {
-            let mut rt = rt! {
+            let mut rt = rtp! {
                 |_| {
                     let signal3 = signal.clone();
                     signal3

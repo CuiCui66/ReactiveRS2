@@ -28,7 +28,7 @@ impl<'a, In: 'a, E: 'a, S: 'a> GProcess<'a, ((S, E),In)> for EmitD
     }
 }
 
-impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, ((SignalRuntimeRef<SV>, E),In)> for EmitD
+impl<'a, In: 'a, E: 'a, S: 'a> Process<'a, ((S, E),In)> for EmitD
 where
     S: Signal<'a, E=E>,
 {
@@ -42,6 +42,7 @@ where
         NEmitD {}
     }
 }
+
 impl<'a, E: 'a, S: 'a> GProcess<'a, (S, E)> for EmitD
     where
     S: Signal<'a,E = E>,
@@ -70,9 +71,9 @@ where
     }
 }
 
-impl<'a, In: 'a, E: 'a, SV: 'a> GProcess<'a, (Vec<(SignalRuntimeRef<SV>, E)>,In)> for EmitD
-    where
-    SV: SignalValue<E=E>,
+impl<'a, In: 'a, E: 'a, S: 'a> GProcess<'a, (Vec<(S, E)>,In)> for EmitD
+where
+    S: Signal<'a,E=E>,
 {
     type Out = In;
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -85,8 +86,8 @@ impl<'a, In: 'a, E: 'a, SV: 'a> GProcess<'a, (Vec<(SignalRuntimeRef<SV>, E)>,In)
 
 
 impl<'a, In: 'a, E: 'a, S: 'a> Process<'a, (Vec<(S, E)>,In)> for EmitD
-    where
-        S: Signal<'a, E=E>,
+where
+    S: Signal<'a, E=E>,
 {
     type NI = DummyN<()>;
     type NO = DummyN<In>;
@@ -101,7 +102,7 @@ impl<'a, In: 'a, E: 'a, S: 'a> Process<'a, (Vec<(S, E)>,In)> for EmitD
 
 impl<'a, E: 'a, S: 'a> GProcess<'a, Vec<(S, E)>> for EmitD
     where
-    SV: Signal<E = E>,
+    S: Signal<'a,E = E>,
 {
     type Out = ();
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -147,7 +148,7 @@ where
 
 impl<'a, E: 'a, S: 'a> GProcess<'a, E> for EmitS<S, E>
     where
-    S: Signal<E = E>,
+    S: Signal<'a, E = E>,
 {
     type Out = ();
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -159,7 +160,7 @@ impl<'a, E: 'a, S: 'a> GProcess<'a, E> for EmitS<S, E>
 }
 
 
-impl<'a, E: 'a, SV: 'a> Process<'a, E> for EmitS<SV, E>
+impl<'a, E: 'a, S: 'a> Process<'a, E> for EmitS<S, E>
 where
     S: Signal<'a, E = E>,
 {
@@ -174,9 +175,10 @@ where
     }
 }
 
-impl<'a, SV: 'a, E: 'a, In: 'a> GProcess<'a, (E,In)> for EmitS<SV, E>
+
+impl<'a, S: 'a, E: 'a, In: 'a> GProcess<'a, (E,In)> for EmitS<S, E>
     where
-    SV: SignalValue<E = E>,
+    S: Signal<'a, E = E>,
 {
     type Out = In;
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -188,14 +190,13 @@ impl<'a, SV: 'a, E: 'a, In: 'a> GProcess<'a, (E,In)> for EmitS<SV, E>
 }
 
 
-
-impl<'a, SV: 'a, E: 'a, In: 'a> Process<'a, (E,In)> for EmitS<SV, E>
+impl<'a, S: 'a, E: 'a, In: 'a> Process<'a, (E,In)> for EmitS<S, E>
 where
     S: Signal<'a, E = E>,
 {
     type NI = DummyN<()>;
     type NO = DummyN<In>;
-    type Out = In;
+    type NIO = NEmitS<S, E>;
     type Mark = IsIm;
     type MarkOnce = SNotOnce;
 
@@ -237,7 +238,7 @@ impl<'a, E: 'a, S: 'a> GProcess<'a, Vec<E>> for EmitVecS<S>
 }
 
 
-impl<'a, E: 'a, SV: 'a> Process<'a, Vec<E>> for EmitVecS<SV>
+impl<'a, E: 'a, S: 'a> Process<'a, Vec<E>> for EmitVecS<S>
 where
     S: Signal<'a, E = E>,
 {
@@ -252,9 +253,9 @@ where
     }
 }
 
-impl<'a, SV: 'a, E: 'a, In: 'a> GProcess<'a, (Vec<E>,In)> for EmitVecS<SV>
+impl<'a, S: 'a, E: 'a, In: 'a> GProcess<'a, (Vec<E>,In)> for EmitVecS<S>
     where
-    SV: SignalValue<E = E>,
+    S: Signal<'a,E = E>,
 {
     type Out = In;
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -304,7 +305,7 @@ E: Clone,
 
 impl<'a, In: 'a, E: 'a, S: 'a> GProcess<'a, In> for EmitVS<S, E>
     where
-    S: Signal<E = E>,
+    S: Signal<'a, E = E>,
     E: Clone,
 {
     type Out = In;
@@ -318,9 +319,9 @@ impl<'a, In: 'a, E: 'a, S: 'a> GProcess<'a, In> for EmitVS<S, E>
 
 
 
-impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, In> for EmitVS<SV, E>
+impl<'a, In: 'a, E: 'a, S: 'a> Process<'a, In> for EmitVS<S, E>
 where
-    S: Signal<E = E>,
+    S: Signal<'a, E = E>,
     E: Clone,
 {
     type NI = DummyN<()>;
@@ -357,7 +358,7 @@ pub fn emit_value_vec<'a, S, E>(values: Vec<(S,E)>) -> EmitVVecS<S, E>
 
 impl<'a, In: 'a, E: 'a, S: 'a> GProcess<'a, In> for EmitVVecS<S, E>
     where
-    S: Signal<E = E>,
+    S: Signal<'a, E = E>,
     E: Clone,
 {
     type Out = In;
@@ -371,10 +372,10 @@ impl<'a, In: 'a, E: 'a, S: 'a> GProcess<'a, In> for EmitVVecS<S, E>
 
 
 
-impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, In> for EmitVVecS<SV, E>
-    where
-        S: Signal<'a, E = E>,
-        E: Clone,
+impl<'a, In: 'a, E: 'a, S: 'a> Process<'a, In> for EmitVVecS<S, E>
+where
+    S: Signal<'a, E = E>,
+    E: Clone,
 {
     type NI = DummyN<()>;
     type NO = DummyN<In>;
@@ -405,7 +406,7 @@ pub static AwaitD: AwaitD = AwaitD {};
 
 impl<'a, V: 'a, S: 'a> GProcess<'a, S> for AwaitD
     where
-    S: Signal<V = V>,
+    S: Signal<'a, V = V>,
 {
     type Out = V;
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -418,9 +419,9 @@ impl<'a, V: 'a, S: 'a> GProcess<'a, S> for AwaitD
 
 
 
-impl<'a, V: 'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for AwaitD
+impl<'a, V: 'a, S: 'a> Process<'a, S> for AwaitD
 where
-    SV: SignalValue<V = V>,
+    S: Signal<'a, V = V>,
 {
     type Mark = NotIm;
     type NIO = DummyN<V>;
@@ -438,9 +439,9 @@ where
     }
 }
 
-impl<'a, In: 'a, V: 'a, SV: 'a> GProcess<'a, (SignalRuntimeRef<SV>, In)> for AwaitD
+impl<'a, In: 'a, V: 'a, S: 'a> GProcess<'a, (S, In)> for AwaitD
 where
-    SV: SignalValue<V=V>,
+    S: Signal<'a,V=V>,
 {
     type Out = (V,In);
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -486,7 +487,7 @@ where
 #[derive(Clone)]
 pub struct AwaitS<S>(pub S);
 
-impl<'a, In: 'a, V: 'a, S: 'a> Process<'a, In> for AwaitS<S>
+impl<'a, In: 'a, V: 'a, S: 'a> GProcess<'a, In> for AwaitS<S>
 where
     S: Signal<'a, V=V>,
 {
@@ -500,9 +501,9 @@ where
 }
 
 
-impl<'a, In: 'a, V: 'a, SV: 'a> Process<'a, In> for AwaitS<SV>
+impl<'a, In: 'a, V: 'a, S: 'a> Process<'a, In> for AwaitS<S>
 where
-    SV: SignalValue<V=V>,
+    S: Signal<'a, V=V>,
 {
     type Mark = NotIm;
     type NIO = DummyN<(V,In)>;
@@ -537,9 +538,9 @@ pub struct AwaitImmediateD {}
 #[allow(non_upper_case_globals)]
 pub static AwaitImmediateD: AwaitImmediateD = AwaitImmediateD {};
 
-impl<'a, S: 'a> Process<'a, S> for AwaitImmediateD
-    where
-        S: Signal<'a>,
+impl<'a, S: 'a> GProcess<'a, S> for AwaitImmediateD
+where
+    S: Signal<'a>,
 {
     type Out = ();
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -566,9 +567,9 @@ impl<'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
     }
 }
 
-impl<'a, In: 'a, S: 'a> GProcess<'a, (SignalRuntimeRef<SV>, In)> for AwaitImmediateD
-    where
-        S: Signal,
+impl<'a, In: 'a, S: 'a> GProcess<'a, (S, In)> for AwaitImmediateD
+where
+    S: Signal<'a>,
 {
     type Out = In;
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -670,7 +671,7 @@ impl<'a, PT, PF, S: 'a, Out: 'a> GProcess<'a, S>
 where
     PT: GProcess<'a, (), Out=Out>,
     PF: GProcess<'a, (), Out=Out>,
-    S: SignalValue,
+    S: Signal<'a>,
 {
     type Out = Out;
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -682,7 +683,7 @@ where
 }
 
 
-impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, SignalRuntimeRef<SV>>
+impl<'a, PT, PF, S: 'a, Out: 'a> Process<'a, S>
     for PresentD<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>>
 where
     PT: Process<'a, (), Out=Out>,
@@ -835,11 +836,11 @@ pub struct PresentS<PT,PF,S> {
 }
 
 impl<'a, PT, PF, S: 'a, Out: 'a> GProcess<'a, ()>
-for PresentS<PT, PF, SV>
-    where
-        PT: GProcess<'a, (), Out=Out>,
-        PF: GProcess<'a, (), Out=Out>,
-        S: Signal,
+for PresentS<PT, PF, S>
+where
+    PT: GProcess<'a, (), Out=Out>,
+    PF: GProcess<'a, (), Out=Out>,
+    S: Signal<'a>,
 {
     type Out = Out;
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -851,8 +852,8 @@ for PresentS<PT, PF, SV>
 }
 
 
-impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, ()>
-for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>, SV>
+impl<'a, PT, PF, S: 'a, Out: 'a> Process<'a, ()>
+for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>, S>
     where
         PT: Process<'a, (), Out=Out>,
         PF: Process<'a, (), Out=Out>,
