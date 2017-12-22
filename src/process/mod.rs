@@ -2,7 +2,7 @@ use node::*;
 use engine::*;
 use std::marker::PhantomData;
 use signal::*;
-pub use std::intrinsics::type_name;
+use std::intrinsics::type_name;
 
 /// Contains all basic struct of reactive processes, closure, Pause, ...
 mod base;
@@ -495,8 +495,9 @@ impl<In, Out> ForceType<In, Out> {
 //                                        |_|
 
 
-fn tname<T>() -> &'static str {
-    unsafe { type_name::<T>() }
+fn tname<T>() -> String{
+    let s = String::from(unsafe { type_name::<T>() });
+    s.replace("ReactiveRS2::node::ChoiceData","CD")
 }
 
 pub fn print_graph<'a, P>(p: &'a mut P)

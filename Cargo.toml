@@ -14,6 +14,6 @@ cpuprofiler = "0.0.3"
 # name = "gol"
 # path = "src/gameoflife.rs"
 
-# [[bin]]
-# name = "sb"
-# path = "src/sandbox.rs"
+[[bin]]
+name = "sb"
+path = "src/sandbox.rs"

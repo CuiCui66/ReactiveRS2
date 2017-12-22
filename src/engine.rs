@@ -1,9 +1,16 @@
 use std::vec::Vec;
-
+use std::boxed::Box;
+use core::ops::DerefMut;
 
 use node::*;
 use process::*;
 use take::take;
+
+
+
+
+
+
 
 /// This type represent a full control-flow graph of a reactive system.
 ///
@@ -61,6 +68,10 @@ impl<'a> Graph<'a> {
     }
 }
 
+
+
+
+
 /// Contains the remaining node to be executed
 pub(crate) struct Tasks {
     /// Contains nodes to be executed on the current instants.
@@ -71,15 +82,27 @@ pub(crate) struct Tasks {
     pub(crate) next: Vec<usize>,
 }
 
+
+
+
+
 pub trait EndOfInstantCallback<'a>{
     fn on_end_of_instant(&self, sub_runtime: &mut SubRuntime<'a>);
 }
+
+
+
+
 
 /// Contains a list of [signal](../signal/index.html)
 /// related continuation to be run at the end of the instant.
 pub(crate) struct EndOfInstant<'a> {
     pub(crate) pending: Vec<Box<EndOfInstantCallback<'a> + 'a>>,
 }
+
+
+
+
 
 /// The part of the runtime that is passed to Nodes, see
 /// [Node::call](../node/trait.Node.html#tymethod.call).
@@ -91,6 +114,9 @@ pub struct SubRuntime<'a> {
     /// The id of the current instant.
     pub(crate) current_instant: usize,
 }
+
+
+
 
 
 /// Runtime for running reactive graph.
@@ -184,5 +210,14 @@ impl<'a> Runtime<'a> {
         self.sub_runtime.current_instant += 1;
 
         self.sub_runtime.tasks.current.len() > 0 || self.sub_runtime.eoi.pending.len() > 0
+    }
+
+    pub fn printDot(&mut self){
+        println!("digraph {{");
+        let mut cfgd = CFGDrawer::new();
+        for (i,node) in self.nodes.iter_mut().enumerate(){
+            printNode(i,node.deref_mut(),&mut cfgd);
+        }
+        println!("}}");
     }
 }

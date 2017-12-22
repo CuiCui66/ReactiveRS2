@@ -18,7 +18,7 @@ impl<'a, P, Q, In: 'a, Mid: 'a, Out: 'a> GProcess<'a, In>
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let (beg,midup) = self.p.printDot(curNum);
         let (middown,end) = self.q.printDot(curNum);
-        println!("{} -> {} [label = \"{}\"];",midup,middown,tname::<Mid>());
+        println!("{} -> {} [label = \" {} \"];",midup,middown,tname::<Mid>());
         (beg,end)
     }
 }

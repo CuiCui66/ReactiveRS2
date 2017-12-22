@@ -29,8 +29,8 @@ where
         let numend = numbeg +1;
         *curNum += 2;
         println!("{} [shape=diamond, label=\"if\"]",numbeg);
-        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
-        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
+        println!("{}:w -> {} [label = \" True:{} \"];",numbeg,begt,tname::<InT>());
+        println!("{}:e -> {} [label = \" False:{} \"];",numbeg,begf,tname::<InF>());
         println!("{} [size = 0.1]",numend);
         println!("{} -> {}:w",endt,numend);
         println!("{} -> {}:e",endf,numend);
@@ -166,10 +166,10 @@ impl<'a, P, In: 'a, Out: 'a> GProcess<'a, In>
         let numend = numbeg +1;
         *curNum += 2;
         println!("{} [label = \"loop\"]",numbeg);
-        println!("{}:s -> {} [label = \"{}\"]",numbeg,beg,tname::<In>());
-        println!("{} [shape=diamond]",numend);
-        println!("{} -> {}:n [label = \"{}\"]",end,numend,tname::<ChoiceData<In,Out>>());
-        println!("{}:w -> {}:w [label = \"Continue: {}\"];",numend,numbeg,tname::<In>());
+        println!("{}:s -> {} [label = \" {} \"]",numbeg,beg,tname::<In>());
+        println!("{} [shape=diamond,label=\"\"]",numend);
+        println!("{} -> {}:n [label = \" {} \"]",end,numend,tname::<ChoiceData<In,Out>>());
+        println!("{}:w -> {}:w [label = \" Continue: {} \"];",numend,numbeg,tname::<In>());
         (numbeg,numend)
     }
 }

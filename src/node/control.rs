@@ -21,6 +21,11 @@ impl<'a> Node<'a, ()> for NJump {
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, _: ()) {
         sub_runtime.tasks.current.push(self.dest);
     }
+    fn printDot(&mut self, cfgd: &mut CFGDrawer) {
+        let ind = cfgd.get_node_ind();
+        print!("<f{}> Jump",ind);
+        cfgd.add_arrow((ind,self.dest));
+    }
 }
 
 
@@ -43,6 +48,11 @@ impl<'a> Node<'a, ()> for NPause {
     type Out = ();
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, _: ()) {
         sub_runtime.tasks.next.push(self.dest);
+    }
+    fn printDot(&mut self, cfgd: &mut CFGDrawer) {
+        let ind = cfgd.get_node_ind();
+        print!("<f{}> Pause",ind);
+        cfgd.add_arrow((ind,self.dest));
     }
 }
 
@@ -80,6 +90,13 @@ impl<'a,NT,NF, InT: 'a, InF: 'a, Out: 'a> Node<'a, ChoiceData<InT, InF>> for NCh
                 self.nf.call(sub_runtime, f)
             }
         }
+    }
+    fn printDot(&mut self, cfgd: &mut CFGDrawer){
+        print!("");
+        self.nt.printDot(cfgd);
+        print!("| or |");
+        self.nf.printDot(cfgd);
+        print!("");
     }
 }
 

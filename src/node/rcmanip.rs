@@ -24,8 +24,14 @@ impl<'a, T: 'a> Node<'a, T> for RcStore<T> {
     fn call(&mut self, _: &mut SubRuntime<'a>, val: T) {
         self.p.set(Some(val));
     }
+    fn printDot(&mut self, cfgd: &mut CFGDrawer) {
+        print!(
+            "Store : {} in {}",
+            tname::<T>(),
+            cfgd.get_ind(Rc::into_raw(self.p.clone()))
+        )
+    }
 }
-
 
 
 pub struct RcLoad<T> {
@@ -41,7 +47,15 @@ impl<'a, T: 'a> Node<'a, ()> for RcLoad<T> {
     fn call(&mut self, _: &mut SubRuntime<'a>, _: ()) -> T {
         self.p.take().unwrap()
     }
+    fn printDot(&mut self, cfgd: &mut CFGDrawer) {
+        print!(
+            "Load : {} in {}",
+            tname::<T>(),
+            cfgd.get_ind(Rc::into_raw(self.p.clone()))
+        )
+    }
 }
+
 
 pub struct RcLoadCopy<T> {
     p: RCell<T>,
@@ -61,5 +75,12 @@ where
     type Out = T;
     fn call(&mut self, _: &mut SubRuntime<'a>, _: ()) -> T {
         self.p.get().unwrap()
+    }
+    fn printDot(&mut self, cfgd: &mut CFGDrawer) {
+        print!(
+            "LoadCopy : {} in {}",
+            tname::<T>(),
+            cfgd.get_ind(Rc::into_raw(self.p.clone()))
+        )
     }
 }

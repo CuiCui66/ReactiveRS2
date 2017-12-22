@@ -25,6 +25,9 @@ impl<'a, In: 'a> Node<'a, In> for Ignore {
     fn call(&mut self, _: &mut SubRuntime<'a>, _: In) -> Self::Out {}
 }
 
+
+
+
 #[derive(Clone, Copy)]
 pub struct GenP {}
 
@@ -37,6 +40,7 @@ impl<'a> Node<'a, ()> for GenP {
         ((), ())
     }
 }
+
 
 
 
@@ -53,6 +57,9 @@ impl<'a, In1: 'a, In2: 'a> Node<'a, (In1, In2)> for Ignore1 {
     }
 }
 
+
+
+
 #[derive(Clone, Copy)]
 pub struct Ignore2 {}
 
@@ -65,6 +72,9 @@ impl<'a, In1: 'a, In2: 'a> Node<'a, (In1, In2)> for Ignore2 {
         val
     }
 }
+
+
+
 
 //  ____
 // |  _ \ __ _ _ __
@@ -86,7 +96,16 @@ impl<'a, N1, N2, In1: 'a, In2: 'a, Out1: 'a, Out2: 'a> Node<'a, (In1,In2)> for N
     fn call(&mut self, t: &mut SubRuntime<'a>, (val1,val2):(In1,In2) ) -> Self::Out {
         (self.n1.call(t, val1), self.n2.call(t, val2))
     }
+    fn printDot(&mut self, cfgd: &mut CFGDrawer){
+        print!("");
+        self.n1.printDot(cfgd);
+        print!("| |");
+        self.n2.printDot(cfgd);
+        print!("");
+    }
 }
+
+
 
 pub struct JoinPoint<T1, T2> {
     o1: Option<T1>,
@@ -102,6 +121,9 @@ impl<T1, T2> Default for JoinPoint<T1, T2> {
 pub fn new_rcjp<T1, T2>() -> Rc<RefCell<JoinPoint<T1, T2>>> {
     Rc::new(RefCell::new(JoinPoint::default()))
 }
+
+
+
 
 
 pub struct NSetVar1<T1, T2> {
@@ -121,7 +143,18 @@ impl<'a, T1: 'a, T2: 'a> Node<'a, T1> for NSetVar1<T1, T2> {
             t.tasks.current.push(self.dest);
         }
     }
+    fn printDot(&mut self, cfgd: &mut CFGDrawer) {
+        let ind = cfgd.get_node_ind();
+        print!(
+            "<f{}> Set1: {} in {}",
+            ind,
+            tname::<T1>(),
+            cfgd.get_ind(Rc::into_raw(self.rc.clone()))
+        );
+        cfgd.add_arrow((ind,self.dest));
+    }
 }
+
 
 
 
@@ -142,7 +175,19 @@ impl<'a, T1: 'a, T2: 'a> Node<'a, T2> for NSetVar2<T1, T2> {
             t.tasks.current.push(self.dest);
         }
     }
+    fn printDot(&mut self, cfgd: &mut CFGDrawer) {
+        let ind = cfgd.get_node_ind();
+        print!(
+            "<f{}> Set2: {} in {}",
+            ind,
+            tname::<T2>(),
+            cfgd.get_ind(Rc::into_raw(self.rc.clone()))
+        );
+        cfgd.add_arrow((ind,self.dest));
+    }
+
 }
+
 
 
 
@@ -160,7 +205,15 @@ impl<'a, T1: 'a, T2: 'a> Node<'a, ()> for NMerge<T1, T2> {
         let jp = take(&mut *self.rc.borrow_mut());
         (jp.o1.unwrap(), jp.o2.unwrap())
     }
+    fn printDot(&mut self, cfgd: &mut CFGDrawer) {
+        print!(
+            "Merge: {} in {}",
+            tname::<(T1,T2)>(),
+            cfgd.get_ind(Rc::into_raw(self.rc.clone()))
+        )
+    }
 }
+
 
 //  ____            ____
 // |  _ \ __ _ _ __|  _ \ __ _ _ __

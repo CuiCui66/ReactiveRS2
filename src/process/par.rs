@@ -21,11 +21,11 @@ where
         let numend = numbeg +1;
         *curNum += 2;
         println!("{} [shape = triangle, label = \"\"]",numbeg);
-        println!("{}:sw -> {}:n [label = \"{}\"]",numbeg,begp,tname::<InP>());
-        println!("{}:se -> {}:n [label = \"{}\"]",numbeg,begq,tname::<InQ>());
+        println!("{}:sw -> {}:n [label = \" {} \"]",numbeg,begp,tname::<InP>());
+        println!("{}:se -> {}:n [label = \" {} \"]",numbeg,begq,tname::<InQ>());
         println!("{} [shape= invtriangle, label = \"\"]",numend);
-        println!("{}:s -> {}:nw [label = \"{}\"]",endp,numend,tname::<OutP>());
-        println!("{}:s -> {}:ne [label = \"{}\"]",endq,numend,tname::<OutQ>());
+        println!("{}:s -> {}:nw [label = \" {} \"]",endp,numend,tname::<OutP>());
+        println!("{}:s -> {}:ne [label = \" {} \"]",endq,numend,tname::<OutQ>());
         (numbeg,numend)
     }
 }
