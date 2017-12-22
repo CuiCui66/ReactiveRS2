@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 use signal::*;
 pub use std::intrinsics::type_name;
 pub use process::*;
-
+use engine_par::*;
 
 /// Contains all basic struct of reactive processes, closure, Pause, ...
 mod base;
@@ -91,7 +91,7 @@ pub trait ProcessPar<'a, In: 'a>: Sized + GProcess<'a,In>{
     ///   when called during the normal execution of the runtime (i.e after another node has put
     ///   its id in the runtime). This node must be placed (after adding other stuff behind) in
     ///   the id slot given as middle value so other node can reference it.
-    fn compile_par(self, _: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, _: &mut GraphPar<'a>) -> (Self::NI, usize, Self::NO) {
         unreachable!();
     }
 
@@ -101,7 +101,7 @@ pub trait ProcessPar<'a, In: 'a>: Sized + GProcess<'a,In>{
     /// Compile an immediate process
     ///
     /// It just outputs a node that do the whole computation represented by the process in a single instant.
-    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut GraphPar<'a>) -> Self::NIO {
         unreachable!();
     }
 
@@ -132,9 +132,9 @@ pub trait ProcessPar<'a, In: 'a>: Sized + GProcess<'a,In>{
 
     }
 
-    /*
+
     /// Builds the present construct which takes a signal, see PresentD.
-    fn present<PF>(
+    fn present_par<PF>(
         self,
         p: PF,
     ) -> PresentD<MarkedProcessPar<Self, Self::Mark>, MarkedProcessPar<PF, PF::Mark>>
@@ -145,7 +145,7 @@ pub trait ProcessPar<'a, In: 'a>: Sized + GProcess<'a,In>{
             pt: mp_par(self),
             pf: mp_par(p),
         }
-    }*/
+    }
 
     /// The process must returns a ChoiceData Value,
     fn ploop_par<ROut : 'a>(self) -> PLoop<MarkedProcessPar<Self, Self::Mark>>
@@ -228,35 +228,38 @@ impl<'a, In :'a, P, M> GProcess<'a, In> for MarkedProcessPar<P, M>
     }
 }
 
+/// This is trait of an object that can be compiled to a control-flow [`Graph`](../engine/struct.Graph.html).
+pub trait GraphFillerPar<'a> {
+    fn fill_graph_par(self, g: &mut GraphPar<'a>) -> usize;
+}
 
-
-impl<'a, P, Mark> GraphFiller<'a> for MarkedProcessPar<P, Mark>
+impl<'a, P, Mark> GraphFillerPar<'a> for MarkedProcessPar<P, Mark>
 where
     P: ProcessPar<'a, (), Out = ()>,
     Mark: Im,
 {
-    default fn fill_graph(self, _: &mut Graph<'a>) -> usize {
+    default fn fill_graph_par(self, _: &mut GraphPar<'a>) -> usize {
         unreachable!();
     }
 }
 
 
-impl<'a, P> GraphFiller<'a> for MarkedProcessPar<P, NotIm>
+impl<'a, P> GraphFillerPar<'a> for MarkedProcessPar<P, NotIm>
 where
     P: ProcessPar<'a, (), Out = ()>,
 {
-    fn fill_graph(self, g: &mut Graph<'a>) -> usize {
+    fn fill_graph_par(self, g: &mut GraphPar<'a>) -> usize {
         let (pni, pind, pno) = self.p.compile_par(g);
         g.set(pind, box pno);
         g.add(box pni)
     }
 }
 
-impl<'a, P> GraphFiller<'a> for MarkedProcessPar<P, IsIm>
+impl<'a, P> GraphFillerPar<'a> for MarkedProcessPar<P, IsIm>
 where
     P: ProcessPar<'a, (), Out = ()>,
 {
-    fn fill_graph(self, g: &mut Graph<'a>) -> usize {
+    fn fill_graph_par(self, g: &mut GraphPar<'a>) -> usize {
         let pnio = self.p.compileIm_par(g);
         g.add(box pnio)
     }
@@ -277,10 +280,10 @@ pub trait ProcessBoxPar<'a, In: 'a>: 'a{
     type Mark: Im;
 
     type MarkOnce: Once;
-    fn compile_box(self: Box<Self>, _: &mut Graph<'a>) -> (Self::NI, usize, Self::NO);
+    fn compile_box(self: Box<Self>, _: &mut GraphPar<'a>) -> (Self::NI, usize, Self::NO);
 
     type NIO: Node<'a, In, Out = Self::Out>;
-    fn compileIm_box(self: Box<Self>, _: &mut Graph<'a>) -> Self::NIO;
+    fn compileIm_box(self: Box<Self>, _: &mut GraphPar<'a>) -> Self::NIO;
 
     // pretty print
     fn printDot_box(self: &mut Self, curNum : &mut usize) -> (usize,usize);
@@ -298,10 +301,10 @@ where
     type Mark = P::Mark;
     type MarkOnce = P::MarkOnce;
 
-    fn compile_box(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_box(self: Box<Self>, g: &mut GraphPar<'a>) -> (Self::NI, usize, Self::NO) {
         (*self).compile_par(g)
     }
-    fn compileIm_box(self: Box<Self>, g: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_box(self: Box<Self>, g: &mut GraphPar<'a>) -> Self::NIO {
         (*self).compileIm_par(g)
     }
     fn printDot_box(self: &mut Self, curNum : &mut usize) -> (usize,usize){
@@ -340,10 +343,10 @@ where
     type Mark = Mark;
     type MarkOnce = MarkOnce;
 
-    fn compile_par(self, g: &mut Graph<'a>) -> (NI, usize, NO) {
+    fn compile_par(self, g: &mut GraphPar<'a>) -> (NI, usize, NO) {
         self.p.compile_box(g)
     }
-    fn compileIm_par(self, g: &mut Graph<'a>) -> NIO {
+    fn compileIm_par(self, g: &mut GraphPar<'a>) -> NIO {
         self.p.compileIm_box(g)
     }
 }

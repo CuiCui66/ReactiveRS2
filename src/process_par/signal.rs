@@ -18,7 +18,7 @@ where
     type NIO = NEmitD;
     type MarkOnce = SNotOnce;
 
-    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut GraphPar<'a>) -> Self::NIO {
         NEmitD {}
     }
 }
@@ -33,7 +33,7 @@ where
     type NIO = NEmitD;
     type MarkOnce = SNotOnce;
 
-    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut GraphPar<'a>) -> Self::NIO {
         NEmitD {}
     }
 }
@@ -49,7 +49,7 @@ where
     type NIO = NEmitD;
     type MarkOnce = SNotOnce;
 
-    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut GraphPar<'a>) -> Self::NIO {
         NEmitD {}
     }
 }
@@ -64,7 +64,7 @@ where
     type NIO = NEmitD;
     type MarkOnce = SNotOnce;
 
-    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut GraphPar<'a>) -> Self::NIO {
         NEmitD {}
     }
 }
@@ -87,7 +87,7 @@ where
     type NIO = NEmitS<S, E>;
     type MarkOnce = SNotOnce;
 
-    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut GraphPar<'a>) -> Self::NIO {
         NEmitS(self.0, PhantomData)
     }
 }
@@ -104,7 +104,7 @@ where
     type Mark = IsIm;
     type MarkOnce = SNotOnce;
 
-    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut GraphPar<'a>) -> Self::NIO {
         NEmitS(self.0, PhantomData)
     }
 }
@@ -127,7 +127,7 @@ where
     type NIO = NEmitVecS<S>;
     type MarkOnce = SNotOnce;
 
-    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut GraphPar<'a>) -> Self::NIO {
         NEmitVecS(self.0)
     }
 
@@ -144,7 +144,7 @@ where
     type Mark = IsIm;
     type MarkOnce = SNotOnce;
 
-    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut GraphPar<'a>) -> Self::NIO {
         NEmitVecS(self.0)
     }
 }
@@ -170,7 +170,7 @@ where
     type NIO = NEmitVS<S, E>;
     type MarkOnce = SNotOnce;
 
-    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut GraphPar<'a>) -> Self::NIO {
         NEmitVS(self.0, self.1)
     }
 
@@ -196,7 +196,7 @@ where
     type NIO = NEmitVVecS<S, E>;
     type MarkOnce = SNotOnce;
 
-    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut GraphPar<'a>) -> Self::NIO {
         NEmitVVecS(self.0)
     }
 
@@ -221,7 +221,7 @@ where
     type NO = NSeq<ArcLoad<S>, NGetD>;
     type MarkOnce = SNotOnce;
 
-    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut GraphPar<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
         let rc = new_amutex();
         let rc2 = rc.clone();
@@ -245,7 +245,7 @@ where
     type NO = NSeq<ArcLoad<(S, In)>, NGetD>;
     type MarkOnce = SNotOnce;
 
-    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut GraphPar<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
         let rc = new_amutex();
         let rc2 = rc.clone();
@@ -277,7 +277,7 @@ where
     type NO = NSeq<GenP, NPar<NGetS<S>, ArcLoad<In>>>;
     type MarkOnce = SNotOnce;
 
-    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut GraphPar<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
         let rc = new_amutex();
         let rc2 = rc.clone();
@@ -306,7 +306,7 @@ where
     type NO = Nothing;
     type MarkOnce = SNotOnce;
 
-    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut GraphPar<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
         (NAwaitImmediateD(out_id), out_id, Nothing {})
     }
@@ -323,7 +323,7 @@ where
     type NO = ArcLoad<In>;
     type MarkOnce = SNotOnce;
 
-    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut GraphPar<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
         let rc = new_amutex();
         let rc2 = rc.clone();
@@ -354,7 +354,7 @@ where
     type NO = ArcLoad<In>;
     type MarkOnce = SNotOnce;
 
-    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut GraphPar<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
         let rc = new_amutex();
         let rc2 = rc.clone();
@@ -386,7 +386,7 @@ where
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut GraphPar<'a>) -> (Self::NI, usize, Self::NO) {
         let rct = new_amutex();
         let rcf = rct.clone();
         let rc_out = rct.clone();
@@ -423,7 +423,7 @@ where
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut GraphPar<'a>) -> (Self::NI, usize, Self::NO) {
         let rct = new_amutex();
         let rcf = rct.clone();
         let rc_out = rct.clone();
@@ -459,7 +459,7 @@ where
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut GraphPar<'a>) -> (Self::NI, usize, Self::NO) {
         let rct = new_amutex();
         let rcf = rct.clone();
         let rc_out = rct.clone();
@@ -495,7 +495,7 @@ where
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut GraphPar<'a>) -> (Self::NI, usize, Self::NO) {
         let rct = new_amutex();
         let rcf = rct.clone();
         let rc_out = rct.clone();
@@ -536,7 +536,7 @@ where
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut GraphPar<'a>) -> (Self::NI, usize, Self::NO) {
         let rct = new_amutex();
         let rcf = rct.clone();
         let rc_out = rct.clone();
@@ -574,7 +574,7 @@ where
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut GraphPar<'a>) -> (Self::NI, usize, Self::NO) {
         let rct = new_amutex();
         let rcf = rct.clone();
         let rc_out = rct.clone();
@@ -611,7 +611,7 @@ where
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut GraphPar<'a>) -> (Self::NI, usize, Self::NO) {
         let rct = new_amutex();
         let rcf = rct.clone();
         let rc_out = rct.clone();
@@ -648,7 +648,7 @@ where
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut GraphPar<'a>) -> (Self::NI, usize, Self::NO) {
         let rct = new_amutex();
         let rcf = rct.clone();
         let rc_out = rct.clone();

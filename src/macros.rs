@@ -16,7 +16,7 @@ macro_rules! rt {
 #[macro_export]
 macro_rules! rtp {
     ($($x:tt)+) => {{
-        Runtime::new(mp_par(prop!($($x)*)))
+        RuntimePar::new(mp_par(prop!($($x)*)))
     }};
 }
 
@@ -31,7 +31,7 @@ macro_rules! run {
 #[macro_export]
 macro_rules! runp {
     ($($x:tt)+) => {{
-        let mut r = Runtime::new(mp_par(prop!($($x)*)));
+        let mut r = RuntimePar::new(mp_par(prop!($($x)*)));
         r.execute();
     }};
 }

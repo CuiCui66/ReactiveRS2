@@ -17,6 +17,7 @@ extern crate test;
 #[macro_use]
 pub mod macros;
 pub mod engine;
+pub mod engine_par;
 pub mod node;
 pub mod process;
 pub mod process_par;
@@ -28,6 +29,7 @@ mod take;
 #[cfg(test)]
 mod tests {
     use engine::*;
+    use engine_par::*;
     use process::*;
     use process_par::*;
     use node::ChoiceData::*;

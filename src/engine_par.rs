@@ -3,7 +3,9 @@ use std::vec::Vec;
 
 use node::*;
 use process::*;
+use process_par::*;
 use take::take;
+use engine::{SubRuntime,Tasks,EndOfInstant};
 
 /// This type represent a full control-flow graph of a reactive system.
 ///
@@ -15,18 +17,18 @@ use take::take;
 /// Reserved values may only be used during the compilation process but not during the runtime
 /// (The Runtime type store the same vector but without option).
 /// see [Runtime::fromgraph](struct.Runtime.html#method.fromgraph).
-pub struct Graph<'a>(Vec<Option<Box<Node<'a, (), Out = ()>>>>);
+pub struct GraphPar<'a>(Vec<Option<Box<Node<'a, (), Out = ()> + Send + Sync>>>);
 
-impl<'a> Graph<'a> {
+impl<'a> GraphPar<'a> {
 
     /// Creates an empty graph.
     pub(crate) fn new() -> Self {
-        Graph(vec![])
+        GraphPar(vec![])
     }
 
     /// Reserves a fresh id and returns it
     pub(crate) fn reserve(&mut self) -> usize {
-        let &mut Graph(ref mut v) = self;
+        let &mut GraphPar(ref mut v) = self;
         v.push(None);
         v.len() - 1
     }
@@ -35,8 +37,8 @@ impl<'a> Graph<'a> {
     ///
     /// Sets a Node at a position reserved by [`reserve`](struct.Graph.html#method.reserve).
     /// If the position is not valid (it was never reserved or it has already been set), it panics.
-    pub(crate) fn set(&mut self, pos: usize, val: Box<Node<'a, (), Out = ()>>) {
-        let &mut Graph(ref mut v) = self;
+    pub(crate) fn set(&mut self, pos: usize, val: Box<Node<'a, (), Out = ()> + Send + Sync>) {
+        let &mut GraphPar(ref mut v) = self;
         if let Some(_) = v[pos] {
             panic!("v[pos] != None in Graph::set")
         }
@@ -47,67 +49,37 @@ impl<'a> Graph<'a> {
     ///
     /// It's the same than calling reserve then add.
     /// Returns the id of the added node.
-    pub(crate) fn add(&mut self, val: Box<Node<'a, (), Out = ()>>) -> usize {
-        let &mut Graph(ref mut v) = self;
+    pub(crate) fn add(&mut self, val: Box<Node<'a, (), Out = ()> + Send + Sync>) -> usize {
+        let &mut GraphPar(ref mut v) = self;
         v.push(Some(val));
         v.len() - 1
     }
 
 
     /// Return the underlying data structure
-    pub(crate) fn get(self) -> Vec<Option<Box<Node<'a, (), Out = ()>>>> {
-        let Graph(v) = self;
+    pub(crate) fn get(self) -> Vec<Option<Box<Node<'a, (), Out = ()> + Send + Sync>>> {
+        let GraphPar(v) = self;
         v
     }
 }
 
-/// Contains the remaining node to be executed
-pub(crate) struct Tasks {
-    /// Contains nodes to be executed on the current instants.
-    /// Nodes can add other nodes' id to continue the execution in an other node on the same instant.
-    pub(crate) current: Vec<usize>,
-    /// Contains nodes to be executed on the next instants.
-    /// Nodes can add other nodes' id and stop to pause their execution until the next instant.
-    pub(crate) next: Vec<usize>,
-}
-
-pub trait EndOfInstantCallback<'a>{
-    fn on_end_of_instant(&self, sub_runtime: &mut SubRuntime<'a>);
-}
-
-/// Contains a list of [signal](../signal/index.html)
-/// related continuation to be run at the end of the instant.
-pub(crate) struct EndOfInstant<'a> {
-    pub(crate) pending: Vec<Box<EndOfInstantCallback<'a> + 'a>>,
-}
-
-/// The part of the runtime that is passed to Nodes, see
-/// [Node::call](../node/trait.Node.html#tymethod.call).
-pub struct SubRuntime<'a> {
-    /// The tasks lists
-    pub(crate) tasks: Tasks,
-    /// The end of instant continuations.
-    pub(crate) eoi: EndOfInstant<'a>,
-    /// The id of the current instant.
-    pub(crate) current_instant: usize,
-}
 
 
 /// Runtime for running reactive graph.
 ///
 /// It contains all the information needed to execute of a reactive process.
-pub struct Runtime<'a> {
+pub struct RuntimePar<'a> {
     /// The reactive control-flow graph in non-optional version. See [`Graph`](struct.Graph.html).
-    nodes: Vec<Box<Node<'a, (), Out = ()>>>,
+    nodes: Vec<Box<Node<'a, (), Out = ()> + Send + Sync>>,
 
     // The SubRuntime containing all runtime info.
     sub_runtime: SubRuntime<'a>,
 }
 
-impl<'a> Runtime<'a> {
+impl<'a> RuntimePar<'a> {
     /// Creates a new empty runtime.
     fn newempty() -> Self {
-        Runtime::<'a> {
+        RuntimePar::<'a> {
             nodes: vec![],
             sub_runtime: SubRuntime {
                 current_instant: 2,
@@ -127,7 +99,7 @@ impl<'a> Runtime<'a> {
     /// The graph must be complete i.e any reserved id must not be empty.
     /// If the graph is not complete, it panics.
     /// This function does not setup a start point:
-    fn fromgraph(g: Graph<'a>) -> Self {
+    fn fromgraph(g: GraphPar<'a>) -> Self {
         let mut r = Self::newempty();
         for n in g.get() {
             match n {
@@ -140,20 +112,20 @@ impl<'a> Runtime<'a> {
         r
     }
 
-    /// [gf]: ../process/trait..html
+    /// [gf]: ../process/trait.GraphFiller.html
     /// [mp]: ../process/struct.MarkedProcess.html
 
-    /// Creates a Runtime by using a value implementing [``][gf].
+    /// Creates a Runtime by using a value implementing [`GraphFiller`][gf].
     ///
     /// After this function, the runtime is ready to be used
-    /// Normally,types that implement [``][gf] are [`MarkedProcess`][mp]
+    /// Normally,types that implement [`GraphFiller`][gf] are [`MarkedProcess`][mp]
     pub fn new<GF>(gf: GF) -> Self
     where
-        GF: GraphFiller<'a>,
+        GF: GraphFillerPar<'a>,
     {
-        let mut g = Graph::new();
-        let start = gf.fill_graph(&mut g);
-        let mut r = Runtime::fromgraph(g);
+        let mut g = GraphPar::new();
+        let start = gf.fill_graph_par(&mut g);
+        let mut r = RuntimePar::fromgraph(g);
         r.sub_runtime.tasks.current.push(start);
         r
     }
