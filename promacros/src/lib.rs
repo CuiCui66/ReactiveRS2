@@ -55,6 +55,20 @@ fn split_on_binop(
     (parse_pro(cx, sp1, s1), parse_pro(cx, sp2, s2))
 }
 
+fn split_on_binop_par(
+    cx: &mut ExtCtxt,
+    sp: Span,
+    args: &[TokenTree],
+    ind: usize,
+) -> (P<Expr>, P<Expr>) {
+    let (s1, s2tmp) = args.split_at(ind);
+    let (_, s2) = s2tmp.split_at(1);
+    let sp1 = sp.until(args[ind].span());
+    let sp2 = args[ind].span().end_point().to(sp.end_point());
+
+    (parse_pro_par(cx, sp1, s1), parse_pro_par(cx, sp2, s2))
+}
+
 fn split_on_binop_node(
     cx: &mut ExtCtxt,
     sp: Span,
@@ -67,6 +81,88 @@ fn split_on_binop_node(
     let sp2 = args[ind].span().end_point().to(sp.end_point());
 
     (parse_node(cx, sp1, s1), parse_node(cx, sp2, s2))
+}
+
+
+fn parse_pro_par(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
+
+    //print!("parse pro : ");
+    //printtts(args);
+
+    if args.len() == 0 {
+        cx.expr_ident(sp,cx.ident_of("PNothing"));
+    }
+    if args.len() == 1 {
+        match &args[0] {
+            &TokenTree::Token(sp, _) => {
+                return parse_expr(cx, sp, args);
+            }
+            &TokenTree::Delimited(sp,
+                                  Delimited {
+                                      delim: d,
+                                      tts: ref ts,
+                                  }) => {
+                if d == DelimToken::Paren || d == DelimToken::Brace {
+                    return parse_pro_par(cx, sp, &extract_ts(ts.clone().into()));
+                } else {
+                    cx.span_err(sp, "Process delimited by brackets ?");
+                    return DummyResult::raw_expr(sp);
+                }
+            }
+        }
+    }
+    if args.len() == 2 {
+        if let TokenTree::Token(_, Ident(id)) = args[0] {
+            if id.name.as_str() == "loop" {
+                let n1 = parse_pro_par(cx, args[1].span(), &args[1..2]);
+                return cx.expr_method_call(sp, n1, cx.ident_of("ploop_par"), vec![]);
+            }
+            if id.name.as_str() == "box" {
+                let n1 = parse_pro_par(cx, args[1].span(), &args[1..2]);
+                return cx.expr_method_call(sp, n1, cx.ident_of("pbox_par"), vec![]);
+            }
+
+        }
+    }
+
+    if args.len() == 3 {
+        if let TokenTree::Token(_, Ident(id)) = args[0] {
+            if id.name.as_str() == "choice" {
+                let n1 = parse_pro_par(cx, args[1].span(), &args[1..2]);
+                let n2 = parse_pro_par(cx, args[2].span(), &args[2..3]);
+                return cx.expr_method_call(sp, n1, cx.ident_of("choice_par"), vec![n2]);
+            }
+            if id.name.as_str() == "present" {
+                let n1 = parse_pro_par(cx, args[1].span(), &args[1..2]);
+                let n2 = parse_pro_par(cx, args[2].span(), &args[2..3]);
+                return cx.expr_method_call(sp, n1, cx.ident_of("present_par"), vec![n2]);
+            }
+        }
+    }
+
+
+    // reverse for type inference (left associativity)
+    for i in (0..args.len()).rev() {
+        match args[i] {
+            TokenTree::Token(_, ref tok) => {
+                match tok {
+                    &Token::Semi => {
+                        let (p1, p2) = split_on_binop_par(cx, sp, args, i);
+                        return cx.expr_method_call(sp, p1, cx.ident_of("seq_par"), vec![p2]);
+                    }
+                    &Token::OrOr => {
+                        let (p1, p2) = split_on_binop_par(cx, sp, args, i);
+                        return cx.expr_method_call(sp, p1, cx.ident_of("join_par"), vec![p2]);
+                    }
+
+                    _ => {}
+                }
+            }
+            TokenTree::Delimited(_,_) => {}
+        }
+    }
+
+    parse_expr(cx, sp, args)
 }
 
 fn parse_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
@@ -214,6 +310,10 @@ fn expand_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> Box<MacResult +
     MacEager::expr(parse_pro(cx, sp, args))
 }
 
+fn expand_pro_par(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> Box<MacResult + 'static> {
+    MacEager::expr(parse_pro_par(cx, sp, args))
+}
+
 fn expand_node(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> Box<MacResult + 'static> {
     MacEager::expr(parse_node(cx, sp, args))
 }
@@ -222,5 +322,6 @@ fn expand_node(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> Box<MacResult 
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_macro("pro", expand_pro);
+    reg.register_macro("prop", expand_pro_par);
     reg.register_macro("node", expand_node);
 }

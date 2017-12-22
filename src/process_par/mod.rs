@@ -1,6 +1,7 @@
 use node::*;
 use engine::*;
 use std::marker::PhantomData;
+use signal_par::*;
 use signal::*;
 pub use std::intrinsics::type_name;
 pub use process::*;
@@ -26,11 +27,11 @@ mod par;
 #[doc(hidden)]
 pub use self::par::*;
 
-/*
+
 /// Contains signal related control structures.
 mod signal;
 #[doc(hidden)]
-pub use self::signal::*;*/
+pub use self::signal::*;
 
 /// General trait for representing a reactive process.
 ///
@@ -91,7 +92,7 @@ pub trait ProcessPar<'a, In: 'a>: Sized + GProcess<'a,In>{
     ///   when called during the normal execution of the runtime (i.e after another node has put
     ///   its id in the runtime). This node must be placed (after adding other stuff behind) in
     ///   the id slot given as middle value so other node can reference it.
-    fn compile(self, _: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, _: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         unreachable!();
     }
 
@@ -101,13 +102,13 @@ pub trait ProcessPar<'a, In: 'a>: Sized + GProcess<'a,In>{
     /// Compile an immediate process
     ///
     /// It just outputs a node that do the whole computation represented by the process in a single instant.
-    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
         unreachable!();
     }
 
 
     /// Build the sequence of two process.
-    fn seq<P>(self, p: P) -> Seq<MarkedProcessPar<Self, Self::Mark>, MarkedProcessPar<P, P::Mark>>
+    fn seq_par<P>(self, p: P) -> Seq<MarkedProcessPar<Self, Self::Mark>, MarkedProcessPar<P, P::Mark>>
     where
         P: ProcessPar<'a, Self::Out>,
     {
@@ -118,7 +119,7 @@ pub trait ProcessPar<'a, In: 'a>: Sized + GProcess<'a,In>{
     }
 
     /// Builds a process taking a ChoiceData value and choosing the right process to call with it.
-    fn choice<PF, InF: 'a>(
+    fn choice_par<PF, InF: 'a>(
         self,
         p: PF,
     ) -> PChoice<MarkedProcessPar<Self, Self::Mark>, MarkedProcessPar<PF, PF::Mark>>
@@ -148,7 +149,7 @@ pub trait ProcessPar<'a, In: 'a>: Sized + GProcess<'a,In>{
     }*/
 
     /// The process must returns a ChoiceData Value,
-    fn ploop<ROut :'a>(self) -> PLoop<MarkedProcessPar<Self, Self::Mark>>
+    fn ploop_par<ROut : 'a>(self) -> PLoop<MarkedProcessPar<Self, Self::Mark>>
         where
         Self: ProcessPar<'a, In,Out = ChoiceData<In,ROut>>
     {
@@ -156,7 +157,7 @@ pub trait ProcessPar<'a, In: 'a>: Sized + GProcess<'a,In>{
     }
 
     /// Put two processes in parallel
-    fn join<InQ: 'a, Q>(
+    fn join_par<InQ: 'a, Q>(
         self,
         q: Q,
     ) -> Par<MarkedProcessPar<Self, Self::Mark>, MarkedProcessPar<Q, Q::Mark>>
@@ -176,7 +177,7 @@ pub trait ProcessPar<'a, In: 'a>: Sized + GProcess<'a,In>{
 }
 
 /// Join N process in parallel, The input value must be `Copy` and the output value is `()`
-pub fn big_join<'a, In: 'a, P>(vp: Vec<P>) -> BigPar<MarkedProcessPar<P, P::Mark>>
+pub fn big_join_par<'a, In: 'a, P>(vp: Vec<P>) -> BigPar<MarkedProcessPar<P, P::Mark>>
 where
     P: ProcessPar<'a, In, Out = ()> + Sized,
     In: Copy,
@@ -246,7 +247,7 @@ where
     P: ProcessPar<'a, (), Out = ()>,
 {
     fn fill_graph(self, g: &mut Graph<'a>) -> usize {
-        let (pni, pind, pno) = self.p.compile(g);
+        let (pni, pind, pno) = self.p.compile_par(g);
         g.set(pind, box pno);
         g.add(box pni)
     }
@@ -257,7 +258,7 @@ where
     P: ProcessPar<'a, (), Out = ()>,
 {
     fn fill_graph(self, g: &mut Graph<'a>) -> usize {
-        let pnio = self.p.compileIm(g);
+        let pnio = self.p.compileIm_par(g);
         g.add(box pnio)
     }
 }
@@ -299,10 +300,10 @@ where
     type MarkOnce = P::MarkOnce;
 
     fn compile_box(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        (*self).compile(g)
+        (*self).compile_par(g)
     }
     fn compileIm_box(self: Box<Self>, g: &mut Graph<'a>) -> Self::NIO {
-        (*self).compileIm(g)
+        (*self).compileIm_par(g)
     }
     fn printDot_box(self: &mut Self, curNum : &mut usize) -> (usize,usize){
         self.printDot(curNum)
@@ -340,10 +341,10 @@ where
     type Mark = Mark;
     type MarkOnce = MarkOnce;
 
-    fn compile(self, g: &mut Graph<'a>) -> (NI, usize, NO) {
+    fn compile_par(self, g: &mut Graph<'a>) -> (NI, usize, NO) {
         self.p.compile_box(g)
     }
-    fn compileIm(self, g: &mut Graph<'a>) -> NIO {
+    fn compileIm_par(self, g: &mut Graph<'a>) -> NIO {
         self.p.compileIm_box(g)
     }
 }

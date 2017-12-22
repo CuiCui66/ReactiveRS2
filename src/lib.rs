@@ -29,10 +29,13 @@ mod take;
 mod tests {
     use engine::*;
     use process::*;
+    use process_par::*;
     use node::ChoiceData::*;
     use signal::*;
+    use signal_par::*;
     use test::test::Bencher;
     use std::cell::RefCell;
+    use std::sync::{Arc, Mutex};
     use std::rc::*;
 
 
@@ -40,8 +43,16 @@ mod tests {
     fn instant_action() {
         let mut i = 0;
         {
-            let mut r = Runtime::new(mp(|_: ()| { i += 42; }));
-            r.execute();
+            run!(|_:()| { i += 42 });
+        }
+        assert_eq!(i, 42);
+    }
+
+    #[test]
+    fn instant_action_par() {
+        let mut i = 0;
+        {
+            runp!(|_:()| { i += 42 });
         }
         assert_eq!(i, 42);
     }
@@ -50,36 +61,79 @@ mod tests {
     fn sequence() {
         let mut i = 0;
         {
-            let mut r = Runtime::new(mp((|_: ()| 42).seq(|v| i = v)));
-            r.execute();
+            run!(
+                |_: ()| { 42 };
+                |v| { i = v }
+            );
+        }
+        assert_eq!(i, 42);
+    }
+
+    #[test]
+    fn sequence_par() {
+        let mut i = 0;
+        {
+            runp!(
+                |_: ()| { 42 };
+                |v| { i = v }
+            );
         }
         assert_eq!(i, 42);
     }
 
     #[test]
     fn pause() {
-        let mut i = 0;
-        let p = &mut i as *mut i32;
+        let i = RefCell::new(0);
         {
             let mut r =
                 rt!{
                 |_| 42;
                 Pause;
-                |v| i = v
+                |v| *i.borrow_mut() = v
             };
             r.instant();
-            unsafe {
-                assert_eq!(*p, 0);
-            }
+            assert_eq!(*i.borrow(), 0);
             r.instant();
         }
-        assert_eq!(i, 42);
+        assert_eq!(*i.borrow(), 42);
+    }
+
+
+    #[test]
+    fn pause_par() {
+        let mut i = Mutex::new(0);
+        {
+            let mut r =
+                rtp!{
+                    |_| { 42 };
+                    Pause;
+                    |v| { *i.lock().unwrap() = v }
+                };
+            r.instant();
+            assert_eq!(*i.lock().unwrap(), 0);
+            r.instant();
+        }
+        assert_eq!(*i.lock().unwrap(), 42);
     }
 
     #[test]
     fn choice() {
         let mut i = 0;
         run!{
+            |_| { True(42) };
+            choice {
+                |v| i=v
+            } {
+                |()| unreachable!()
+            }
+        }
+        assert_eq!(i, 42);
+    }
+
+    #[test]
+    fn choice_par() {
+        let mut i = 0;
+        runp!{
             |_| True(42);
             choice {
                 |v| i=v
@@ -107,8 +161,43 @@ mod tests {
     }
 
     #[test]
+    fn choice_pause_par() {
+        let mut i = 0;
+        runp!{
+            |_| True(42);
+            Pause;
+            choice {
+                Pause;
+                |v :usize| i = v
+            } {
+                |()| unreachable!()
+            }
+        }
+        assert_eq!(i, 42);
+    }
+
+    #[test]
     fn loop_test() {
         run!{
+            |_| 0;
+            loop {
+                |i : usize| if i < 42 {
+                    True(i+1)
+                }
+                else{
+                    False(i)
+                };
+                Pause
+            };
+            |i| {
+                assert_eq!(i,42)
+            }
+        }
+    }
+
+    #[test]
+    fn loop_test_par() {
+        runp!{
             |_| 0;
             loop {
                 |i : usize| if i < 42 {
@@ -159,7 +248,40 @@ mod tests {
     }
 
     #[test]
-    fn box_par() {
+    fn par_par() {
+        runp!{
+            |_| (0,0);
+            {
+                loop {
+                    |i : usize|
+                    if i < 21 {
+                        True(i+1)
+                    }
+                    else{
+                        False(i)
+                    };
+                    Pause
+                } || loop {
+                    |i : usize|
+                    if i < 21 {
+                        True(i+1)
+                    }
+                    else{
+                        False(i)
+                    };
+                    Pause
+                }
+            };
+            |(v1,v2)| v1 + v2;
+            Pause;
+            |i| {
+                assert_eq!(i,42)
+            }
+        }
+    }
+
+    #[test]
+    fn boxp() {
         run!{
             |_| (0,0);
             {
@@ -193,9 +315,67 @@ mod tests {
         }
     }
 
+    #[test]
+    fn boxp_par() {
+        runp!{
+            |_| (0,0);
+            {
+                box {
+                    loop {
+                        |i : usize|
+                        if i < 21 {
+                            True(i+1)
+                        }
+                        else{
+                            False(i)
+                        };
+                        Pause
+                    }
+                }|| loop {
+                    |i : usize|
+                    if i < 21 {
+                        True(i+1)
+                    }
+                    else{
+                        False(i)
+                    };
+                    Pause
+                }
+            };
+            |(v1,v2)| v1 + v2;
+            Pause;
+            |i| {
+                assert_eq!(i,42)
+            }
+        }
+    }
 
     #[test]
     fn par_half_im() {
+        run!{
+            |_| (0,0);
+            {
+                loop {
+                    |i : usize|
+                    if i < 21 {
+                        True(i+1)
+                    }
+                    else{
+                        False(i)
+                    };
+                    Pause
+                } || |_| 21
+            };
+            |(v1,v2)| v1 + v2;
+            Pause;
+            |i| {
+                assert_eq!(i,42)
+            }
+        }
+    }
+
+    #[test]
+    fn par_half_im_par() {
         run!{
             |_| (0,0);
             {
@@ -233,6 +413,20 @@ mod tests {
         }
     }
 
+    #[test]
+    fn par_im_par() {
+        runp!{
+            |_| (0,0);
+            {
+                |_| 21 || |_| 21
+            };
+            |(v1,v2)| v1 + v2;
+            Pause;
+            |i| {
+                assert_eq!(i,42)
+            }
+        }
+    }
 
 
     #[test]
@@ -254,6 +448,30 @@ mod tests {
             assert_eq!(*value.borrow_mut(), 0);
             rt.instant();
             assert_eq!(*value.borrow_mut(), 42);
+        }
+    }
+
+    #[test]
+    fn emitd_await_par() {
+        let value = Mutex::new(0);
+        let signal = SignalRuntimeParRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e;});
+        {
+            let mut rt = rtp! {
+                move |_| {
+                    let signal2 = signal.clone();
+                    let signal3 = signal.clone();
+                    ((signal2,42), signal3)
+                };
+                EmitD;
+                AwaitD;
+                |v| {
+                    *value.lock().unwrap() = v;
+                }
+            };
+            rt.instant();
+            assert_eq!(*value.lock().unwrap(), 0);
+            rt.instant();
+            assert_eq!(*value.lock().unwrap(), 42);
         }
     }
 
@@ -280,6 +498,30 @@ mod tests {
         }
     }
 
+
+    #[test]
+    fn emits_await_par() {
+        let value = Mutex::new(0);
+        let signal = SignalRuntimeParRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e;});
+        {
+            let mut rt = rtp! {
+                |_| {
+                    42
+                };
+                emit(signal.clone());
+                |_| {
+                    signal.clone()
+                };
+                AwaitD;
+                |v| { *value.lock().unwrap() = v; }
+            };
+            rt.instant();
+            assert_eq!(*value.lock().unwrap(), 0);
+            rt.instant();
+            assert_eq!(*value.lock().unwrap(), 42);
+        }
+    }
+
     #[test]
     fn emit_await_immediate() {
         let value = RefCell::new(0);
@@ -303,6 +545,28 @@ mod tests {
 
 
     #[test]
+    fn emit_await_immediate_par() {
+        let value = Mutex::new(0);
+        let signal = SignalRuntimeParRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e; });
+        {
+            let mut rt = rt! {
+                |_| {
+                    let signal2 = signal.clone();
+                    let signal3 = signal.clone();
+                    ((signal2,42), signal3)
+                };
+                EmitD;
+                AwaitImmediateD;
+                |()| { *value.lock().unwrap() = 42; }
+            };
+
+            rt.instant();
+            assert_eq!(*value.lock().unwrap(), 42);
+        }
+    }
+
+
+    #[test]
     fn non_await_immediate() {
         let value = RefCell::new(0);
         let signal = SignalRuntimeRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e; });
@@ -320,6 +584,28 @@ mod tests {
             assert_eq!(*value.borrow(), 0);
             rt.instant();
             assert_eq!(*value.borrow(), 0);
+        }
+    }
+
+
+    #[test]
+    fn non_await_immediate_par() {
+        let value = Mutex::new(0);
+        let signal = SignalRuntimeParRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e; });
+        {
+            let mut rt = rt! {
+                |_| {
+                    let signal3 = signal.clone();
+                    signal3
+                };
+                AwaitImmediateD;
+                |()| { *value.lock().unwrap() = 42; }
+            };
+
+            rt.instant();
+            assert_eq!(*value.lock().unwrap(), 0);
+            rt.instant();
+            assert_eq!(*value.lock().unwrap(), 0);
         }
     }
 
@@ -347,6 +633,29 @@ mod tests {
     }
 
     #[test]
+    fn present_true_par() {
+        let value = Mutex::new(0);
+        let signal = SignalRuntimeParRef::new_pure();
+        {
+            let mut rt = rt! {
+                |_| {
+                    ((signal.clone(),()), signal.clone())
+                };
+                EmitD;
+                present
+                    {|_:()| {
+                        *value.lock().unwrap() = 42;
+                    }} {
+                    |_:()| {
+                        *value.lock().unwrap() = 21;
+                    }}
+            };
+            rt.instant();
+            assert_eq!(*value.lock().unwrap(), 42);
+        }
+    }
+
+    #[test]
     fn present_false() {
         let value = RefCell::new(0);
         let signal = SignalRuntimeRef::new_pure();
@@ -370,9 +679,32 @@ mod tests {
         }
     }
 
+    #[test]
+    fn present_false_par() {
+        let value = Mutex::new(0);
+        let signal = SignalRuntimeParRef::new_pure();
+        {
+            let mut rt = rt! {
+                |_| {
+                    signal.clone()
+                };
+                present
+                    {|_:()| {
+                        *value.lock().unwrap() = 42;
+                    }} {
+                    |_:()| {
+                        *value.lock().unwrap() = 21;
+                    }}
+            };
+            rt.instant();
+            assert_eq!(*value.lock().unwrap(), 0);
+            rt.instant();
+            assert_eq!(*value.lock().unwrap(), 21);
+        }
+    }
 
     #[test]
-    fn big_par(){
+    fn bigpar(){
         let value = Rc::new(RefCell::new(-3));
         {
             let mut processes = vec![];
@@ -392,6 +724,26 @@ mod tests {
     }
 
     #[test]
+    fn bigpar_par(){
+        let value = Arc::new(Mutex::new(-3));
+        {
+            let mut processes = vec![];
+
+            for i in 0..10{
+                let value2 = value.clone();
+                processes.push(pro!{
+                    move |_|{
+                        *value2.lock().unwrap() += i;
+                    };
+                    Pause
+                });
+            }
+            run!(big_join(processes));
+        }
+        assert_eq!(*value.lock().unwrap(), 42);
+    }
+
+    #[test]
     fn fnonce() {
         let value = Rc::new(RefCell::new(-3));
         {
@@ -405,6 +757,22 @@ mod tests {
             );
         }
         assert_eq!(*value.borrow(), 42);
+    }
+
+    #[test]
+    fn fnonce_par() {
+        let value = Mutex::new(-3);
+        {
+            run!(
+                once(|_:()| {
+                    42
+                });
+                |v:i32| {
+                    *value.lock().unwrap() = v;
+                }
+            );
+        }
+        assert_eq!(*value.lock().unwrap(), 42);
     }
 
 

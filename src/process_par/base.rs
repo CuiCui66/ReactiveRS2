@@ -15,7 +15,7 @@ impl<'a> ProcessPar<'a, ()> for PNothing {
     type Mark = IsIm;
     type MarkOnce = SNotOnce;
 
-    fn compileIm(self, _: &mut Graph) -> Self::NIO {
+    fn compileIm_par(self, _: &mut Graph) -> Self::NIO {
         Nothing {}
     }
 }
@@ -36,7 +36,7 @@ where
     type Mark = IsIm;
     type MarkOnce = SNotOnce;
 
-    fn compileIm(self, _: &mut Graph) -> Self::NIO {
+    fn compileIm_par(self, _: &mut Graph) -> Self::NIO {
         NValue(self.0)
     }
 }
@@ -59,7 +59,7 @@ where
     type Mark = IsIm;
     type MarkOnce = SOnce;
 
-    fn compileIm(self, _: &mut Graph) -> Self::NIO {
+    fn compileIm_par(self, _: &mut Graph) -> Self::NIO {
         NFnOnce(Some(self.0))
     }
 }
@@ -82,7 +82,9 @@ where
     type Mark = IsIm;
     type MarkOnce = SNotOnce;
 
-    fn compileIm(self, _: &mut Graph) -> Self::NIO {
+
+
+    fn compileIm_par(self, _: &mut Graph) -> Self::NIO {
         FnMutN(self)
     }
 }
@@ -105,7 +107,7 @@ where
     type Mark = NotIm;
     type MarkOnce = SNotOnce;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let arcin = new_amutex();
         let arcout = arcin.clone();
         let out = g.reserve();
@@ -131,7 +133,7 @@ where
     type Mark = NotIm;
     type MarkOnce = SNotOnce;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let rcin = new_amutex();
         let rcout = rcin.clone();
         let out = g.reserve();

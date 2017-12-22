@@ -7,17 +7,10 @@ use super::*;
 // | |___| | | | | | | |_| |_| |
 // |_____|_| |_| |_|_|\__|____/
 
-/// Process representing the emission of a signal,
-/// where the signal and the value is given as the process input.
-#[derive(Copy, Clone)]
-pub struct EmitD {}
-
-#[allow(non_upper_case_globals)]
-pub static EmitD: EmitD = EmitD {};
-
-impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, ((SignalRuntimeRef<SV>, E),In)> for EmitD
+impl<'a, In: 'a, E: 'a, S: 'a> ProcessPar<'a, ((S, E),In)> for EmitD
 where
-    SV: SignalValue<E=E>,
+    S: Signal<'a, E=E> + Send + Sync,
+    In: Sync + Send,
 {
     type NI = DummyN<()>;
     type NO = DummyN<In>;
@@ -26,7 +19,7 @@ where
     type Out = In;
     type MarkOnce = SNotOnce;
 
-    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
     }
 
@@ -38,9 +31,9 @@ where
     }
 }
 
-impl<'a, E: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, E)> for EmitD
+impl<'a, E: 'a, S: 'a> ProcessPar<'a, (S, E)> for EmitD
 where
-    SV: SignalValue<E = E>,
+    S: Signal<'a, E = E> + Send + Sync,
 {
     type NI = DummyN<()>;
     type NO = DummyN<()>;
@@ -49,7 +42,7 @@ where
     type Out = ();
     type MarkOnce = SNotOnce;
 
-    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
     }
 
@@ -61,9 +54,10 @@ where
     }
 }
 
-impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, (Vec<(SignalRuntimeRef<SV>, E)>,In)> for EmitD
-    where
-        SV: SignalValue<E=E>,
+impl<'a, In: 'a, E: 'a, S: 'a> ProcessPar<'a, (Vec<(S, E)>,In)> for EmitD
+where
+    S: Signal<'a, E=E> + Send + Sync,
+    In: Send + Sync,
 {
     type NI = DummyN<()>;
     type NO = DummyN<In>;
@@ -72,7 +66,7 @@ impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, (Vec<(SignalRuntimeRef<SV>, E)>,In)>
     type Out = In;
     type MarkOnce = SNotOnce;
 
-    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
     }
 
@@ -84,9 +78,9 @@ impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, (Vec<(SignalRuntimeRef<SV>, E)>,In)>
     }
 }
 
-impl<'a, E: 'a, SV: 'a> Process<'a, Vec<(SignalRuntimeRef<SV>, E)>> for EmitD
+impl<'a, E: 'a, S: 'a> ProcessPar<'a, Vec<(S, E)>> for EmitD
     where
-        SV: SignalValue<E = E>,
+        S: Signal<'a, E = E> + Send + Sync,
 {
     type NI = DummyN<()>;
     type NO = DummyN<()>;
@@ -95,7 +89,7 @@ impl<'a, E: 'a, SV: 'a> Process<'a, Vec<(SignalRuntimeRef<SV>, E)>> for EmitD
     type Out = ();
     type MarkOnce = SNotOnce;
 
-    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitD {}
     }
 
@@ -113,30 +107,19 @@ impl<'a, E: 'a, SV: 'a> Process<'a, Vec<(SignalRuntimeRef<SV>, E)>> for EmitD
 // | |___| | | | | | | |_ ___) |
 // |_____|_| |_| |_|_|\__|____/
 
-/// Process representing the emission of a signal,
-/// where the signal is fixed and the value is given as the process input.
-#[derive(Clone)]
-pub struct EmitS<SV, E>(pub SignalRuntimeRef<SV>, pub PhantomData<E>);
-
-pub fn emit<SV>(sr: SignalRuntimeRef<SV>) -> EmitS<SV, SV::E>
+impl<'a, E: 'a, S: 'a> ProcessPar<'a, E> for EmitS<S, E>
 where
-    SV:SignalValue
-{
-    EmitS(sr, PhantomData)
-}
-
-impl<'a, E: 'a, SV: 'a> Process<'a, E> for EmitS<SV, E>
-where
-    SV: SignalValue<E = E>,
+    S: Signal<'a, E = E> + Send + Sync,
+    E: Send + Sync,
 {
     type NI = DummyN<()>;
     type NO = DummyN<()>;
     type Mark = IsIm;
-    type NIO = NEmitS<SV, E>;
+    type NIO = NEmitS<S, E>;
     type Out = ();
     type MarkOnce = SNotOnce;
 
-    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitS(self.0, PhantomData)
     }
 
@@ -149,18 +132,20 @@ where
 }
 
 
-impl<'a, SV: 'a, E: 'a, In: 'a> Process<'a, (E,In)> for EmitS<SV, E>
+impl<'a, S: 'a, E: 'a, In: 'a> ProcessPar<'a, (E,In)> for EmitS<S, E>
 where
-    SV: SignalValue<E = E>,
+    S: Signal<'a, E = E> + Send + Sync,
+    E: Send + Sync,
+    In: Send + Sync,
 {
     type NI = DummyN<()>;
     type NO = DummyN<In>;
     type Out = In;
-    type NIO = NEmitS<SV, E>;
+    type NIO = NEmitS<S, E>;
     type Mark = IsIm;
     type MarkOnce = SNotOnce;
 
-    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitS(self.0, PhantomData)
     }
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -178,30 +163,18 @@ where
 // | |___| | | | | | | |_ \ V /  __/ (__ ___) |
 // |_____|_| |_| |_|_|\__| \_/ \___|\___|____/
 
-/// Process representing the emission of multiple signals,
-/// where the signals are fixed and the values are given as the process input.
-#[derive(Clone)]
-pub struct EmitVecS<SV>(pub Vec<SignalRuntimeRef<SV>>);
-
-pub fn emit_vec<SV>(sr: Vec<SignalRuntimeRef<SV>>) -> EmitVecS<SV>
+impl<'a, E: 'a, S: 'a> ProcessPar<'a, Vec<E>> for EmitVecS<S>
 where
-    SV:SignalValue
-{
-    EmitVecS(sr)
-}
-
-impl<'a, E: 'a, SV: 'a> Process<'a, Vec<E>> for EmitVecS<SV>
-where
-    SV: SignalValue<E = E>,
+    S: Signal<'a, E = E> + Send + Sync,
 {
     type NI = DummyN<()>;
     type NO = DummyN<()>;
     type Mark = IsIm;
-    type NIO = NEmitVecS<SV>;
+    type NIO = NEmitVecS<S>;
     type Out = ();
     type MarkOnce = SNotOnce;
 
-    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVecS(self.0)
     }
 
@@ -214,18 +187,19 @@ where
 }
 
 
-impl<'a, SV: 'a, E: 'a, In: 'a> Process<'a, (Vec<E>,In)> for EmitVecS<SV>
+impl<'a, S: 'a, E: 'a, In: 'a> ProcessPar<'a, (Vec<E>,In)> for EmitVecS<S>
 where
-    SV: SignalValue<E = E>,
+    S: Signal<'a, E = E> + Send + Sync,
+    In: Send + Sync,
 {
     type NI = DummyN<()>;
     type NO = DummyN<In>;
     type Out = In;
-    type NIO = NEmitVecS<SV>;
+    type NIO = NEmitVecS<S>;
     type Mark = IsIm;
     type MarkOnce = SNotOnce;
 
-    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVecS(self.0)
     }
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -244,32 +218,20 @@ where
 // |_____|_| |_| |_|_|\__| \_/  |____/
 
 
-/// Process representing the emission of a signal,
-/// where the signal and the value are fixed.
-#[derive(Clone)]
-pub struct EmitVS<SV, E>(pub SignalRuntimeRef<SV>, pub E);
-
-pub fn emit_value<SV, E>(sr: SignalRuntimeRef<SV>, value: E) -> EmitVS<SV, E>
-    where
-SV: SignalValue<E = E>,
-E: Clone,
-{
-    EmitVS(sr, value)
-}
-
-impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, In> for EmitVS<SV, E>
+impl<'a, In: 'a, E: 'a, S: 'a> ProcessPar<'a, In> for EmitVS<S, E>
 where
-    SV: SignalValue<E = E>,
-    E: Clone,
+    S: Signal<'a, E = E> + Send + Sync,
+    E: Clone + Send + Sync,
+    In: Send + Sync,
 {
     type NI = DummyN<()>;
     type NO = DummyN<In>;
     type Mark = IsIm;
-    type NIO = NEmitVS<SV, E>;
+    type NIO = NEmitVS<S, E>;
     type Out = In;
     type MarkOnce = SNotOnce;
 
-    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVS(self.0, self.1)
     }
 
@@ -289,32 +251,20 @@ where
 // |_____|_| |_| |_|_|\__| \_/      \_/ \___|\___|____/
 
 
-/// Process representing the emission of multiple signals,
-/// where the signals and the values are fixed.
-#[derive(Clone)]
-pub struct EmitVVecS<SV, E>(pub Vec<(SignalRuntimeRef<SV>,E)>);
-
-pub fn emit_value_vec<SV, E>(values: Vec<(SignalRuntimeRef<SV>,E)>) -> EmitVVecS<SV, E>
-    where
-        SV: SignalValue<E = E>,
-        E: Clone,
-{
-    EmitVVecS(values)
-}
-
-impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, In> for EmitVVecS<SV, E>
-    where
-        SV: SignalValue<E = E>,
-        E: Clone,
+impl<'a, In: 'a, E: 'a, S: 'a> ProcessPar<'a, In> for EmitVVecS<S, E>
+where
+    S: Signal<'a, E = E> + Send + Sync,
+    E: Clone + Send + Sync,
+    In: Send + Sync,
 {
     type NI = DummyN<()>;
     type NO = DummyN<In>;
     type Mark = IsIm;
-    type NIO = NEmitVVecS<SV, E>;
+    type NIO = NEmitVVecS<S, E>;
     type Out = In;
     type MarkOnce = SNotOnce;
 
-    fn compileIm(self, _: &mut Graph<'a>) -> Self::NIO {
+    fn compileIm_par(self, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVVecS(self.0)
     }
 
@@ -333,33 +283,25 @@ impl<'a, In: 'a, E: 'a, SV: 'a> Process<'a, In> for EmitVVecS<SV, E>
 //  / ___ \ V  V / (_| | | |_| |_| |
 // /_/   \_\_/\_/ \__,_|_|\__|____/
 
-
-/// Process awaiting for the emission of a signal, and executing the next process the next instant,
-/// where the signal is given as the process input.
-#[derive(Clone, Copy)]
-pub struct AwaitD {}
-
-#[allow(non_upper_case_globals)]
-pub static AwaitD: AwaitD = AwaitD {};
-
-impl<'a, V: 'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for AwaitD
+impl<'a, V: 'a, S: 'a> ProcessPar<'a, S> for AwaitD
 where
-    SV: SignalValue<V = V>,
+    S: Signal<'a, V = V> + Send + Sync,
+    V: Send + Sync,
 {
     type Out = V;
     type Mark = NotIm;
     type NIO = DummyN<V>;
-    type NI = NSeq<NAwaitD, RcStore<SignalRuntimeRef<SV>>>;
-    type NO = NSeq<RcLoad<SignalRuntimeRef<SV>>, NGetD>;
+    type NI = NSeq<NAwaitD, ArcStore<S>>;
+    type NO = NSeq<ArcLoad<S>, NGetD>;
     type MarkOnce = SNotOnce;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
-        let rc = new_rcell();
+        let rc = new_amutex();
         let rc2 = rc.clone();
 
-        let ni = node!(NAwaitD(out_id) >> store(rc));
-        let no = node!(load(rc2) >> NGetD {});
+        let ni = node!(NAwaitD(out_id) >> store_par(rc));
+        let no = node!(load_par(rc2) >> NGetD {});
         (ni, out_id, no)
     }
 
@@ -371,26 +313,28 @@ where
     }
 }
 
-impl<'a, In: 'a, V: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, In)> for AwaitD
+impl<'a, In: 'a, V: 'a, S: 'a> ProcessPar<'a, (S, In)> for AwaitD
 where
-    SV: SignalValue<V=V>,
+    S: Signal<'a, V=V> + Send + Sync,
+    V: Send + Sync,
+    In: Send + Sync,
 {
     type Out = (V,In);
     type Mark = NotIm;
     type NIO = DummyN<(V,In)>;
-    type NI = NSeq<NPar<NAwaitD,NIdentity>,RcStore<(SignalRuntimeRef<SV>, In)>>;
-    type NO = NSeq<RcLoad<(SignalRuntimeRef<SV>, In)>, NGetD>;
+    type NI = NSeq<NPar<NAwaitD,NIdentity>,ArcStore<(S, In)>>;
+    type NO = NSeq<ArcLoad<(S, In)>, NGetD>;
     type MarkOnce = SNotOnce;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
-        let rc = new_rcell();
+        let rc = new_amutex();
         let rc2 = rc.clone();
 
         // Type inference won't work here
-        let ni_first = <NAwaitD as Node<'a,SignalRuntimeRef<SV>>>::njoin::<In, NIdentity>(NAwaitD(out_id), NIdentity {});
-        let ni = node!(ni_first >> store(rc));
-        let no = node!(load(rc2) >> NGetD{});
+        let ni_first = <NAwaitD as Node<'a,S>>::njoin::<In, NIdentity>(NAwaitD(out_id), NIdentity {});
+        let ni = node!(ni_first >> store_par(rc));
+        let no = node!(load_par(rc2) >> NGetD{});
         (ni, out_id, no)
     }
 
@@ -409,29 +353,26 @@ where
 // /_/   \_\_/\_/ \__,_|_|\__|____/
 
 
-/// Process awaiting for the emission of a signal, and executing the next process the next instant,
-/// where the signal is fixed.
-#[derive(Clone)]
-pub struct AwaitS<SV>(pub SignalRuntimeRef<SV>);
-
-impl<'a, In: 'a, V: 'a, SV: 'a> Process<'a, In> for AwaitS<SV>
+impl<'a, In: 'a, V: 'a, S: 'a> ProcessPar<'a, In> for AwaitS<S>
 where
-    SV: SignalValue<V=V>,
+    S: Signal<'a, V=V> + Send + Sync,
+    V: Send + Sync,
+    In: Send + Sync,
 {
     type Out = (V,In);
     type Mark = NotIm;
     type NIO = DummyN<(V,In)>;
-    type NI = NSeq<RcStore<In>,NAwaitS<SV>>;
-    type NO = NSeq<GenP, NPar<NGetS<SV>, RcLoad<In>>>;
+    type NI = NSeq<ArcStore<In>,NAwaitS<S>>;
+    type NO = NSeq<GenP, NPar<NGetS<S>, ArcLoad<In>>>;
     type MarkOnce = SNotOnce;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
-        let rc = new_rcell();
+        let rc = new_amutex();
         let rc2 = rc.clone();
 
-        let ni = node!(store(rc) >> NAwaitS(self.0.clone(), out_id));
-        let no = node!( GenP >> (NGetS(self.0) || load(rc2)));
+        let ni = node!(store_par(rc) >> NAwaitS(self.0.clone(), out_id));
+        let no = node!( GenP >> (NGetS(self.0) || load_par(rc2)));
         (ni, out_id, no)
     }
 
@@ -451,17 +392,9 @@ where
 // /_/   \_\_/\_/ \__,_|_|\__|___|_| |_| |_|_| |_| |_|\___|\__,_|_|\__,_|\__\___|____/
 
 
-/// Process awaiting for the emission of a signal, and executing the next process the current instant,
-/// where the signal is given as the process input.
-#[derive(Clone, Copy)]
-pub struct AwaitImmediateD {}
-
-#[allow(non_upper_case_globals)]
-pub static AwaitImmediateD: AwaitImmediateD = AwaitImmediateD {};
-
-impl<'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
-    where
-        SV: SignalValue,
+impl<'a, S: 'a> ProcessPar<'a, S> for AwaitImmediateD
+where
+    S: Signal<'a> + Send + Sync,
 {
     type Out = ();
     type Mark = NotIm;
@@ -470,7 +403,7 @@ impl<'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
     type NO = Nothing;
     type MarkOnce = SNotOnce;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
         (NAwaitImmediateD(out_id), out_id, Nothing {})
     }
@@ -484,26 +417,27 @@ impl<'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
 }
 
 
-impl<'a, In: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, In)> for AwaitImmediateD
-    where
-        SV: SignalValue,
+impl<'a, In: 'a, S: 'a> ProcessPar<'a, (S, In)> for AwaitImmediateD
+where
+    S: Signal<'a> + Send + Sync,
+    In: Send + Sync,
 {
     type Out = In;
     type Mark = NotIm;
     type NIO = DummyN<In>;
-    type NI = NSeq<NSeq<NPar<NIdentity,RcStore<In>>, Ignore2>,NAwaitImmediateD>;
-    type NO = RcLoad<In>;
+    type NI = NSeq<NSeq<NPar<NIdentity,ArcStore<In>>, Ignore2>,NAwaitImmediateD>;
+    type NO = ArcLoad<In>;
     type MarkOnce = SNotOnce;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
-        let rc = new_rcell();
+        let rc = new_amutex();
         let rc2 = rc.clone();
 
-        let ni_first = <NIdentity as Node<'a,SignalRuntimeRef<SV>>>::njoin::<In, RcStore<In>>(NIdentity {}, store(rc));
-        let ni_second = <NPar<NIdentity,RcStore<In>> as Node<'a, (SignalRuntimeRef<SV>, In)>>::nseq(ni_first, Ignore2);
-        let ni = <NSeq<NPar<NIdentity,RcStore<In>>,Ignore2> as Node<'a, (SignalRuntimeRef<SV>, In)>>::nseq(ni_second, NAwaitImmediateD(out_id));
-        let no = load(rc2);
+        let ni_first = <NIdentity as Node<'a,S>>::njoin::<In, ArcStore<In>>(NIdentity {}, store_par(rc));
+        let ni_second = <NPar<NIdentity,ArcStore<In>> as Node<'a, (S, In)>>::nseq(ni_first, Ignore2);
+        let ni = <NSeq<NPar<NIdentity,ArcStore<In>>,Ignore2> as Node<'a, (S, In)>>::nseq(ni_second, NAwaitImmediateD(out_id));
+        let no = load_par(rc2);
         (ni, out_id, no)
     }
 
@@ -522,30 +456,25 @@ impl<'a, In: 'a, SV: 'a> Process<'a, (SignalRuntimeRef<SV>, In)> for AwaitImmedi
 // /_/   \_\_/\_/ \__,_|_|\__|___|_| |_| |_|_| |_| |_|\___|\__,_|_|\__,_|\__\___|____/
 
 
-/// Process awaiting for the emission of a signal, and executing the next process the current instant,
-/// where the signal is fixed.
-#[derive(Clone)]
-pub struct AwaitImmediateS<SV>(pub SignalRuntimeRef<SV>);
-
-
-impl<'a, In: 'a, V: 'a, SV: 'a> Process<'a, In> for AwaitImmediateS<SV>
-    where
-        SV: SignalValue<V=V>,
+impl<'a, In: 'a, V: 'a, S: 'a> ProcessPar<'a, In> for AwaitImmediateS<S>
+where
+    S: Signal<'a, V=V> + Send + Sync,
+    In: Send + Sync,
 {
     type Out = In;
     type Mark = NotIm;
     type NIO = DummyN<In>;
-    type NI = NSeq<RcStore<In>,NAwaitImmediateS<SV>>;
-    type NO = RcLoad<In>;
+    type NI = NSeq<ArcStore<In>,NAwaitImmediateS<S>>;
+    type NO = ArcLoad<In>;
     type MarkOnce = SNotOnce;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
-        let rc = new_rcell();
+        let rc = new_amutex();
         let rc2 = rc.clone();
 
-        let ni = node!(store(rc) >> NAwaitImmediateS(self.0.clone(), out_id));
-        let no = load(rc2);
+        let ni = node!(store_par(rc) >> NAwaitImmediateS(self.0.clone(), out_id));
+        let no = load_par(rc2);
         (ni, out_id, no)
     }
 
@@ -563,7 +492,7 @@ impl<'a, In: 'a, V: 'a, SV: 'a> Process<'a, In> for AwaitImmediateS<SV>
 // |  __/| | |  __/\__ \  __/ | | | |_| |_| |
 // |_|   |_|  \___||___/\___|_| |_|\__|____/
 
-/// Process that executes pt in the current instant if the signal is present this instant,
+/// ProcessPar that executes pt in the current instant if the signal is present this instant,
 /// and executes pf in the next instant otherwise,
 /// where the signal is given as the process input.
 pub struct PresentD<PT, PF> {
@@ -571,30 +500,31 @@ pub struct PresentD<PT, PF> {
     pub(crate) pf: PF,
 }
 
-impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, SignalRuntimeRef<SV>>
-    for PresentD<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>>
+impl<'a, PT, PF, S: 'a, Out: 'a> ProcessPar<'a, S>
+    for PresentD<MarkedProcessPar<PT, NotIm>, MarkedProcessPar<PF, NotIm>>
 where
-    PT: Process<'a, (), Out=Out>,
-    PF: Process<'a, (), Out=Out>,
-    SV: SignalValue,
+    PT: ProcessPar<'a, (), Out=Out>,
+    PF: ProcessPar<'a, (), Out=Out>,
+    S: Signal<'a> + Send + Sync,
+    Out: Send + Sync,
 {
     type Out = Out;
     type NI = NPresentD;
-    type NO = RcLoad<Out>;
+    type NO = ArcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rct = new_rcell();
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let rct = new_amutex();
         let rcf = rct.clone();
         let rc_out = rct.clone();
-        let (ptni, ptind, ptno) = self.pt.p.compile(g);
-        let (pfni, pfind, pfno) = self.pf.p.compile(g);
+        let (ptni, ptind, ptno) = self.pt.p.compile_par(g);
+        let (pfni, pfind, pfno) = self.pf.p.compile_par(g);
 
         let out_id = g.reserve();
-        g.set(ptind, box node!(ptno >> store(rct) >> jump(out_id)));
-        g.set(pfind, box node!(pfno >> store(rcf) >> jump(out_id)));
+        g.set(ptind, box node!(ptno >> store_par(rct) >> jump(out_id)));
+        g.set(pfind, box node!(pfno >> store_par(rcf) >> jump(out_id)));
         let nit_id = g.add(box ptni);
         let nif_id = g.add(box pfni);
 
@@ -603,7 +533,7 @@ where
             node_false: nif_id,
         };
 
-        (ni, out_id, load(rc_out))
+        (ni, out_id, load_par(rc_out))
     }
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -615,30 +545,31 @@ where
 }
 
 
-impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, SignalRuntimeRef<SV>>
-for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>>
-    where
-        PT: Process<'a, (), Out=Out>,
-        PF: Process<'a, (), Out=Out>,
-        SV: SignalValue,
+impl<'a, PT, PF, S: 'a, Out: 'a> ProcessPar<'a, S>
+for PresentD<MarkedProcessPar<PT, IsIm>, MarkedProcessPar<PF, NotIm>>
+where
+    PT: ProcessPar<'a, (), Out=Out>,
+    PF: ProcessPar<'a, (), Out=Out>,
+    S: Signal<'a> + Send + Sync,
+    Out: Send + Sync,
 {
     type Out = Out;
     type NI = NPresentD;
-    type NO = RcLoad<Out>;
+    type NO = ArcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rct = new_rcell();
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let rct = new_amutex();
         let rcf = rct.clone();
         let rc_out = rct.clone();
-        let ptnio = self.pt.p.compileIm(g);
-        let (pfni, pfind, pfno) = self.pf.p.compile(g);
+        let ptnio = self.pt.p.compileIm_par(g);
+        let (pfni, pfind, pfno) = self.pf.p.compile_par(g);
 
         let out_id = g.reserve();
-        let ptind = g.add(box node!(ptnio >> store(rct) >> jump(out_id)));
-        g.set(pfind, box node!(pfno >> store(rcf) >> jump(out_id)));
+        let ptind = g.add(box node!(ptnio >> store_par(rct) >> jump(out_id)));
+        g.set(pfind, box node!(pfno >> store_par(rcf) >> jump(out_id)));
         let nif_id = g.add(box pfni);
 
         let ni = NPresentD {
@@ -646,7 +577,7 @@ for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>>
             node_false: nif_id,
         };
 
-        (ni, out_id, load(rc_out))
+        (ni, out_id, load_par(rc_out))
     }
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -658,30 +589,31 @@ for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>>
 }
 
 
-impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, SignalRuntimeRef<SV>>
-for PresentD<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>>
-    where
-        PT: Process<'a, (), Out=Out>,
-        PF: Process<'a, (), Out=Out>,
-        SV: SignalValue,
+impl<'a, PT, PF, S: 'a, Out: 'a> ProcessPar<'a, S>
+for PresentD<MarkedProcessPar<PT, NotIm>, MarkedProcessPar<PF, IsIm>>
+where
+    PT: ProcessPar<'a, (), Out=Out>,
+    PF: ProcessPar<'a, (), Out=Out>,
+    S: Signal<'a> + Send + Sync,
+    Out: Send + Sync,
 {
     type Out = Out;
     type NI = NPresentD;
-    type NO = RcLoad<Out>;
+    type NO = ArcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rct = new_rcell();
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let rct = new_amutex();
         let rcf = rct.clone();
         let rc_out = rct.clone();
-        let pfnio = self.pf.p.compileIm(g);
-        let (ptni, ptind, ptno) = self.pt.p.compile(g);
+        let pfnio = self.pf.p.compileIm_par(g);
+        let (ptni, ptind, ptno) = self.pt.p.compile_par(g);
 
         let out_id = g.reserve();
-        let pfind = g.add(box node!(pfnio >> store(rcf) >> jump(out_id)));
-        g.set(ptind, box node!(ptno >> store(rct) >> jump(out_id)));
+        let pfind = g.add(box node!(pfnio >> store_par(rcf) >> jump(out_id)));
+        g.set(ptind, box node!(ptno >> store_par(rct) >> jump(out_id)));
         let nit_id = g.add(box ptni);
 
         let ni = NPresentD {
@@ -689,7 +621,7 @@ for PresentD<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>>
             node_false: pfind,
         };
 
-        (ni, out_id, load(rc_out))
+        (ni, out_id, load_par(rc_out))
     }
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -701,37 +633,38 @@ for PresentD<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>>
 }
 
 
-impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, SignalRuntimeRef<SV>>
-for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>>
-    where
-        PT: Process<'a, (), Out=Out>,
-        PF: Process<'a, (), Out=Out>,
-        SV: SignalValue,
+impl<'a, PT, PF, S: 'a, Out: 'a> ProcessPar<'a, S>
+for PresentD<MarkedProcessPar<PT, IsIm>, MarkedProcessPar<PF, IsIm>>
+where
+    PT: ProcessPar<'a, (), Out=Out>,
+    PF: ProcessPar<'a, (), Out=Out>,
+    S: Signal<'a> + Send + Sync,
+    Out: Send + Sync,
 {
     type Out = Out;
     type NI = NPresentD;
-    type NO = RcLoad<Out>;
+    type NO = ArcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rct = new_rcell();
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let rct = new_amutex();
         let rcf = rct.clone();
         let rc_out = rct.clone();
-        let pfnio = self.pf.p.compileIm(g);
-        let ptnio = self.pt.p.compileIm(g);
+        let pfnio = self.pf.p.compileIm_par(g);
+        let ptnio = self.pt.p.compileIm_par(g);
 
         let out_id = g.reserve();
-        let pfind = g.add(box node!(pfnio >> store(rcf) >> jump(out_id)));
-        let ptind = g.add(box node!(ptnio >> store(rct) >> jump(out_id)));
+        let pfind = g.add(box node!(pfnio >> store_par(rcf) >> jump(out_id)));
+        let ptind = g.add(box node!(ptnio >> store_par(rct) >> jump(out_id)));
 
         let ni = NPresentD {
             node_true: ptind,
             node_false: pfind,
         };
 
-        (ni, out_id, load(rc_out))
+        (ni, out_id, load_par(rc_out))
     }
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -748,39 +681,40 @@ for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>>
 // |  __/| | |  __/\__ \  __/ | | | |_ ___) |
 // |_|   |_|  \___||___/\___|_| |_|\__|____/
 
-/// Process that executes pt in the current instant if the signal is present this instant,
+/// ProcessPar that executes pt in the current instant if the signal is present this instant,
 /// and executes pf in the next instant otherwise,
 /// where the signal is given as the process input.
-pub struct PresentS<PT,PF,SV> {
+pub struct PresentS<PT,PF,S> {
     pub(crate) pt: PT,
     pub(crate) pf: PF,
-    pub(crate) signal_runtime: SignalRuntimeRef<SV>,
+    pub(crate) signal_runtime: S,
 }
 
-impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, ()>
-for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>, SV>
-    where
-        PT: Process<'a, (), Out=Out>,
-        PF: Process<'a, (), Out=Out>,
-        SV: SignalValue,
+impl<'a, PT, PF, S: 'a, Out: 'a> ProcessPar<'a, ()>
+for PresentS<MarkedProcessPar<PT, NotIm>, MarkedProcessPar<PF, NotIm>, S>
+where
+    PT: ProcessPar<'a, (), Out=Out>,
+    PF: ProcessPar<'a, (), Out=Out>,
+    S: Signal<'a> + Send + Sync,
+    Out: Send + Sync,
 {
     type Out = Out;
-    type NI = NPresentS<SV>;
-    type NO = RcLoad<Out>;
+    type NI = NPresentS<S>;
+    type NO = ArcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rct = new_rcell();
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let rct = new_amutex();
         let rcf = rct.clone();
         let rc_out = rct.clone();
-        let (ptni, ptind, ptno) = self.pt.p.compile(g);
-        let (pfni, pfind, pfno) = self.pf.p.compile(g);
+        let (ptni, ptind, ptno) = self.pt.p.compile_par(g);
+        let (pfni, pfind, pfno) = self.pf.p.compile_par(g);
 
         let out_id = g.reserve();
-        g.set(ptind, box node!(ptno >> store(rct) >> jump(out_id)));
-        g.set(pfind, box node!(pfno >> store(rcf) >> jump(out_id)));
+        g.set(ptind, box node!(ptno >> store_par(rct) >> jump(out_id)));
+        g.set(pfind, box node!(pfno >> store_par(rcf) >> jump(out_id)));
         let nit_id = g.add(box ptni);
         let nif_id = g.add(box pfni);
 
@@ -790,7 +724,7 @@ for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>, SV>
             signal_runtime: self.signal_runtime,
         };
 
-        (ni, out_id, load(rc_out))
+        (ni, out_id, load_par(rc_out))
     }
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -802,30 +736,31 @@ for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>, SV>
 }
 
 
-impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, ()>
-for PresentS<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>, SV>
-    where
-        PT: Process<'a, (), Out=Out>,
-        PF: Process<'a, (), Out=Out>,
-        SV: SignalValue,
+impl<'a, PT, PF, S: 'a, Out: 'a> ProcessPar<'a, ()>
+for PresentS<MarkedProcessPar<PT, IsIm>, MarkedProcessPar<PF, NotIm>, S>
+where
+    PT: ProcessPar<'a, (), Out=Out>,
+    PF: ProcessPar<'a, (), Out=Out>,
+    S: Signal<'a> + Send + Sync,
+    Out: Send + Sync,
 {
     type Out = Out;
-    type NI = NPresentS<SV>;
-    type NO = RcLoad<Out>;
+    type NI = NPresentS<S>;
+    type NO = ArcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rct = new_rcell();
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let rct = new_amutex();
         let rcf = rct.clone();
         let rc_out = rct.clone();
-        let ptnio = self.pt.p.compileIm(g);
-        let (pfni, pfind, pfno) = self.pf.p.compile(g);
+        let ptnio = self.pt.p.compileIm_par(g);
+        let (pfni, pfind, pfno) = self.pf.p.compile_par(g);
 
         let out_id = g.reserve();
-        let ptind = g.add(box node!(ptnio >> store(rct) >> jump(out_id)));
-        g.set(pfind, box node!(pfno >> store(rcf) >> jump(out_id)));
+        let ptind = g.add(box node!(ptnio >> store_par(rct) >> jump(out_id)));
+        g.set(pfind, box node!(pfno >> store_par(rcf) >> jump(out_id)));
         let nif_id = g.add(box pfni);
 
         let ni = NPresentS {
@@ -834,7 +769,7 @@ for PresentS<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>, SV>
             signal_runtime: self.signal_runtime,
         };
 
-        (ni, out_id, load(rc_out))
+        (ni, out_id, load_par(rc_out))
     }
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -846,30 +781,31 @@ for PresentS<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>, SV>
 }
 
 
-impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, ()>
-for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>, SV>
-    where
-        PT: Process<'a, (), Out=Out>,
-        PF: Process<'a, (), Out=Out>,
-        SV: SignalValue,
+impl<'a, PT, PF, S: 'a, Out: 'a> ProcessPar<'a, ()>
+for PresentS<MarkedProcessPar<PT, NotIm>, MarkedProcessPar<PF, IsIm>, S>
+where
+    PT: ProcessPar<'a, (), Out=Out>,
+    PF: ProcessPar<'a, (), Out=Out>,
+    S: Signal<'a> + Send + Sync,
+    Out: Send + Sync,
 {
     type Out = Out;
-    type NI = NPresentS<SV>;
-    type NO = RcLoad<Out>;
+    type NI = NPresentS<S>;
+    type NO = ArcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rct = new_rcell();
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let rct = new_amutex();
         let rcf = rct.clone();
         let rc_out = rct.clone();
-        let pfnio = self.pf.p.compileIm(g);
-        let (ptni, ptind, ptno) = self.pt.p.compile(g);
+        let pfnio = self.pf.p.compileIm_par(g);
+        let (ptni, ptind, ptno) = self.pt.p.compile_par(g);
 
         let out_id = g.reserve();
-        let pfind = g.add(box node!(pfnio >> store(rcf) >> jump(out_id)));
-        g.set(ptind, box node!(ptno >> store(rct) >> jump(out_id)));
+        let pfind = g.add(box node!(pfnio >> store_par(rcf) >> jump(out_id)));
+        g.set(ptind, box node!(ptno >> store_par(rct) >> jump(out_id)));
         let nit_id = g.add(box ptni);
 
         let ni = NPresentS {
@@ -878,7 +814,7 @@ for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>, SV>
             signal_runtime: self.signal_runtime,
         };
 
-        (ni, out_id, load(rc_out))
+        (ni, out_id, load_par(rc_out))
     }
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -890,30 +826,31 @@ for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>, SV>
 }
 
 
-impl<'a, PT, PF, SV: 'a, Out: 'a> Process<'a, ()>
-for PresentS<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>, SV>
-    where
-        PT: Process<'a, (), Out=Out>,
-        PF: Process<'a, (), Out=Out>,
-        SV: SignalValue,
+impl<'a, PT, PF, S: 'a, Out: 'a> ProcessPar<'a, ()>
+for PresentS<MarkedProcessPar<PT, IsIm>, MarkedProcessPar<PF, IsIm>, S>
+where
+    PT: ProcessPar<'a, (), Out=Out>,
+    PF: ProcessPar<'a, (), Out=Out>,
+    S: Signal<'a> + Send + Sync,
+    Out: Send + Sync,
 {
     type Out = Out;
-    type NI = NPresentS<SV>;
-    type NO = RcLoad<Out>;
+    type NI = NPresentS<S>;
+    type NO = ArcLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rct = new_rcell();
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let rct = new_amutex();
         let rcf = rct.clone();
         let rc_out = rct.clone();
-        let pfnio = self.pf.p.compileIm(g);
-        let ptnio = self.pt.p.compileIm(g);
+        let pfnio = self.pf.p.compileIm_par(g);
+        let ptnio = self.pt.p.compileIm_par(g);
 
         let out_id = g.reserve();
-        let pfind = g.add(box node!(pfnio >> store(rcf) >> jump(out_id)));
-        let ptind = g.add(box node!(ptnio >> store(rct) >> jump(out_id)));
+        let pfind = g.add(box node!(pfnio >> store_par(rcf) >> jump(out_id)));
+        let ptind = g.add(box node!(ptnio >> store_par(rct) >> jump(out_id)));
 
         let ni = NPresentS {
             node_true: ptind,
@@ -921,7 +858,7 @@ for PresentS<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>, SV>
             signal_runtime: self.signal_runtime,
         };
 
-        (ni, out_id, load(rc_out))
+        (ni, out_id, load_par(rc_out))
     }
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){

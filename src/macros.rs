@@ -14,9 +14,24 @@ macro_rules! rt {
 }
 
 #[macro_export]
+macro_rules! rtp {
+    ($($x:tt)+) => {{
+        Runtime::new(mp_par(prop!($($x)*)))
+    }};
+}
+
+#[macro_export]
 macro_rules! run {
     ($($x:tt)+) => {{
         let mut r = Runtime::new(mp(pro!($($x)*)));
+        r.execute();
+    }};
+}
+
+#[macro_export]
+macro_rules! runp {
+    ($($x:tt)+) => {{
+        let mut r = Runtime::new(mp_par(prop!($($x)*)));
         r.execute();
     }};
 }

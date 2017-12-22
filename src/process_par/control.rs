@@ -20,9 +20,9 @@ where
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let (ptni, ptind, ptno) = self.pt.p.compile(g);
-        let (pfni, pfind, pfno) = self.pf.p.compile(g);
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let (ptni, ptind, ptno) = self.pt.p.compile_par(g);
+        let (pfni, pfind, pfno) = self.pf.p.compile_par(g);
         let rct = new_amutex();
         let rcf = rct.clone();
         let rcout = rct.clone();
@@ -46,9 +46,9 @@ where
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let ptnio = self.pt.p.compileIm(g);
-        let (pfni, pfind, pfno) = self.pf.p.compile(g);
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let ptnio = self.pt.p.compileIm_par(g);
+        let (pfni, pfind, pfno) = self.pf.p.compile_par(g);
         let rct = new_amutex();
         let rcf = rct.clone();
         let rcout = rct.clone();
@@ -77,9 +77,9 @@ where
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let (ptni, ptind, ptno) = self.pt.p.compile(g);
-        let pfnio = self.pf.p.compileIm(g);
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let (ptni, ptind, ptno) = self.pt.p.compile_par(g);
+        let pfnio = self.pf.p.compileIm_par(g);
         let rct = new_amutex();
         let rcf = rct.clone();
         let rcout = rct.clone();
@@ -106,9 +106,9 @@ where
     type Mark = IsIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
-    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
-        let ptnio = self.pt.p.compileIm(g);
-        let pfnio = self.pf.p.compileIm(g);
+    fn compileIm_par(self, g: &mut Graph<'a>) -> Self::NIO {
+        let ptnio = self.pt.p.compileIm_par(g);
+        let pfnio = self.pf.p.compileIm_par(g);
         node!(choice ptnio pfnio)
     }
 }
@@ -136,9 +136,9 @@ where
     type Mark = NotIm;
     type MarkOnce = SNotOnce;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI,usize,Self::NO){
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI,usize,Self::NO){
         trace!("");
-        let (pni, pind, pno) = self.p.p.compile(g);
+        let (pni, pind, pno) = self.p.p.compile_par(g);
         let rcextin = new_amutex();
         let rcbegin = rcextin.clone();
         let rcendin = rcextin.clone();
@@ -173,9 +173,9 @@ where
     type Mark = IsIm;
     type MarkOnce = SNotOnce;
 
-    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO{
+    fn compileIm_par(self, g: &mut Graph<'a>) -> Self::NIO{
         trace!("");
-        let pnio = self.p.p.compileIm(g);
+        let pnio = self.p.p.compileIm_par(g);
         LoopIm(pnio)
     }
 }

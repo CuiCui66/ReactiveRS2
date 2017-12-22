@@ -4,6 +4,65 @@ use engine::{SubRuntime, Tasks, EndOfInstantCallback};
 use std::sync::{Arc, Mutex, MutexGuard};
 use signal::*;
 
+
+//  __  __  ____ ____  _                   ___     __    _            ____
+// |  \/  |/ ___/ ___|(_) __ _ _ __   __ _| \ \   / /_ _| |_   _  ___|  _ \ __ _ _ __
+// | |\/| | |   \___ \| |/ _` | '_ \ / _` | |\ \ / / _` | | | | |/ _ \ |_) / _` | '__|
+// | |  | | |___ ___) | | (_| | | | | (_| | | \ V / (_| | | |_| |  __/  __/ (_| | |
+// |_|  |_|\____|____/|_|\__, |_| |_|\__,_|_|  \_/ \__,_|_|\__,_|\___|_|   \__,_|_|
+
+
+/// Structure representing the values of a multi consumer signal
+pub struct MCSignalValuePar<E,V> {
+
+    /// The default value of the signal
+    default_value: V,
+
+    /// The value of the signal for the current instant
+    current_value: V,
+
+    /// The value of the signal at the last instant
+    pre_value: V,
+
+    /// The function used to gather the signals
+    gather: Box<FnMut(E, &mut V) + Send>,
+}
+
+impl<E,V> MCSignalValuePar<E,V>
+    where
+        V: Clone
+{
+    /// Creates a new multi consumer signal, given a default value and a gather function
+    fn new(default_value: V, gather: Box<FnMut(E, &mut V) + Send>) -> Self {
+        MCSignalValuePar {
+            default_value: default_value.clone(),
+            current_value: default_value.clone(),
+            pre_value: default_value,
+            gather,
+        }
+    }
+}
+
+impl<E,V> SignalValue for MCSignalValuePar<E,V>
+    where
+        V: Clone
+{
+    type E = E;
+    type V = V;
+    fn get_pre_value(&self) -> V {
+        self.pre_value.clone()
+    }
+
+    fn gather(&mut self, emit_value: E) {
+        (&mut self.gather)(emit_value, &mut self.current_value)
+    }
+
+    fn reset_value(&mut self) {
+        mem::swap(&mut self.pre_value, &mut self.current_value);
+        self.current_value = self.default_value.clone();
+    }
+}
+
 //  ____  _                   _ ____              _   _                ____       __
 // / ___|(_) __ _ _ __   __ _| |  _ \ _   _ _ __ | |_(_)_ __ ___   ___|  _ \ ___ / _|
 // \___ \| |/ _` | '_ \ / _` | | |_) | | | | '_ \| __| | '_ ` _ \ / _ \ |_) / _ \ |_
@@ -26,14 +85,14 @@ impl SignalRuntimeParRef<PureSignalValue> {
     }
 }
 
-impl<E,V> SignalRuntimeParRef<MCSignalValue<E,V>>
+impl<E,V> SignalRuntimeParRef<MCSignalValuePar<E,V>>
 where
     V: Clone
 {
     /// Create a shared pointer to a new multi consumer signal runtime
-    pub fn new_mc(default_value: V, gather: Box<FnMut(E, &mut V)>) -> Self {
+    pub fn new_mc(default_value: V, gather: Box<FnMut(E, &mut V) + Send>) -> Self {
         SignalRuntimeParRef {
-            signal_runtime: Arc::new(Mutex::new(SignalRuntime::new_mc(default_value,gather)))
+            signal_runtime: Arc::new(Mutex::new(SignalRuntime::new(MCSignalValuePar::new(default_value,gather))))
         }
     }
 }
@@ -91,7 +150,7 @@ where
     }
 
     /// Update the values
-    pub(crate) fn update_values(&self, current_instant: usize, signal_runtime: &mut MutexGuard<SignalRuntime<SV>>) {
+    fn update_values(&self, current_instant: usize, signal_runtime: &mut MutexGuard<SignalRuntime<SV>>) {
         if signal_runtime.last_update + 1 < current_instant {
             signal_runtime.values.reset_value();
             signal_runtime.values.reset_value();
@@ -101,9 +160,18 @@ where
             signal_runtime.last_update = current_instant;
         }
     }
+}
+
+impl<'a, SV: 'a, V: 'a> Signal<'a> for SignalRuntimeParRef<SV>
+where
+    SV: SignalValue<V=V>,
+    V: Clone,
+{
+    type V = SV::V;
+    type E = SV::E;
 
     /// Emit a value to the signal
-    pub(crate) fn emit(&self, emit_value: E, sub_runtime: &mut SubRuntime<'a>) {
+    fn emit(&self, emit_value: Self::E, sub_runtime: &mut SubRuntime<'a>) {
         let mut signal_runtime = self.signal_runtime.lock().unwrap();
 
         // If the signal is already set, we are finished
@@ -126,7 +194,7 @@ where
     }
 
     /// Await the signal to be emitted, and then execute the node at the next instant,
-    pub(crate) fn await(&self, sub_runtime: &mut SubRuntime<'a>, node: usize) {
+    fn await(&self, sub_runtime: &mut SubRuntime<'a>, node: usize) {
         let mut signal_runtime = self.signal_runtime.lock().unwrap();
         if signal_runtime.last_set == sub_runtime.current_instant {
             sub_runtime.tasks.next.push(node);
@@ -136,7 +204,7 @@ where
     }
 
     /// Await the signal to be emitted, and then exexute the node at the current instant
-    pub(crate) fn await_immediate(&self, sub_runtime: &mut SubRuntime<'a>, node: usize) {
+    fn await_immediate(&self, sub_runtime: &mut SubRuntime<'a>, node: usize) {
         let mut signal_runtime = self.signal_runtime.lock().unwrap();
         if signal_runtime.last_set == sub_runtime.current_instant {
             sub_runtime.tasks.current.push(node);
@@ -147,7 +215,7 @@ where
 
     /// If the signal is present at the current instant, execute node_true.
     /// Otherwise, execute node_false at the next instant.
-    pub(crate) fn present(&self, sub_runtime: &mut SubRuntime<'a>, node_true: usize, node_false: usize) {
+    fn present(&self, sub_runtime: &mut SubRuntime<'a>, node_true: usize, node_false: usize) {
         let mut signal_runtime = self.signal_runtime.lock().unwrap();
 
         if signal_runtime.last_set == sub_runtime.current_instant {
@@ -162,8 +230,15 @@ where
     }
 
     /// Return true if the signal was set at the last instant
-    pub fn pre_set(&self, current_instant: usize) -> bool {
+    fn pre_set(&self, current_instant: usize) -> bool {
         self.signal_runtime.lock().unwrap().pre_last_set + 1 == current_instant
+    }
+
+    /// Return the last instant signal value
+    fn get_pre_value(&self, current_instant: usize) -> Self::V {
+        let mut signal_runtime = self.signal_runtime.lock().unwrap();
+        self.update_values(current_instant, &mut signal_runtime);
+        signal_runtime.values.get_pre_value()
     }
 }
 

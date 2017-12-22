@@ -14,9 +14,9 @@ where
     type Mark = NotIm;
     type MarkOnce = And<P::MarkOnce, Q::MarkOnce>;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let (pni, pind, pno) = self.p.p.compile(g);
-        let (qni, qind, qno) = self.q.p.compile(g);
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let (pni, pind, pno) = self.p.p.compile_par(g);
+        let (qni, qind, qno) = self.q.p.compile_par(g);
         g.set(pind, box node!(pno >> qni));
         (pni, qind, qno)
     }
@@ -34,9 +34,9 @@ where
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<P::MarkOnce, Q::MarkOnce>;
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let pnio = self.p.p.compileIm(g);
-        let (qni, qind, qno) = self.q.p.compile(g);
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let pnio = self.p.p.compileIm_par(g);
+        let (qni, qind, qno) = self.q.p.compile_par(g);
         (node!(pnio >> qni), qind, qno)
 
     }
@@ -54,9 +54,9 @@ where
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<P::MarkOnce, Q::MarkOnce>;
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let (pni, pind, pno) = self.p.p.compile(g);
-        let qnio = self.q.p.compileIm(g);
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let (pni, pind, pno) = self.p.p.compile_par(g);
+        let qnio = self.q.p.compileIm_par(g);
         (pni, pind, node!(pno >> qnio))
 
     }
@@ -74,9 +74,9 @@ where
     type NIO = NSeq<P::NIO, Q::NIO>;
     type Mark = IsIm;
     type MarkOnce = And<P::MarkOnce, Q::MarkOnce>;
-    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
-        let pnio = self.p.p.compileIm(g);
-        let qnio = self.q.p.compileIm(g);
+    fn compileIm_par(self, g: &mut Graph<'a>) -> Self::NIO {
+        let pnio = self.p.p.compileIm_par(g);
+        let qnio = self.q.p.compileIm_par(g);
         node!(pnio >> qnio)
     }
 }

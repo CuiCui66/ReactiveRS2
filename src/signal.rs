@@ -39,7 +39,10 @@ pub(crate) struct SignalRuntime<SV>
 impl<SV> SignalRuntime<SV>
 {
     /// Create a new signal runtime, given a structure representing its value
-    pub(crate) fn new(signal_value: SV) -> Self {
+    pub(crate) fn new(signal_value: SV) -> Self
+    where
+        SV: SignalValue
+    {
         SignalRuntime {
             last_set: 0,
             pre_last_set: 0,
@@ -238,6 +241,17 @@ impl<SV> Clone for SignalRuntimeRef<SV>
     }
 }
 
+pub trait Signal<'a>: Clone {
+    type E;
+    type V;
+
+    fn emit(&self, emit_value: Self::E, sub_runtime: &mut SubRuntime<'a>);
+    fn await(&self, sub_runtime: &mut SubRuntime<'a>, node: usize);
+    fn await_immediate(&self, sub_runtime: &mut SubRuntime<'a>, node: usize);
+    fn present(&self, sub_runtime: &mut SubRuntime<'a>, node_true: usize, node_false: usize);
+    fn pre_set(&self, current_instant: usize) -> bool;
+    fn get_pre_value(&self, current_instant: usize) -> Self::V;
+}
 
 impl<'a, E: 'a, V: 'a, SV: 'a> SignalRuntimeRef<SV>
 where
@@ -269,7 +283,7 @@ where
     }
 
     /// Update the values
-    pub(crate) fn update_values(&self, current_instant: usize, signal_runtime: &mut RefMut<SignalRuntime<SV>>) {
+    fn update_values(&self, current_instant: usize, mut signal_runtime: &mut RefMut<SignalRuntime<SV>>) {
         if signal_runtime.last_update + 1 < current_instant {
             signal_runtime.values.reset_value();
             signal_runtime.values.reset_value();
@@ -279,9 +293,17 @@ where
             signal_runtime.last_update = current_instant;
         }
     }
+}
+
+impl<'a, E: 'a, V: 'a, SV: 'a> Signal<'a> for SignalRuntimeRef<SV>
+where
+    SV: SignalValue<E=E,V=V>,
+{
+    type E = E;
+    type V = V;
 
     /// Emit a value to the signal
-    pub(crate) fn emit(&self, emit_value: E, sub_runtime: &mut SubRuntime<'a>) {
+    fn emit(&self, emit_value: E, sub_runtime: &mut SubRuntime<'a>) {
         let mut signal_runtime = self.signal_runtime.borrow_mut();
 
         // If the signal is already set, we are finished
@@ -304,7 +326,7 @@ where
     }
 
     /// Await the signal to be emitted, and then execute the node at the next instant,
-    pub(crate) fn await(&self, sub_runtime: &mut SubRuntime<'a>, node: usize) {
+    fn await(&self, sub_runtime: &mut SubRuntime<'a>, node: usize) {
         let mut signal_runtime = self.signal_runtime.borrow_mut();
         if signal_runtime.last_set == sub_runtime.current_instant {
             sub_runtime.tasks.next.push(node);
@@ -314,7 +336,7 @@ where
     }
 
     /// Await the signal to be emitted, and then exexute the node at the current instant
-    pub(crate) fn await_immediate(&self, sub_runtime: &mut SubRuntime<'a>, node: usize) {
+    fn await_immediate(&self, sub_runtime: &mut SubRuntime<'a>, node: usize) {
         let mut signal_runtime = self.signal_runtime.borrow_mut();
         if signal_runtime.last_set == sub_runtime.current_instant {
             sub_runtime.tasks.current.push(node);
@@ -325,7 +347,7 @@ where
 
     /// If the signal is present at the current instant, execute node_true.
     /// Otherwise, execute node_false at the next instant.
-    pub(crate) fn present(&self, sub_runtime: &mut SubRuntime<'a>, node_true: usize, node_false: usize) {
+    fn present(&self, sub_runtime: &mut SubRuntime<'a>, node_true: usize, node_false: usize) {
         let mut signal_runtime = self.signal_runtime.borrow_mut();
 
         if signal_runtime.last_set == sub_runtime.current_instant {
@@ -340,8 +362,15 @@ where
     }
 
     /// Return true if the signal was set at the last instant
-    pub fn pre_set(&self, current_instant: usize) -> bool {
+    fn pre_set(&self, current_instant: usize) -> bool {
         self.signal_runtime.borrow().pre_last_set + 1 == current_instant
+    }
+
+    /// Return the value of the last instant
+    fn get_pre_value(&self, current_instant: usize) -> V {
+        let mut signal_runtime = self.signal_runtime.borrow_mut();
+        self.update_values(current_instant, &mut signal_runtime);
+        signal_runtime.values.get_pre_value()
     }
 }
 

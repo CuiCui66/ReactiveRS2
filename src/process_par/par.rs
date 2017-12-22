@@ -15,9 +15,9 @@ where
     type NIO = DummyN<Self::Out>;
     type Mark = NotIm;
     type MarkOnce = And<P::MarkOnce, Q::MarkOnce>;
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let (pni, pind, pno) = self.p.p.compile(g);
-        let (qni, qind, qno) = self.q.p.compile(g);
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let (pni, pind, pno) = self.p.p.compile_par(g);
+        let (qni, qind, qno) = self.q.p.compile_par(g);
         let out_ind = g.reserve();
         let rc1 = new_arcjp();
         let rc2 = rc1.clone();
@@ -41,9 +41,9 @@ where
     type NIO = DummyN<Self::Out>;
     type Mark = NotIm;
     type MarkOnce = And<P::MarkOnce, Q::MarkOnce>;
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let pnio = self.p.p.compileIm(g);
-        let (qni, qind, qno) = self.q.p.compile(g);
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let pnio = self.p.p.compileIm_par(g);
+        let (qni, qind, qno) = self.q.p.compile_par(g);
         let rcin = new_amutex();
         let rcout = rcin.clone();
         (
@@ -68,9 +68,9 @@ where
     type NIO = DummyN<Self::Out>;
     type Mark = NotIm;
     type MarkOnce = And<P::MarkOnce, Q::MarkOnce>;
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let (pni, pind, pno) = self.p.p.compile(g);
-        let qnio = self.q.p.compileIm(g);
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let (pni, pind, pno) = self.p.p.compile_par(g);
+        let qnio = self.q.p.compileIm_par(g);
         let rcin = new_amutex();
         let rcout = rcin.clone();
         (
@@ -95,9 +95,9 @@ where
     type NIO = NPar<P::NIO, Q::NIO>;
     type Mark = IsIm;
     type MarkOnce = And<P::MarkOnce, Q::MarkOnce>;
-    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
-        let pnio = self.p.p.compileIm(g);
-        let qnio = self.q.p.compileIm(g);
+    fn compileIm_par(self, g: &mut Graph<'a>) -> Self::NIO {
+        let pnio = self.p.p.compileIm_par(g);
+        let qnio = self.q.p.compileIm_par(g);
         node!(pnio || qnio)
     }
 }
@@ -120,13 +120,13 @@ where
     type NIO = DummyN<Self::Out>;
     type Mark = NotIm;
     type MarkOnce = P::MarkOnce;
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile_par(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let mut dests: Vec<usize> = vec![];
         let end_point = g.reserve();
         let arcbjp = new_arcbjp(self.vp.len(),end_point);
         let arcin = new_amutex();
         for p in self.vp{
-            let (pni, pind, pno) = p.p.compile(g);
+            let (pni, pind, pno) = p.p.compile_par(g);
             g.set(pind, box node!(pno >> big_merge_par(arcbjp.clone())));
             dests.push(g.add(box node!(load_copy_par(arcin.clone()) >> pni)));
         };
