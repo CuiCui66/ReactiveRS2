@@ -41,6 +41,37 @@ fn parse_expr(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
     })
 }
 
+
+fn parse_expr_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
+
+    if args.len() == 0 {
+        cx.span_err(sp, "Empty expr ?");
+    }
+
+    match &args[0] {
+        &TokenTree::Token(_, ref tok) => {
+            match tok {
+                &Token::BinOp(Or) => {
+                    let e = parse_expr(cx,sp,args);
+                    return cx.expr_call_ident(sp,cx.ident_of("fnmut2pro"),vec![e])
+                }
+                &Token::Ident(id) if id.name.as_str() == "move" => {
+                    let e = parse_expr(cx,sp,args);
+                    return cx.expr_call_ident(sp,cx.ident_of("fnmut2pro"),vec![e])
+                }
+                _ => {}
+            }
+        }
+        _ => {}
+    }
+
+    let mut parser = cx.new_parser_from_tts(args);
+    parser.parse_expr().unwrap_or_else(| mut d| {
+        d.emit();
+        return DummyResult::raw_expr(sp);
+    })
+}
+
 fn split_on_binop(
     cx: &mut ExtCtxt,
     sp: Span,
@@ -71,8 +102,8 @@ fn split_on_binop_node(
 
 fn parse_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
 
-    //print!("parse pro : ");
-    //printtts(args);
+    // print!("parse pro : ");
+    // printtts(args);
 
     if args.len() == 0 {
         cx.expr_ident(sp,cx.ident_of("PNothing"));
@@ -80,7 +111,7 @@ fn parse_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
     if args.len() == 1 {
         match &args[0] {
             &TokenTree::Token(sp, _) => {
-                return parse_expr(cx, sp, args);
+                return parse_expr_pro(cx, sp, args);
             }
             &TokenTree::Delimited(sp,
                                   Delimited {
@@ -147,7 +178,7 @@ fn parse_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
         }
     }
 
-    parse_expr(cx, sp, args)
+    parse_expr_pro(cx, sp, args)
 }
 
 fn parse_node(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {

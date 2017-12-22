@@ -7,6 +7,7 @@
 #![plugin(promacros)]
 #![feature(core_intrinsics)]
 #![feature(arbitrary_self_types)]
+#![feature(conservative_impl_trait)]
 
 extern crate core;
 #[macro_use] extern crate log;
@@ -35,22 +36,29 @@ mod tests {
 
 
     #[test]
-    fn instant_action() {
+    fn instant_action_no_macro() {
         let mut i = 0;
         {
-            let mut r = Runtime::new(mp(|_: ()| { i += 42; }));
+            let mut r = Runtime::new(fnmut2pro(|_| { i += 42; }));
             r.execute();
         }
         assert_eq!(i, 42);
     }
 
     #[test]
+    fn instant_action(){
+        let mut i = 0;
+        run!(|_| { i += 42; });
+        assert_eq!(i, 42);
+    }
+
+
+    #[test]
     fn sequence() {
         let mut i = 0;
-        {
-            let mut r = Runtime::new(mp((|_: ()| 42).seq(|v| i = v)));
-            r.execute();
-        }
+        run!{|_ :()| 42;
+             |v : usize| i = v
+        };
         assert_eq!(i, 42);
     }
 
@@ -60,11 +68,10 @@ mod tests {
         let p = &mut i as *mut i32;
         {
             let mut r =
-                rt!{
-                |_| 42;
-                Pause;
-                |v| i = v
-            };
+                Runtime::new(
+                    fnmut2pro(|_ : ()| { ()}).seq(ProcessNotIm(box Pause {}))//.seq(
+                   // fnmut2pro(|v:i32| i = v))
+                );
             r.instant();
             unsafe {
                 assert_eq!(*p, 0);
@@ -74,7 +81,7 @@ mod tests {
         assert_eq!(i, 42);
     }
 
-    #[test]
+    /*#[test]
     fn choice() {
         let mut i = 0;
         run!{
@@ -494,5 +501,5 @@ mod tests {
                 rt.instant();
             }
         });
-    }
+    }*/
 }

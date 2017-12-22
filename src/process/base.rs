@@ -9,23 +9,22 @@ use super::*;
 // |_| \_|\___/ \__|_| |_|_|_| |_|\__, |
 //                                |___/
 
-pub struct PNothing {}
-
-
-impl<'a> Process<'a, ()> for PNothing {
+pub(crate) struct PNothing {}
+impl<'a> IntProcess<'a, ()> for PNothing {
     type Out = ();
-    type NI = DummyN<()>;
-    type NO = DummyN<()>;
-    type NIO = Nothing;
-    fn compileIm(self, _: &mut Graph) -> Self::NIO {
-        Nothing {}
-    }
-    type Mark = IsIm;
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"Nothing\"];",num);
-        (num,num)
+        *curNum += 1;
+        println!("{} [shape = box, label= \"Nothing\"];", num);
+        (num, num)
+    }
+}
+
+
+impl<'a> IntProcessIm<'a, ()> for PNothing {
+    type NIO = Nothing;
+    fn compileIm(self: Box<Self>, _: &mut Graph) -> Self::NIO {
+        Nothing {}
     }
 }
 
@@ -35,28 +34,34 @@ impl<'a> Process<'a, ()> for PNothing {
 // |  _|| | | | |  | | |_| | |_
 // |_|  |_| |_|_|  |_|\__,_|\__|
 
-
-impl<'a, F: 'a, In: 'a, Out: 'a> Process<'a, In> for F
-    where
+impl<'a, F: 'a, In: 'a, Out: 'a> IntProcess<'a, In> for F
+where
     F: FnMut(In) -> Out,
 {
     type Out = Out;
-    type NI = DummyN<()>;
-    type NO = DummyN<Out>;
-    type NIO = FnMutN<F>;
-
-
-
-    fn compileIm(self, _: &mut Graph) -> Self::NIO {
-        FnMutN(self)
-    }
-    type Mark = IsIm;
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"FnMut\"];",num);
-        (num,num)
+        *curNum += 1;
+        println!("{} [shape = box, label= \"FnMut\"];", num);
+        (num, num)
     }
+}
+
+impl<'a, F: 'a, In: 'a, Out: 'a> IntProcessIm<'a, In> for F
+where
+    F: FnMut(In) -> Out,
+{
+    type NIO = FnMutN<F>;
+    fn compileIm(self: Box<Self>, _: &mut Graph) -> Self::NIO {
+        FnMutN(*self)
+    }
+}
+
+pub fn fnmut2pro<'a, F: 'a, In: 'a, Out: 'a>(f: F) -> ProcessIm<'a, In, Out, FnMutN<F>>
+where
+    F: FnMut(In) -> Out,
+{
+    ProcessIm(box f)
 }
 
 
@@ -68,34 +73,34 @@ impl<'a, F: 'a, In: 'a, Out: 'a> Process<'a, In> for F
 //                       |_|
 
 
-#[derive(Copy, Clone, Debug)]
-pub struct Jump {}
+#[derive(Copy, Clone)]
+pub(crate) struct Jump {}
 
-#[allow(non_upper_case_globals)]
-pub static Jump: Jump = Jump {};
-
-impl<'a, In: 'a> Process<'a, In> for Jump {
+impl<'a, In: 'a> IntProcess<'a, In> for Jump {
     type Out = In;
-    type NI = NSeq<RcStore<In>, NJump>;
-    type NO = RcLoad<In>;
-    type NIO = DummyN<In>;
-    type Mark = NotIm;
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rcin = new_rcell();
-        let rcout = rcin.clone();
-        let out = g.reserve();
-        (node!(store(rcin) >> jump(out)), out, load(rcout))
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"Jump\"];",num);
-        (num,num)
+        *curNum += 1;
+        println!("{} [shape = box, label= \"Jump\"];", num);
+        (num, num)
     }
-
 }
 
 
+impl<'a, In: 'a> IntProcessNotIm<'a, In> for Jump {
+    type NI = NSeq<RcStore<In>, NJump>;
+    type NO = RcLoad<In>;
+    fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+        let rcin = new_rcell();
+        let rcout = rcin.clone();
+        let out = g.reserve();
+        (node!(store(rcin) >> njump(out)), out, load(rcout))
+    }
+}
+
+pub fn jump<'a, In: 'a>() -> impl Process<'a, In> {
+    ProcessNotIm(box Jump {})
+}
 
 //  ____
 // |  _ \ __ _ _   _ ___  ___
@@ -103,28 +108,31 @@ impl<'a, In: 'a> Process<'a, In> for Jump {
 // |  __/ (_| | |_| \__ \  __/
 // |_|   \__,_|\__,_|___/\___|
 
-#[derive(Copy, Clone, Debug)]
-pub struct Pause {}
+#[derive(Copy, Clone)]
+pub(crate) struct Pause {}
 
-#[allow(non_upper_case_globals)]
-pub static Pause: Pause = Pause {};
-
-impl<'a, In: 'a> Process<'a, In> for Pause {
+impl<'a, In: 'a> IntProcess<'a, In> for Pause {
     type Out = In;
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
+        let num = *curNum;
+        *curNum += 1;
+        println!("{} [shape = box, label= \"Pause\"];", num);
+        (num, num)
+    }
+}
+
+
+impl<'a, In: 'a> IntProcessNotIm<'a, In> for Pause {
     type NI = NSeq<RcStore<In>, NPause>;
     type NO = RcLoad<In>;
-    type NIO = DummyN<In>;
-    type Mark = NotIm;
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+    fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let rcin = new_rcell();
         let rcout = rcin.clone();
         let out = g.reserve();
-        (node!(store(rcin) >> pause(out)), out, load(rcout))
+        (node!(store(rcin) >> npause(out)), out, load(rcout))
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let num = *curNum;
-        *curNum +=1;
-        println!("{} [shape = box, label= \"Pause\"];",num);
-        (num,num)
-    }
+}
+
+pub fn pause<'a, In: 'a>() -> ProcessNotIm<'a,In,In,NSeq<RcStore<In>, NPause>,RcLoad<In>> {
+    ProcessNotIm(box Pause {})
 }

@@ -146,7 +146,7 @@ impl<'a> Runtime<'a> {
     /// Normally,types that implement [`GraphFiller`][gf] are [`MarkedProcess`][mp]
     pub fn new<P>(p: P) -> Self
     where
-        P: UnitProcess<'a>,
+        P: GraphFiller<'a>,
     {
         let mut g = Graph::new();
         let start = p.fill_graph(&mut g);
