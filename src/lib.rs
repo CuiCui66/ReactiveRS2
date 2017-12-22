@@ -797,9 +797,48 @@ mod tests {
     }
 
     #[bench]
+    fn bench_emitd_pause_par(bencher: &mut Bencher) {
+        let signal = SignalRuntimeParRef::new_pure();
+        let mut rt = rtp! {
+            loop {
+                value((signal.clone(), ()));
+                EmitD;
+                Pause;
+                value(True(()))
+            }
+        };
+
+        bencher.iter(|| {
+            for _ in 0..1000 {
+                rt.instant();
+            }
+        });
+    }
+
+
+    #[bench]
     fn bench_emits_pause(bencher: &mut Bencher) {
         let signal = SignalRuntimeRef::new_pure();
         let mut rt = rt! {
+            loop {
+                value(());
+                emit_value(signal.clone(),());
+                Pause;
+                value(True(()))
+            }
+        };
+
+        bencher.iter(|| {
+            for _ in 0..1000 {
+                rt.instant();
+            }
+        });
+    }
+
+    #[bench]
+    fn bench_emits_pause_par(bencher: &mut Bencher) {
+        let signal = SignalRuntimeParRef::new_pure();
+        let mut rt = rtp! {
             loop {
                 value(());
                 emit_value(signal.clone(),());
@@ -834,6 +873,24 @@ mod tests {
         });
     }
 
+    #[bench]
+    fn bench_emitd_await_par(bencher: &mut Bencher) {
+        let signal = SignalRuntimeParRef::new_pure();
+        let mut rt = rtp! {
+            loop {
+                value(((signal.clone(), ()), signal.clone()));
+                EmitD;
+                AwaitD;
+                value(True(()))
+            }
+        };
+
+        bencher.iter(|| {
+            for _ in 0..1000 {
+                rt.instant();
+            }
+        });
+    }
 
     #[bench]
     fn bench_emits_await(bencher: &mut Bencher) {
@@ -855,4 +912,26 @@ mod tests {
             }
         });
     }
+
+
+    /*#[bench]
+    fn bench_emits_await_par(bencher: &mut Bencher) {
+        let signal = SignalRuntimeParRef::new_pure();
+        let mut rt = rtp! {
+            loop {
+                value(());
+                emit_value(signal.clone(), ());
+                AwaitS(signal.clone());
+                |_:((),())| {
+                    True(())
+                }
+            }
+        };
+
+        bencher.iter(|| {
+            for _ in 0..1000 {
+                rt.instant();
+            }
+        });
+    }*/
 }
