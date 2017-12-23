@@ -33,13 +33,13 @@ impl<'a> Node<'a, ()> for ControlNode<'a>
         for control_sig in &self.control_sig {
             match control_sig {
                 &DoWhen(ref signal) => {
-                    if !signal.is_set(sub_runtime.current_instant) {
+                    if !signal.is_set(sub_runtime.get_current_instant()) {
                         signal.await_immediate(sub_runtime, self.id);
                         return;
                     }
                 },
                 &DoUntil(ref signal) => {
-                    if signal.pre_set(sub_runtime.current_instant) {
+                    if signal.pre_set(sub_runtime.get_current_instant()) {
                         return;
                     }
                 },

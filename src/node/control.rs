@@ -19,7 +19,7 @@ pub fn jump(pos: usize) -> NJump {
 impl<'a> Node<'a, ()> for NJump {
     type Out = ();
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, _: ()) {
-        sub_runtime.tasks.current.push(self.dest);
+        sub_runtime.add_current(self.dest);
     }
     fn printDot(&mut self, cfgd: &mut CFGDrawer) {
         let ind = cfgd.get_node_ind();
@@ -47,7 +47,7 @@ pub fn pause(pos: usize) -> NPause {
 impl<'a> Node<'a, ()> for NPause {
     type Out = ();
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, _: ()) {
-        sub_runtime.tasks.next.push(self.dest);
+        sub_runtime.add_next(self.dest);
     }
     fn printDot(&mut self, cfgd: &mut CFGDrawer) {
         let ind = cfgd.get_node_ind();

@@ -238,7 +238,7 @@ where
     type Out = (V, In);
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, (sr, val): (S, In)) -> Self::Out {
-        (sr.get_pre_value(sub_runtime.current_instant), val)
+        (sr.get_pre_value(sub_runtime.get_current_instant()), val)
     }
 }
 
@@ -249,7 +249,7 @@ where
     type Out = V;
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: S) -> Self::Out {
-        sr.get_pre_value(sub_runtime.current_instant)
+        sr.get_pre_value(sub_runtime.get_current_instant())
     }
 }
 
@@ -273,7 +273,7 @@ where
     type Out = V;
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, _: ()) -> Self::Out {
-        self.0.get_pre_value(sub_runtime.current_instant)
+        self.0.get_pre_value(sub_runtime.get_current_instant())
     }
 }
 

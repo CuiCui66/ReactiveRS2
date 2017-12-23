@@ -57,26 +57,26 @@ where
     }
 
     /// Process pending await nodes on signal emission
-    fn process_pending_await(&mut self, tasks: &mut Tasks) {
+    fn process_pending_await<'a>(&mut self, sub_runtime: &mut SubRuntime<'a>) {
         let nodes = take(&mut self.pending_await);
         for node in nodes {
-            tasks.next.push(node);
+            sub_runtime.add_next(node);
         }
     }
 
     /// Process pending await_immediate nodes on signal emission
-    fn process_pending_await_immediate(&mut self, tasks: &mut Tasks) {
+    fn process_pending_await_immediate<'a>(&mut self, sub_runtime: &mut SubRuntime<'a>) {
         let nodes = take(&mut self.pending_await_immediate);
         for node in nodes {
-            tasks.current.push(node);
+            sub_runtime.add_current(node);
         }
     }
 
     /// Process pending present nodes on signal emission
-    fn process_pending_present(&mut self, tasks: &mut Tasks) {
+    fn process_pending_present<'a>(&mut self, sub_runtime: &mut SubRuntime<'a>) {
         let nodes = take(&mut self.pending_present);
         for node in nodes {
-            tasks.current.push(node.0);
+            sub_runtime.add_current(node.0);
         }
     }
 
@@ -94,8 +94,8 @@ where
 
     /// Await the signal to be emitted, and then execute the node at the next instant,
     pub(crate) fn await(&mut self, sub_runtime: &mut SubRuntime, node: usize) {
-        if self.last_set == sub_runtime.current_instant {
-            sub_runtime.tasks.next.push(node);
+        if self.last_set == sub_runtime.get_current_instant() {
+            sub_runtime.add_next(node);
         } else {
             self.pending_await.push(node);
         }
@@ -103,8 +103,8 @@ where
 
     /// Await the signal to be emitted, and then exexute the node at the current instant
     pub(crate) fn await_immediate(&mut self, sub_runtime: &mut SubRuntime, node: usize) {
-        if self.last_set == sub_runtime.current_instant {
-            sub_runtime.tasks.current.push(node);
+        if self.last_set == sub_runtime.get_current_instant() {
+            sub_runtime.add_current(node);
         } else {
             self.pending_await_immediate.push(node);
         }
@@ -113,8 +113,8 @@ where
     /// If the signal is present at the current instant, execute node_true.
     /// Otherwise, execute node_false at the next instant.
     fn present<'a>(&mut self, sub_runtime: &mut SubRuntime<'a>, node_true: usize, node_false: usize) {
-        if self.last_set == sub_runtime.current_instant {
-            sub_runtime.tasks.current.push(node_true);
+        if self.last_set == sub_runtime.get_current_instant() {
+            sub_runtime.add_current(node_true);
         } else {
             self.pending_present.push((node_true, node_false));
 
@@ -140,22 +140,22 @@ where
     /// Emit a value to the signal
     fn emit(&mut self, emit_value: SV::E, sub_runtime: &mut SubRuntime) {
         // If the signal is already set, we are finished
-        if self.last_set == sub_runtime.current_instant {
+        if self.last_set == sub_runtime.get_current_instant() {
             self.values.gather(emit_value);
             return;
         }
 
         self.pre_last_set = self.last_set;
-        self.last_set = sub_runtime.current_instant;
+        self.last_set = sub_runtime.get_current_instant();
 
-        self.update_values(sub_runtime.current_instant);
+        self.update_values(sub_runtime.get_current_instant());
 
         self.values.gather(emit_value);
 
         // We process the awaiting nodes
-        self.process_pending_await_immediate(&mut sub_runtime.tasks);
-        self.process_pending_await(&mut sub_runtime.tasks);
-        self.process_pending_present(&mut sub_runtime.tasks);
+        self.process_pending_await_immediate(sub_runtime);
+        self.process_pending_await(sub_runtime);
+        self.process_pending_present(sub_runtime);
     }
 
     /// Return the value of the last instant
@@ -167,7 +167,7 @@ where
     fn on_end_of_instant(&mut self, sub_runtime: &mut SubRuntime) {
         let nodes = take(&mut self.pending_present);
         for node in nodes {
-            sub_runtime.tasks.current.push(node.1);
+            sub_runtime.add_current(node.1);
         }
     }
 }
@@ -476,7 +476,7 @@ mod content {
             signal_runtime.present(sub_runtime, node_true, node_false);
 
             if signal_runtime.pending_present.len() == 1 {
-                sub_runtime.eoi.pending.push(box (*self).clone());
+                sub_runtime.add_eoi(box (*self).clone());
             }
         }
 
@@ -602,7 +602,7 @@ mod content {
             signal_runtime.present(sub_runtime, node_true, node_false);
 
             if signal_runtime.pending_present.len() == 1 {
-                sub_runtime.eoi.pending.push(box (*self).clone());
+                sub_runtime.add_eoi(box (*self).clone());
             }
         }
 
@@ -644,7 +644,7 @@ mod content {
         }
     }
 
-    impl<'a, SV: 'a> EndOfInstantCallback<'a> for SignalRuntimeRef<SV>
+    impl<'a, SV: Val<'a>> EndOfInstantCallback<'a> for SignalRuntimeRef<SV>
         where
             SV: SignalValue
     {

@@ -6,6 +6,7 @@ use node::*;
 use node::sig_control::ControlSignal;
 use process::*;
 use take::take;
+use super::*;
 
 
 
@@ -119,7 +120,7 @@ pub(crate) struct Tasks {
 
 
 
-pub trait EndOfInstantCallback<'a>{
+pub trait EndOfInstantCallback<'a> : Val<'a>{
     fn on_end_of_instant(&self, sub_runtime: &mut SubRuntime<'a>);
 }
 
@@ -141,11 +142,26 @@ pub(crate) struct EndOfInstant<'a> {
 /// [Node::call](../node/trait.Node.html#tymethod.call).
 pub struct SubRuntime<'a> {
     /// The tasks lists
-    pub(crate) tasks: Tasks,
+    tasks: Tasks,
     /// The end of instant continuations.
-    pub(crate) eoi: EndOfInstant<'a>,
+    eoi: EndOfInstant<'a>,
     /// The id of the current instant.
-    pub(crate) current_instant: usize,
+    current_instant: usize,
+}
+
+impl<'a> SubRuntime<'a>{
+    pub fn add_current(&mut self, ind: usize) {
+        self.tasks.current.push(ind);
+    }
+    pub fn add_next(&mut self, ind: usize) {
+        self.tasks.next.push(ind);
+    }
+    pub fn add_eoi(&mut self, box_eoi: Box<EndOfInstantCallback<'a>>) {
+        self.eoi.pending.push(box_eoi);
+    }
+    pub fn get_current_instant(&mut self) -> usize {
+        self.current_instant
+    }
 }
 
 

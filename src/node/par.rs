@@ -222,9 +222,9 @@ pub fn set1<T1, T2>(rc: Rcjp<T1, T2>, dest: usize) -> NSetVar1<T1, T2> {
 
 impl<'a, T1: Val<'a>, T2: Val<'a>> Node<'a, T1> for NSetVar1<T1, T2> {
     type Out = ();
-    fn call(&mut self, t: &mut SubRuntime<'a>, val: T1) {
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, val: T1) {
         if self.rc.set1(val) {
-            t.tasks.current.push(self.dest);
+            sub_runtime.add_current(self.dest);
         }
     }
     fn printDot(&mut self, cfgd: &mut CFGDrawer) {
@@ -253,9 +253,9 @@ pub fn set2<T1, T2>(rc: Rcjp<T1, T2>, dest: usize) -> NSetVar2<T1, T2> {
 
 impl<'a, T1: Val<'a>, T2: Val<'a>> Node<'a, T2> for NSetVar2<T1, T2> {
     type Out = ();
-    fn call(&mut self, t: &mut SubRuntime<'a>, val: T2) {
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, val: T2) {
         if self.rc.set2(val) {
-            t.tasks.current.push(self.dest);
+            sub_runtime.add_current(self.dest);
         }
     }
     fn printDot(&mut self, cfgd: &mut CFGDrawer) {
@@ -310,9 +310,9 @@ pub struct NBigPar {
 
 impl<'a> Node<'a, ()> for NBigPar {
     type Out = ();
-    fn call(&mut self, t: &mut SubRuntime<'a>, _: ()) -> Self::Out {
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, _: ()) -> Self::Out {
         for d in &self.dests {
-            t.tasks.current.push(*d);
+            sub_runtime.add_current(*d);
         }
     }
 }
@@ -414,9 +414,9 @@ pub fn big_merge(rc: Rcbjp) -> NBigMerge {
 
 impl<'a> Node<'a, ()> for NBigMerge {
     type Out = ();
-    fn call(&mut self, t: &mut SubRuntime<'a>, _: ()) -> Self::Out {
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, _: ()) -> Self::Out {
         if let Some(ind) = self.rc.incr(){
-            t.tasks.current.push(ind);
+            sub_runtime.add_current(ind);
         }
     }
 }
