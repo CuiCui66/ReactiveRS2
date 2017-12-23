@@ -15,6 +15,8 @@ mod par;
 pub use self::par::*;
 mod signal;
 pub use self::signal::*;
+pub mod sig_control;
+pub use self::sig_control::*;
 
 pub struct CFGDrawer {
     map: HashMap<usize, usize>,

@@ -267,7 +267,7 @@ where
 
 impl<'a, In: 'a, V: 'a, S: 'a> ProcessPar<'a, In> for AwaitS<S>
 where
-    S: Signal<'a, V=V> + Send + Sync,
+    S: Signal<'a, V=V> + Send + Sync + Clone,
     V: Send + Sync,
     In: Send + Sync,
 {
@@ -345,7 +345,7 @@ where
 
 impl<'a, In: 'a, V: 'a, S: 'a> ProcessPar<'a, In> for AwaitImmediateS<S>
 where
-    S: Signal<'a, V=V> + Send + Sync,
+    S: Signal<'a, V=V> + Send + Sync + Clone,
     In: Send + Sync,
 {
     type Mark = NotIm;

@@ -241,15 +241,29 @@ impl<SV> Clone for SignalRuntimeRef<SV>
     }
 }
 
-pub trait Signal<'a>: Clone {
-    type E;
-    type V;
-
-    fn emit(&self, emit_value: Self::E, sub_runtime: &mut SubRuntime<'a>);
+/// Trait only used to store many signals in one vector, without having problems
+/// with their types
+/// Note that they cannot be Clone to be able to have trait object
+pub trait PureSignal<'a> {
     fn await(&self, sub_runtime: &mut SubRuntime<'a>, node: usize);
     fn await_immediate(&self, sub_runtime: &mut SubRuntime<'a>, node: usize);
     fn present(&self, sub_runtime: &mut SubRuntime<'a>, node_true: usize, node_false: usize);
     fn pre_set(&self, current_instant: usize) -> bool;
+
+    /// This function should not be used in user mode, but Rust do not allow us to put
+    /// this function in pub(crate), since it is part of a public trait
+    fn is_set(&self, current_instant: usize) -> bool;
+
+    /// This function is used to clone the signal without knowing statically its struct
+    fn clone2(&self) -> Box<PureSignal<'a> + 'a>;
+}
+
+/// A Signal with a value
+pub trait Signal<'a>: PureSignal<'a> {
+    type E;
+    type V;
+
+    fn emit(&self, emit_value: Self::E, sub_runtime: &mut SubRuntime<'a>);
     fn get_pre_value(&self, current_instant: usize) -> Self::V;
 }
 
@@ -283,7 +297,7 @@ where
     }
 
     /// Update the values
-    fn update_values(&self, current_instant: usize, mut signal_runtime: &mut RefMut<SignalRuntime<SV>>) {
+    fn update_values(&self, current_instant: usize, signal_runtime: &mut RefMut<SignalRuntime<SV>>) {
         if signal_runtime.last_update + 1 < current_instant {
             signal_runtime.values.reset_value();
             signal_runtime.values.reset_value();
@@ -295,36 +309,10 @@ where
     }
 }
 
-impl<'a, E: 'a, V: 'a, SV: 'a> Signal<'a> for SignalRuntimeRef<SV>
+impl<'a, E: 'a, V: 'a, SV: 'a> PureSignal<'a> for SignalRuntimeRef<SV>
 where
     SV: SignalValue<E=E,V=V>,
 {
-    type E = E;
-    type V = V;
-
-    /// Emit a value to the signal
-    fn emit(&self, emit_value: E, sub_runtime: &mut SubRuntime<'a>) {
-        let mut signal_runtime = self.signal_runtime.borrow_mut();
-
-        // If the signal is already set, we are finished
-        if signal_runtime.last_set == sub_runtime.current_instant {
-            signal_runtime.values.gather(emit_value);
-            return;
-        }
-
-        signal_runtime.pre_last_set = signal_runtime.last_set;
-        signal_runtime.last_set = sub_runtime.current_instant;
-
-        self.update_values(sub_runtime.current_instant, &mut signal_runtime);
-
-        signal_runtime.values.gather(emit_value);
-
-        // We process the awaiting nodes
-        self.process_pending_await_immediate(&mut sub_runtime.tasks, &mut signal_runtime);
-        self.process_pending_await(&mut sub_runtime.tasks, &mut signal_runtime);
-        self.process_pending_present(&mut sub_runtime.tasks, &mut signal_runtime);
-    }
-
     /// Await the signal to be emitted, and then execute the node at the next instant,
     fn await(&self, sub_runtime: &mut SubRuntime<'a>, node: usize) {
         let mut signal_runtime = self.signal_runtime.borrow_mut();
@@ -364,6 +352,51 @@ where
     /// Return true if the signal was set at the last instant
     fn pre_set(&self, current_instant: usize) -> bool {
         self.signal_runtime.borrow().pre_last_set + 1 == current_instant
+    }
+
+
+    /// Return true if the signal is set at the current instant
+    /// This function should not be used in user mode, but Rust do not allow us to put
+    /// this function in pub(crate), since it is part of a public trait
+    fn is_set(&self, current_instant: usize) -> bool {
+        self.signal_runtime.borrow().last_set == current_instant
+    }
+
+
+    /// This function is used to clone the signal without knowing statically its struct
+    fn clone2(&self) -> Box<PureSignal<'a> + 'a> {
+        box self.clone()
+    }
+}
+
+impl<'a, E:'a, V: 'a, SV: 'a> Signal<'a> for SignalRuntimeRef<SV>
+where
+    SV: SignalValue<E=E,V=V>
+{
+    type E = E;
+    type V = V;
+
+    /// Emit a value to the signal
+    fn emit(&self, emit_value: E, sub_runtime: &mut SubRuntime<'a>) {
+        let mut signal_runtime = self.signal_runtime.borrow_mut();
+
+        // If the signal is already set, we are finished
+        if signal_runtime.last_set == sub_runtime.current_instant {
+            signal_runtime.values.gather(emit_value);
+            return;
+        }
+
+        signal_runtime.pre_last_set = signal_runtime.last_set;
+        signal_runtime.last_set = sub_runtime.current_instant;
+
+        self.update_values(sub_runtime.current_instant, &mut signal_runtime);
+
+        signal_runtime.values.gather(emit_value);
+
+        // We process the awaiting nodes
+        self.process_pending_await_immediate(&mut sub_runtime.tasks, &mut signal_runtime);
+        self.process_pending_await(&mut sub_runtime.tasks, &mut signal_runtime);
+        self.process_pending_present(&mut sub_runtime.tasks, &mut signal_runtime);
     }
 
     /// Return the value of the last instant

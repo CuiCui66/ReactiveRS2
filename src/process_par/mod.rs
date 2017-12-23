@@ -1,5 +1,4 @@
 use node::*;
-use engine::*;
 use std::marker::PhantomData;
 use signal::*;
 pub use std::intrinsics::type_name;

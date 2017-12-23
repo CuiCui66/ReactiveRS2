@@ -162,37 +162,12 @@ where
     }
 }
 
-impl<'a, SV: 'a, V: 'a> Signal<'a> for SignalRuntimeParRef<SV>
+
+impl<'a, SV: 'a, V: 'a> PureSignal<'a> for SignalRuntimeParRef<SV>
 where
     SV: SignalValue<V=V>,
     V: Clone,
 {
-    type V = SV::V;
-    type E = SV::E;
-
-    /// Emit a value to the signal
-    fn emit(&self, emit_value: Self::E, sub_runtime: &mut SubRuntime<'a>) {
-        let mut signal_runtime = self.signal_runtime.lock().unwrap();
-
-        // If the signal is already set, we are finished
-        if signal_runtime.last_set == sub_runtime.current_instant {
-            signal_runtime.values.gather(emit_value);
-            return;
-        }
-
-        signal_runtime.pre_last_set = signal_runtime.last_set;
-        signal_runtime.last_set = sub_runtime.current_instant;
-
-        self.update_values(sub_runtime.current_instant, &mut signal_runtime);
-
-        signal_runtime.values.gather(emit_value);
-
-        // We process the awaiting nodes
-        self.process_pending_await_immediate(&mut sub_runtime.tasks, &mut signal_runtime);
-        self.process_pending_await(&mut sub_runtime.tasks, &mut signal_runtime);
-        self.process_pending_present(&mut sub_runtime.tasks, &mut signal_runtime);
-    }
-
     /// Await the signal to be emitted, and then execute the node at the next instant,
     fn await(&self, sub_runtime: &mut SubRuntime<'a>, node: usize) {
         let mut signal_runtime = self.signal_runtime.lock().unwrap();
@@ -232,6 +207,51 @@ where
     /// Return true if the signal was set at the last instant
     fn pre_set(&self, current_instant: usize) -> bool {
         self.signal_runtime.lock().unwrap().pre_last_set + 1 == current_instant
+    }
+
+    /// Return true if the signal is set at the current instant
+    /// This function should not be used in user mode, but Rust do not allow us to put
+    /// this function in pub(crate), since it is part of a public trait
+    fn is_set(&self, current_instant: usize) -> bool {
+        self.signal_runtime.lock().unwrap().last_set == current_instant
+    }
+
+    /// This function is used to clone the signal without knowing statically its struct
+    fn clone2(&self) -> Box<PureSignal<'a> + 'a> {
+        box self.clone()
+    }
+}
+
+
+impl<'a, SV: 'a, V: 'a> Signal<'a> for SignalRuntimeParRef<SV>
+where
+    SV: SignalValue<V=V>,
+    V: Clone,
+{
+    type V = SV::V;
+    type E = SV::E;
+
+    /// Emit a value to the signal
+    fn emit(&self, emit_value: Self::E, sub_runtime: &mut SubRuntime<'a>) {
+        let mut signal_runtime = self.signal_runtime.lock().unwrap();
+
+        // If the signal is already set, we are finished
+        if signal_runtime.last_set == sub_runtime.current_instant {
+            signal_runtime.values.gather(emit_value);
+            return;
+        }
+
+        signal_runtime.pre_last_set = signal_runtime.last_set;
+        signal_runtime.last_set = sub_runtime.current_instant;
+
+        self.update_values(sub_runtime.current_instant, &mut signal_runtime);
+
+        signal_runtime.values.gather(emit_value);
+
+        // We process the awaiting nodes
+        self.process_pending_await_immediate(&mut sub_runtime.tasks, &mut signal_runtime);
+        self.process_pending_await(&mut sub_runtime.tasks, &mut signal_runtime);
+        self.process_pending_present(&mut sub_runtime.tasks, &mut signal_runtime);
     }
 
     /// Return the last instant signal value

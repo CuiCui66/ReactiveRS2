@@ -503,7 +503,7 @@ where
 
 impl<'a, In: 'a, V: 'a, S: 'a> Process<'a, In> for AwaitS<S>
 where
-    S: Signal<'a, V=V>,
+    S: Signal<'a, V=V> + Clone,
 {
     type Mark = NotIm;
     type NIO = DummyN<(V,In)>;
@@ -633,7 +633,7 @@ impl<'a, In: 'a, V: 'a, S: 'a> GProcess<'a, In> for AwaitImmediateS<S>
 
 impl<'a, In: 'a, V: 'a, S: 'a> Process<'a, In> for AwaitImmediateS<S>
 where
-    S: Signal<'a, V=V>,
+    S: Signal<'a, V=V> + Clone,
 {
     type Mark = NotIm;
     type NIO = DummyN<In>;
