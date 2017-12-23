@@ -58,7 +58,7 @@ Nous pensons que cette nouvelle structure permet d'être plus efficace, et offre
 une représentation des programmes réactifs plus intuitive. Cependant, cette
 nouvelle structure est plus difficile à programmer (en Rust), et pose quelques
 problèmes pour l'écriture des fonctions and\_then et flatten (que nous n'avons
-pas codé par soucis de temps).
+pas codés par soucis de temps).
 
 \section{Fonctionnement de la bibliothèque}
 
@@ -67,7 +67,7 @@ graphe.
 
 \subsection{Noeuds}
 
-Un noeud est essentiellement une fonction, qui exécute une opération élémentaire
+Un noeud est essentiellement une opération élémentaire
 réactive. L'éxecution d'un noeud peut être l'éxecution d'une fonction non
 réactive (comme un FnMut ou un FnOnce), une pause, une emission d'un signal, un
 await d'un signal, etc... Un noeud possède une entrée et une sortie, afin de
@@ -79,13 +79,16 @@ Cela nous oblige à passer par des Rc<Cell> ou des Arc<Mutex> pour passer des
 valeurs, ce qui ralentit l'éxecution du code. Pour remédier à ce problème, nous
 pouvons associer deux noeuds séquentiellement dans un même noeud, pour pouvoir
 par exemple appliquer la fonction f(g(x)) dans un même noeud, au lieu de passer
-g(x) dans un Rc/Arc.
+g(x) dans un Rc/Arc, pour le passer au noeud contenant f.
+
+Pour savoir quels noeuds sont éxecuter, nous stockons simplement dans un tableau
+la liste des noeuds à éxecuter à l'instant courant, et à l'instant suivant.
 
 Pour simplifier l'écriture de ce graphe, l'utilisateur n'a pas à utiliser les
 noeuds directement, et utilise une autre structure: les processus.
 
 \subsection{Processus}
-Un processus permet à l'utilisateur de compiler une opération élémentaire
+Un processus permet à l'utilisateur de compiler une petite opération
 réactive en plusieurs noeuds. Cela permet de ne pas toujours réécrire les mêmes
 blocs, et d'avoir une compilation efficace vers le graphe de noeuds.
 
@@ -103,7 +106,7 @@ minimum de Rc/Arc utilisés.
 
 \subsection{Signaux}
 
-Les signaux utiliset l'attente passive pour pouvoir effectuer les actions. Cela
+Les signaux utilisent l'attente passive pour pouvoir effectuer les actions. Cela
 permet de ne pas avoir à effectuer des calculs pour un signal lorsque celui-ci
 n'est pas utilisé. Pour cela, on garde en mémoire les deux derniers instants
 dans lesquels un signal à été émis, et on ne met a jour le signal que lorsqu'on
@@ -121,7 +124,16 @@ obtenir le code Rust souhaité.
 
 Par manque de temps, du à des complications avec Rust, nous n'avons pas pu
 écrire certaines structure. Nous présentons ici des idées d'implémentations pour
-ces structures: 
+ces structures:
+
+\begin{itemize}
+\item Flatten: Puisque la bibliothèque se base sur une compilation du programme
+  réactif, il est difficile d'implémenter des processus produits dynamiquement.
+  Cependant, nous avons une idée d'implémentation. L'idée serait d'avoir un
+  noeud prenant en entrée un processus, et compilant se processus, pour contenir
+  un sous-graphe. Le noeud contiendrait aussi un runtime, pour savoir quels
+  noeuds sont à éxecuter.
+\end{itemize}
 
 \section{Exemple de compilation de noeuds}
 

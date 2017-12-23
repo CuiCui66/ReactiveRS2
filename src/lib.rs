@@ -70,7 +70,7 @@ mod tests {
     use signal::*;
     // use signal_par::*;
     use test::test::Bencher;
-    // use std::sync::{Arc, Mutex};
+    use std::sync::{Arc, Mutex};
     use std::rc::*;
     use std::cell::*;
 
@@ -316,7 +316,7 @@ mod tests {
     #[test]
     fn emitd_await() {
         let value = Mutex::new(0);
-        let signal = SignalRuntimeParRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e;});
+        let signal = SignalRuntimeRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e;});
         {
             let mut rt = rt! {
                 move |_| {
@@ -366,7 +366,7 @@ mod tests {
     #[test]
     fn emits_await() {
         let value = Mutex::new(0);
-        let signal = SignalRuntimeParRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e;});
+        let signal = SignalRuntimeRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e;});
         {
             let mut rt = rt! {
                 |_| {
@@ -411,9 +411,9 @@ mod tests {
     #[test]
     fn emit_await_immediate() {
         let value = Mutex::new(0);
-        let signal = SignalRuntimeParRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e; });
+        let signal = SignalRuntimeRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e; });
         {
-            let mut rt = rtp! {
+            let mut rt = rt! {
                 |_| {
                     let signal2 = signal.clone();
                     let signal3 = signal.clone();
@@ -456,9 +456,9 @@ mod tests {
     #[test]
     fn non_await_immediate() {
         let value = Mutex::new(0);
-        let signal = SignalRuntimeParRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e; });
+        let signal = SignalRuntimeRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e; });
         {
-            let mut rt = rtp! {
+            let mut rt = rt! {
                 |_| {
                     let signal3 = signal.clone();
                     signal3
@@ -501,7 +501,7 @@ mod tests {
     #[test]
     fn present_true() {
         let value = Mutex::new(0);
-        let signal = SignalRuntimeParRef::new_pure();
+        let signal = SignalRuntimeRef::new_pure();
         {
             let mut rt = rt! {
                 |_| {
@@ -521,7 +521,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "par")]
+    #[cfg(not(feature = "par"))]
     #[test]
     fn present_false() {
         let value = RefCell::new(0);
@@ -550,7 +550,7 @@ mod tests {
     #[test]
     fn present_false() {
         let value = Mutex::new(0);
-        let signal = SignalRuntimeParRef::new_pure();
+        let signal = SignalRuntimeRef::new_pure();
         {
             let mut rt = rt! {
                 |_| {
@@ -648,7 +648,7 @@ mod tests {
 
     // #[bench]
     // fn bench_emitd_pause_par(bencher: &mut Bencher) {
-    //     let signal = SignalRuntimeParRef::new_pure();
+    //     let signal = SignalRuntimeRef::new_pure();
     //     let mut rt = rtp! {
     //         loop {
     //             value((signal.clone(), ()));
@@ -685,7 +685,7 @@ mod tests {
 
     // #[bench]
     // fn bench_emits_pause_par(bencher: &mut Bencher) {
-    //     let signal = SignalRuntimeParRef::new_pure();
+    //     let signal = SignalRuntimeRef::new_pure();
     //     let mut rt = rtp! {
     //         loop {
     //             value(());
@@ -721,7 +721,7 @@ mod tests {
 
     // #[bench]
     // fn bench_emitd_await_par(bencher: &mut Bencher) {
-    //     let signal = SignalRuntimeParRef::new_pure();
+    //     let signal = SignalRuntimeRef::new_pure();
     //     let mut rt = rtp! {
     //         loop {
     //             value(((signal.clone(), ()), signal.clone()));
@@ -746,7 +746,11 @@ mod tests {
                 emit_value(signal.clone(), ());
                 AwaitS(signal.clone());
                 |_:((),())| {
-                    True(())
+                    if true {
+                        True(())
+                    } else {
+                        False(())
+                    }
                 }
             }
         };
@@ -760,7 +764,7 @@ mod tests {
 
     // #[bench]
     // fn bench_emits_await_par(bencher: &mut Bencher) {
-    //     let signal = SignalRuntimeParRef::new_pure();
+    //     let signal = SignalRuntimeRef::new_pure();
     //     let mut rt = rtp! {
     //         loop {
     //             value(());
