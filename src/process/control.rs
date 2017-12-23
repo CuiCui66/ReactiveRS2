@@ -15,7 +15,7 @@ pub struct PChoice<PT, PF> {
     pub(crate) pf: PF,
 }
 
-impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> GProcess<'a, ChoiceData<InT, InF>>
+impl<'a, PT, PF, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>> GProcess<'a, ChoiceData<InT, InF>>
     for PChoice<PT,PF>
 where
     PT: GProcess<'a, InT, Out = Out>,
@@ -39,14 +39,14 @@ where
 }
 
 
-impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
+impl<'a, PT, PF, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>> Process<'a, ChoiceData<InT, InF>>
     for PChoice<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>>
 where
     PT: Process<'a, InT, Out = Out>,
     PF: Process<'a, InF, Out = Out>,
 {
     type NI = NChoice<PT::NI, PF::NI>;
-    type NO = RcLoad<Out>;
+    type NO = NLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
@@ -54,7 +54,7 @@ where
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let (ptni, ptind, ptno) = self.pt.p.compile(g);
         let (pfni, pfind, pfno) = self.pf.p.compile(g);
-        let rct = new_rcell();
+        let rct = RCell::new();
         let rcf = rct.clone();
         let rcout = rct.clone();
         let out = g.reserve();
@@ -64,14 +64,14 @@ where
     }
 }
 
-impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
+impl<'a, PT, PF, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>> Process<'a, ChoiceData<InT, InF>>
     for PChoice<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>>
 where
     PT: Process<'a, InT, Out = Out>,
     PF: Process<'a, InF, Out = Out>,
 {
-    type NI = NChoice<NSeq<PT::NIO, NSeq<RcStore<Out>, NJump>>, PF::NI>;
-    type NO = RcLoad<Out>;
+    type NI = NChoice<NSeq<PT::NIO, NSeq<NStore<Out>, NJump>>, PF::NI>;
+    type NO = NLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
@@ -79,7 +79,7 @@ where
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let ptnio = self.pt.p.compileIm(g);
         let (pfni, pfind, pfno) = self.pf.p.compile(g);
-        let rct = new_rcell();
+        let rct = RCell::new();
         let rcf = rct.clone();
         let rcout = rct.clone();
         let out = g.reserve();
@@ -94,14 +94,14 @@ where
 }
 
 
-impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
+impl<'a, PT, PF, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>> Process<'a, ChoiceData<InT, InF>>
     for PChoice<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>>
 where
     PT: Process<'a, InT, Out = Out>,
     PF: Process<'a, InF, Out = Out>,
 {
-    type NI = NChoice<PT::NI, NSeq<PF::NIO, NSeq<RcStore<Out>, NJump>>>;
-    type NO = RcLoad<Out>;
+    type NI = NChoice<PT::NI, NSeq<PF::NIO, NSeq<NStore<Out>, NJump>>>;
+    type NO = NLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
@@ -109,7 +109,7 @@ where
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let (ptni, ptind, ptno) = self.pt.p.compile(g);
         let pfnio = self.pf.p.compileIm(g);
-        let rct = new_rcell();
+        let rct = RCell::new();
         let rcf = rct.clone();
         let rcout = rct.clone();
         let out = g.reserve();
@@ -122,7 +122,7 @@ where
     }
 }
 
-impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
+impl<'a, PT, PF, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>> Process<'a, ChoiceData<InT, InF>>
     for PChoice<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>>
 where
     PT: Process<'a, InT, Out = Out>,
@@ -154,7 +154,7 @@ pub struct PLoop<P> {
     pub(crate) p: P,
 }
 
-impl<'a, P, In: 'a, Out: 'a> GProcess<'a, In>
+impl<'a, P, In: Val<'a>, Out: Val<'a>> GProcess<'a, In>
     for PLoop<P>
     where
     P: GProcess<'a, In, Out = ChoiceData<In,Out>>,
@@ -175,24 +175,24 @@ impl<'a, P, In: 'a, Out: 'a> GProcess<'a, In>
 }
 
 
-impl<'a, P, In: 'a, Out: 'a, OnceStruct> Process<'a, In>
+impl<'a, P, In: Val<'a>, Out: Val<'a>, OnceStruct> Process<'a, In>
     for PLoop<MarkedProcess<P,NotIm>>
     where
     OnceStruct: NotOnce,
     P: Process<'a, In, Out = ChoiceData<In,Out>, MarkOnce = OnceStruct>,
 {
-    type NI = NSeq<RcStore<In>,NJump>;
-    type NO = RcLoad<Out>;
+    type NI = NSeq<NStore<In>,NJump>;
+    type NO = NLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = SNotOnce;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI,usize,Self::NO){
         let (pni, pind, pno) = self.p.p.compile(g);
-        let rcextin = new_rcell();
+        let rcextin = RCell::new();
         let rcbegin = rcextin.clone();
         let rcendin = rcextin.clone();
-        let rcendout = new_rcell();
+        let rcendout = RCell::new();
         let rcextout = rcendout.clone();
         let in_id = g.add(box node!(load(rcbegin) >> pni));
         let out_id = g.reserve();
@@ -210,7 +210,7 @@ impl<'a, P, In: 'a, Out: 'a, OnceStruct> Process<'a, In>
     }
 }
 
-impl<'a, P, In: 'a, Out: 'a, OnceStruct> Process<'a, In>
+impl<'a, P, In: Val<'a>, Out: Val<'a>, OnceStruct> Process<'a, In>
     for PLoop<MarkedProcess<P,IsIm>>
     where
     OnceStruct: NotOnce,

@@ -16,9 +16,9 @@ use super::*;
 pub struct NEmitD {}
 
 
-impl<'a, S: 'a, E: 'a> Node<'a, (S, E)> for NEmitD
+impl<'a, S, E: Val<'a>> Node<'a, (S, E)> for NEmitD
 where
-    S: Signal<'a,E = E>,
+    S: Signal<'a, E = E>,
 {
     type Out = ();
 
@@ -28,16 +28,16 @@ where
     }
 }
 
-impl<'a, S: 'a, E: 'a, In: 'a> Node<'a, ((S, E), In)> for NEmitD
-    where
-        S: Signal<'a, E=E>,
+impl<'a, S, E: Val<'a>, In: Val<'a>> Node<'a, ((S, E), In)> for NEmitD
+where
+    S: Signal<'a, E = E>,
 {
     type Out = In;
 
     fn call(
         &mut self,
         sub_runtime: &mut SubRuntime<'a>,
-        ((sr,e),val): ((S, E), In)
+        ((sr, e), val): ((S, E), In),
     ) -> Self::Out {
         sr.emit(e, sub_runtime);
         val
@@ -45,9 +45,9 @@ impl<'a, S: 'a, E: 'a, In: 'a> Node<'a, ((S, E), In)> for NEmitD
 }
 
 
-impl<'a, S: 'a, E: 'a> Node<'a, Vec<(S, E)>> for NEmitD
-    where
-        S: Signal<'a, E = E>,
+impl<'a, S, E: Val<'a>> Node<'a, Vec<(S, E)>> for NEmitD
+where
+    S: Signal<'a, E = E>,
 {
     type Out = ();
 
@@ -60,18 +60,18 @@ impl<'a, S: 'a, E: 'a> Node<'a, Vec<(S, E)>> for NEmitD
 }
 
 
-impl<'a, S: 'a, E: 'a, In: 'a> Node<'a, (Vec<(S, E)>, In)> for NEmitD
-    where
-        S: Signal<'a, E=E>,
+impl<'a, S, E: Val<'a>, In: Val<'a>> Node<'a, (Vec<(S, E)>, In)> for NEmitD
+where
+    S: Signal<'a, E = E>,
 {
     type Out = In;
 
     fn call(
         &mut self,
         sub_runtime: &mut SubRuntime<'a>,
-        (vec,val): (Vec<(S, E)>, In)
+        (vec, val): (Vec<(S, E)>, In),
     ) -> Self::Out {
-        for (sr,emit_value) in vec {
+        for (sr, emit_value) in vec {
             sr.emit(emit_value, sub_runtime);
         }
         val
@@ -90,7 +90,7 @@ impl<'a, S: 'a, E: 'a, In: 'a> Node<'a, (Vec<(S, E)>, In)> for NEmitD
 #[derive(Clone)]
 pub struct NEmitS<S, E>(pub S, pub PhantomData<E>);
 
-impl<'a, S: 'a, E: 'a> Node<'a, E> for NEmitS<S, E>
+impl<'a, S, E: Val<'a>> Node<'a, E> for NEmitS<S, E>
 where
     S: Signal<'a, E = E>,
 {
@@ -103,7 +103,7 @@ where
 }
 
 
-impl<'a, In: 'a, S: 'a, E: 'a> Node<'a, (E, In)> for NEmitS<S, E>
+impl<'a, In: Val<'a>, S, E: Val<'a>> Node<'a, (E, In)> for NEmitS<S, E>
 where
     S: Signal<'a, E = E>,
 {
@@ -127,7 +127,7 @@ where
 #[derive(Clone)]
 pub struct NEmitVecS<S>(pub Vec<S>);
 
-impl<'a, S: 'a, E: 'a> Node<'a, Vec<E>> for NEmitVecS<S>
+impl<'a, S, E: Val<'a>> Node<'a, Vec<E>> for NEmitVecS<S>
 where
     S: Signal<'a, E = E>,
 {
@@ -135,17 +135,19 @@ where
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, emit_values: Vec<E>) -> () {
         if emit_values.len() != self.0.len() {
-            panic!("The vector given to the EmitVecS process should have the same size as the signal vector.")
+            panic!(
+                "The vector given to the EmitVecS process should have the same size as the signal vector."
+            )
         }
 
-        for (sr,emit_value) in self.0.iter().zip(emit_values.into_iter()) {
+        for (sr, emit_value) in self.0.iter().zip(emit_values.into_iter()) {
             sr.emit(emit_value, sub_runtime);
         }
         ()
     }
 }
 
-impl<'a, S: 'a, E: 'a, In: 'a> Node<'a, (Vec<E>, In)> for NEmitVecS<S>
+impl<'a, S, E: Val<'a>, In: Val<'a>> Node<'a, (Vec<E>, In)> for NEmitVecS<S>
 where
     S: Signal<'a, E = E>,
 {
@@ -153,9 +155,11 @@ where
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, (emit_values, val): (Vec<E>, In)) -> In {
         if emit_values.len() != self.0.len() {
-            panic!("The vector given to the EmitVecS process should have the same size as the signal vector.")
+            panic!(
+                "The vector given to the EmitVecS process should have the same size as the signal vector."
+            )
         }
-        for (sr,emit_value) in self.0.iter().zip(emit_values.into_iter()) {
+        for (sr, emit_value) in self.0.iter().zip(emit_values.into_iter()) {
             sr.emit(emit_value, sub_runtime);
         }
         val
@@ -174,10 +178,10 @@ where
 #[derive(Clone)]
 pub struct NEmitVS<S, E>(pub S, pub E);
 
-impl<'a, In: 'a, S: 'a, E: 'a> Node<'a, In> for NEmitVS<S, E>
+impl<'a, In: Val<'a>, S, E: Val<'a>> Node<'a, In> for NEmitVS<S, E>
 where
     S: Signal<'a, E = E>,
-    E: Clone
+    E: Clone,
 {
     type Out = In;
 
@@ -197,17 +201,17 @@ where
 /// Node emitting multiple signals,
 /// where the signals and the values are fixed.
 #[derive(Clone)]
-pub struct NEmitVVecS<S,E>(pub Vec<(S,E)>);
+pub struct NEmitVVecS<S, E>(pub Vec<(S, E)>);
 
-impl<'a, In: 'a, S: 'a, E: 'a> Node<'a, In> for NEmitVVecS<S, E>
-    where
-        S: Signal<'a, E = E>,
-        E: Clone,
+impl<'a, In: Val<'a>, S, E: Val<'a>> Node<'a, In> for NEmitVVecS<S, E>
+where
+    S: Signal<'a, E = E>,
+    E: Clone,
 {
     type Out = In;
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, val: In) -> In {
-        for &(ref sr,ref emit_value) in &self.0 {
+        for &(ref sr, ref emit_value) in &self.0 {
             sr.emit(emit_value.clone(), sub_runtime);
         }
         val
@@ -227,24 +231,20 @@ impl<'a, In: 'a, S: 'a, E: 'a> Node<'a, In> for NEmitVVecS<S, E>
 #[derive(Clone, Copy)]
 pub struct NGetD {}
 
-impl<'a, S: 'a, V: 'a, In: 'a> Node<'a, (S, In)> for NGetD
+impl<'a, S, V: Val<'a>, In: Val<'a>> Node<'a, (S, In)> for NGetD
 where
-    S: Signal<'a,V = V>,
+    S: Signal<'a, V = V>,
 {
     type Out = (V, In);
 
-    fn call(
-        &mut self,
-        sub_runtime: &mut SubRuntime<'a>,
-        (sr, val): (S, In),
-    ) -> Self::Out {
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, (sr, val): (S, In)) -> Self::Out {
         (sr.get_pre_value(sub_runtime.current_instant), val)
     }
 }
 
-impl<'a, S: 'a, V: 'a> Node<'a, S> for NGetD
+impl<'a, S, V: Val<'a>> Node<'a, S> for NGetD
 where
-    S: Signal<'a,V = V>,
+    S: Signal<'a, V = V>,
 {
     type Out = V;
 
@@ -266,17 +266,13 @@ where
 #[derive(Clone)]
 pub struct NGetS<S>(pub S);
 
-impl<'a, S: 'a, V: 'a> Node<'a, ()> for NGetS<S>
+impl<'a, S, V: Val<'a>> Node<'a, ()> for NGetS<S>
 where
-    S: Signal<'a,V = V>,
+    S: Signal<'a, V = V>,
 {
     type Out = V;
 
-    fn call(
-        &mut self,
-        sub_runtime: &mut SubRuntime<'a>,
-        _: (),
-    ) -> Self::Out {
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, _: ()) -> Self::Out {
         self.0.get_pre_value(sub_runtime.current_instant)
     }
 }
@@ -293,7 +289,7 @@ where
 #[derive(Clone, Copy)]
 pub struct NAwaitD(pub usize);
 
-impl<'a, S: 'a> Node<'a, S> for NAwaitD
+impl<'a, S> Node<'a, S> for NAwaitD
 where
     S: Signal<'a>,
 {
@@ -317,7 +313,7 @@ where
 #[derive(Clone)]
 pub struct NAwaitS<S>(pub S, pub usize);
 
-impl<'a, S: 'a> Node<'a, ()> for NAwaitS<S>
+impl<'a, S> Node<'a, ()> for NAwaitS<S>
 where
     S: Signal<'a>,
 {
@@ -340,9 +336,9 @@ where
 #[derive(Clone, Copy)]
 pub struct NAwaitImmediateD(pub usize);
 
-impl<'a, S: 'a> Node<'a, S> for NAwaitImmediateD
-    where
-        S: Signal<'a>,
+impl<'a, S> Node<'a, S> for NAwaitImmediateD
+where
+    S: Signal<'a>,
 {
     type Out = ();
 
@@ -362,7 +358,7 @@ impl<'a, S: 'a> Node<'a, S> for NAwaitImmediateD
 #[derive(Clone)]
 pub struct NAwaitImmediateS<S>(pub S, pub usize);
 
-impl<'a, S: 'a> Node<'a, ()> for NAwaitImmediateS<S>
+impl<'a, S> Node<'a, ()> for NAwaitImmediateS<S>
 where
     S: Signal<'a>,
 {
@@ -390,9 +386,9 @@ pub struct NPresentD {
     pub node_false: usize,
 }
 
-impl<'a, S: 'a> Node<'a, S> for NPresentD
+impl<'a, S> Node<'a, S> for NPresentD
 where
-    S: Signal<'a>
+    S: Signal<'a>,
 {
     type Out = ();
 
@@ -418,13 +414,17 @@ pub struct NPresentS<S> {
     pub signal_runtime: S,
 }
 
-impl<'a, S: 'a> Node<'a, ()> for NPresentS<S>
+impl<'a, S> Node<'a, ()> for NPresentS<S>
 where
-    S: Signal<'a>
+    S: Signal<'a>,
 {
     type Out = ();
 
-    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, _:()) -> Self::Out {
-        self.signal_runtime.present(sub_runtime, self.node_true, self.node_false);
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, _: ()) -> Self::Out {
+        self.signal_runtime.present(
+            sub_runtime,
+            self.node_true,
+            self.node_false,
+        );
     }
 }

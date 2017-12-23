@@ -7,7 +7,7 @@ pub struct Par<P, Q> {
     pub(crate) q: Q,
 }
 
-impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> GProcess<'a, (InP, InQ)>
+impl<'a, P, Q, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>> GProcess<'a, (InP, InQ)>
     for Par<P,Q>
 where
     P: GProcess<'a, InP, Out = OutP>,
@@ -32,7 +32,7 @@ where
 
 
 
-impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> Process<'a, (InP, InQ)>
+impl<'a, P, Q, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>> Process<'a, (InP, InQ)>
     for Par<MarkedProcess<P, NotIm>, MarkedProcess<Q, NotIm>>
 where
     P: Process<'a, InP, Out = OutP>,
@@ -47,7 +47,7 @@ where
         let (pni, pind, pno) = self.p.p.compile(g);
         let (qni, qind, qno) = self.q.p.compile(g);
         let out_ind = g.reserve();
-        let rc1 = new_rcjp();
+        let rc1 = Rcjp::new();
         let rc2 = rc1.clone();
         let rcout = rc1.clone();
         g.set(pind, box node!(pno >> set1(rc1, out_ind)));
@@ -56,21 +56,21 @@ where
     }
 }
 
-impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> Process<'a, (InP, InQ)>
+impl<'a, P, Q, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>> Process<'a, (InP, InQ)>
     for Par<MarkedProcess<P, IsIm>, MarkedProcess<Q, NotIm>>
 where
     P: Process<'a, InP, Out = OutP>,
     Q: Process<'a, InQ, Out = OutQ>,
 {
-    type NI = NSeq<NPar<NSeq<P::NIO, RcStore<OutP>>, Q::NI>, Ignore>;
-    type NO = NSeq<GenP, NPar<RcLoad<OutP>, Q::NO>>;
+    type NI = NSeq<NPar<NSeq<P::NIO, NStore<OutP>>, Q::NI>, Ignore>;
+    type NO = NSeq<GenP, NPar<NLoad<OutP>, Q::NO>>;
     type NIO = DummyN<Self::Out>;
     type Mark = NotIm;
     type MarkOnce = And<P::MarkOnce, Q::MarkOnce>;
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let pnio = self.p.p.compileIm(g);
         let (qni, qind, qno) = self.q.p.compile(g);
-        let rcin = new_rcell();
+        let rcin = RCell::new();
         let rcout = rcin.clone();
         (
             nodei!((pnio >> store(rcin)) || qni),
@@ -81,21 +81,21 @@ where
     }
 }
 
-impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> Process<'a, (InP, InQ)>
+impl<'a, P, Q, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>> Process<'a, (InP, InQ)>
     for Par<MarkedProcess<P, NotIm>, MarkedProcess<Q, IsIm>>
 where
     P: Process<'a, InP, Out = OutP>,
     Q: Process<'a, InQ, Out = OutQ>,
 {
-    type NI = NSeq<NPar<P::NI, NSeq<Q::NIO, RcStore<OutQ>>>, Ignore>;
-    type NO = NSeq<GenP, NPar<P::NO, RcLoad<OutQ>>>;
+    type NI = NSeq<NPar<P::NI, NSeq<Q::NIO, NStore<OutQ>>>, Ignore>;
+    type NO = NSeq<GenP, NPar<P::NO, NLoad<OutQ>>>;
     type NIO = DummyN<Self::Out>;
     type Mark = NotIm;
     type MarkOnce = And<P::MarkOnce, Q::MarkOnce>;
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let (pni, pind, pno) = self.p.p.compile(g);
         let qnio = self.q.p.compileIm(g);
-        let rcin = new_rcell();
+        let rcin = RCell::new();
         let rcout = rcin.clone();
         (
             nodei!(pni || (qnio >> store(rcin))),
@@ -106,7 +106,7 @@ where
     }
 }
 
-impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> Process<'a, (InP, InQ)>
+impl<'a, P, Q, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>> Process<'a, (InP, InQ)>
     for Par<MarkedProcess<P, IsIm>, MarkedProcess<Q, IsIm>>
 where
     P: Process<'a, InP, Out = OutP>,
@@ -136,7 +136,7 @@ pub struct BigPar<P> {
     pub(crate) vp: Vec<P>,
 }
 
-impl<'a, P, In: 'a> GProcess<'a, In> for BigPar<P>
+impl<'a, P, In: Val<'a>> GProcess<'a, In> for BigPar<P>
 where
     P: GProcess<'a, In, Out = ()>,
     In: Copy
@@ -150,12 +150,12 @@ where
     }
 }
 
-impl<'a, P, In: 'a> Process<'a, In> for BigPar<MarkedProcess<P, NotIm>>
+impl<'a, P, In: Val<'a>> Process<'a, In> for BigPar<MarkedProcess<P, NotIm>>
 where
     P: Process<'a, In, Out = ()>,
     In: Copy
 {
-    type NI = NSeq<RcStore<In>,NBigPar>;
+    type NI = NSeq<NStore<In>,NBigPar>;
     type NO = Nothing;
     type NIO = DummyN<Self::Out>;
     type Mark = NotIm;
@@ -163,8 +163,8 @@ where
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let mut dests: Vec<usize> = vec![];
         let end_point = g.reserve();
-        let rcbjp = new_rcbjp(self.vp.len(),end_point);
-        let rcin = new_rcell();
+        let rcbjp = Rcbjp::new(self.vp.len(),end_point);
+        let rcin = RCell::new();
         for p in self.vp{
             let (pni, pind, pno) = p.p.compile(g);
             g.set(pind, box node!(pno >> big_merge(rcbjp.clone())));

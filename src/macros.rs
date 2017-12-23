@@ -13,12 +13,12 @@ macro_rules! rt {
     }};
 }
 
-#[macro_export]
-macro_rules! rtp {
-    ($($x:tt)+) => {{
-        RuntimePar::new(mp_par(prop!($($x)*)))
-    }};
-}
+// #[macro_export]
+// macro_rules! rtp {
+//     ($($x:tt)+) => {{
+//         RuntimePar::new(mp_par(prop!($($x)*)))
+//     }};
+// }
 
 #[macro_export]
 macro_rules! run {
@@ -28,13 +28,13 @@ macro_rules! run {
     }};
 }
 
-#[macro_export]
-macro_rules! runp {
-    ($($x:tt)+) => {{
-        let mut r = RuntimePar::new(mp_par(prop!($($x)*)));
-        r.execute();
-    }};
-}
+// #[macro_export]
+// macro_rules! runp {
+//     ($($x:tt)+) => {{
+//         let mut r = RuntimePar::new(mp_par(prop!($($x)*)));
+//         r.execute();
+//     }};
+// }
 
 #[macro_export]
 macro_rules! nodei {

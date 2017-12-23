@@ -3,6 +3,7 @@ use engine::*;
 use std::marker::PhantomData;
 use signal::*;
 use std::intrinsics::type_name;
+use super::*;
 
 /// Contains all basic struct of reactive processes, closure, Pause, ...
 mod base;
@@ -110,8 +111,8 @@ impl<O1: NotOnce, O2: NotOnce> NotOnce for And<O1, O2> {}
 // |  __/| | | (_) | (_|  __/\__ \__ \
 // |_|   |_|  \___/ \___\___||___/___/
 
-pub trait GProcess<'a, In: 'a> : 'a {
-    type Out :'a ;
+pub trait GProcess<'a, In: Val<'a>> : 'a {
+    type Out :Val<'a> ;
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize);
 }
 
@@ -151,7 +152,7 @@ pub trait GProcess<'a, In: 'a> : 'a {
 ///   The type [`NIO`][NIO] has a dummy value and [`compileIm`][cI] will crash if called.
 ///
 ///Any other method will work in both cases.
-pub trait Process<'a, In: 'a>: Sized + GProcess<'a, In> {
+pub trait Process<'a, In: Val<'a>>: Sized + GProcess<'a, In> {
     /// The output type of the process.
     //type Out: 'a;
     /// The input node when compiling in non-immediate mode
@@ -210,7 +211,7 @@ pub trait Process<'a, In: 'a>: Sized + GProcess<'a, In> {
     }
 
     /// Builds a process taking a ChoiceData value and choosing the right process to call with it.
-    fn choice<PF, InF: 'a>(
+    fn choice<PF, InF: Val<'a>>(
         self,
         p: PF,
     ) -> PChoice<MarkedProcess<Self, Self::Mark>, MarkedProcess<PF, PF::Mark>>
@@ -239,7 +240,7 @@ pub trait Process<'a, In: 'a>: Sized + GProcess<'a, In> {
     }
 
     /// The process must returns a ChoiceData Value,
-    fn ploop<ROut: 'a>(self) -> PLoop<MarkedProcess<Self, Self::Mark>>
+    fn ploop<ROut: Val<'a>>(self) -> PLoop<MarkedProcess<Self, Self::Mark>>
     where
         Self: Process<'a, In, Out = ChoiceData<In, ROut>>,
     {
@@ -247,7 +248,7 @@ pub trait Process<'a, In: 'a>: Sized + GProcess<'a, In> {
     }
 
     /// Put two processes in parallel
-    fn join<InQ: 'a, Q>(
+    fn join<InQ: Val<'a>, Q>(
         self,
         q: Q,
     ) -> Par<MarkedProcess<Self, Self::Mark>, MarkedProcess<Q, Q::Mark>>
@@ -269,7 +270,7 @@ pub trait Process<'a, In: 'a>: Sized + GProcess<'a, In> {
 }
 
 /// Join N process in parallel, The input value must be `Copy` and the output value is `()`
-pub fn big_join<'a, In: 'a, P>(vp: Vec<P>) -> BigPar<MarkedProcess<P, P::Mark>>
+pub fn big_join<'a, In: Val<'a>, P>(vp: Vec<P>) -> BigPar<MarkedProcess<P, P::Mark>>
 where
     P: Process<'a, In, Out = ()> + Sized,
     In: Copy,
@@ -300,7 +301,7 @@ pub struct MarkedProcess<P, Mark: Im> {
 }
 
 /// Marks a process with its [`Im`](trait.Im.html) tag
-pub fn mp<'a, In: 'a, P>(p: P) -> MarkedProcess<P, P::Mark>
+pub fn mp<'a, In: Val<'a>, P>(p: P) -> MarkedProcess<P, P::Mark>
 where
     P: Process<'a, In>,
 {
@@ -310,10 +311,11 @@ where
     }
 }
 
-impl<'a, In :'a, P, M> GProcess<'a, In> for MarkedProcess<P, M>
+impl<'a, In: Val<'a>, P, M> GProcess<'a, In> for MarkedProcess<P, M>
 where
     P: Process<'a, In>,
     M: Im,
+    P::Out: Val<'a>
 {
     type Out = P::Out;
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
@@ -365,8 +367,8 @@ where
 // |  __/| |_) | (_) >  <
 // |_|   |____/ \___/_/\_\
 
-pub trait ProcessBox<'a, In: 'a>: 'a {
-    type Out: 'a;
+pub trait ProcessBox<'a, In: Val<'a>>: 'a {
+    type Out: Val<'a>;
     type NI: Node<'a, In, Out = ()> + Sized;
     type NO: Node<'a, (), Out = Self::Out> + Sized;
     /// If mark is set to IsIm, compile panics, if it is NotIm, compileIm panics
@@ -382,7 +384,7 @@ pub trait ProcessBox<'a, In: 'a>: 'a {
     fn printDot_box(self: &mut Self, curNum: &mut usize) -> (usize, usize);
 }
 
-impl<'a, In: 'a, P> ProcessBox<'a, In> for P
+impl<'a, In: Val<'a>, P> ProcessBox<'a, In> for P
 where
     P: Process<'a, In>,
 {
@@ -419,7 +421,7 @@ pub struct Pbox<'a, In, Out, NI, NO, NIO, Mark, MarkOnce> {
     >,
 }
 
-impl<'a, In: 'a, Out: 'a, NI, NO, NIO, Mark: Im, MarkOnce: Once> GProcess<'a, In>
+impl<'a, In: Val<'a>, Out: Val<'a>, NI, NO, NIO, Mark: Im, MarkOnce: Once> GProcess<'a, In>
     for Pbox<'a, In, Out, NI, NO, NIO, Mark, MarkOnce>
     where
     NI: Node<'a, In, Out = ()>,
@@ -433,7 +435,7 @@ impl<'a, In: 'a, Out: 'a, NI, NO, NIO, Mark: Im, MarkOnce: Once> GProcess<'a, In
 }
 
 
-impl<'a, In: 'a, Out: 'a, NI, NO, NIO, Mark: Im, MarkOnce: Once> Process<'a, In>
+impl<'a, In: Val<'a>, Out: Val<'a>, NI, NO, NIO, Mark: Im, MarkOnce: Once> Process<'a, In>
     for Pbox<'a, In, Out, NI, NO, NIO, Mark, MarkOnce>
 where
     NI: Node<'a, In, Out = ()>,
@@ -479,8 +481,8 @@ impl<In, Out> ForceType<In, Out> {
     pub fn force<'a, P>(p: P) -> P
     where
         P: Process<'a, In, Out = Out>,
-        In: 'a,
-        Out: 'a,
+        In: Val<'a>,
+        Out: Val<'a>,
     {
         p
     }

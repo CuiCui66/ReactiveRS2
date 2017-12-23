@@ -20,7 +20,7 @@ pub struct Ignore {}
 #[allow(non_upper_case_globals)]
 pub static Ignore: Ignore = Ignore {};
 
-impl<'a, In: 'a> Node<'a, In> for Ignore {
+impl<'a, In: Val<'a>> Node<'a, In> for Ignore {
     type Out = ();
     fn call(&mut self, _: &mut SubRuntime<'a>, _: In) -> Self::Out {}
 }
@@ -50,7 +50,7 @@ pub struct Ignore1 {}
 #[allow(non_upper_case_globals)]
 pub static Ignore1: Ignore1 = Ignore1 {};
 
-impl<'a, In1: 'a, In2: 'a> Node<'a, (In1, In2)> for Ignore1 {
+impl<'a, In1: Val<'a>, In2: Val<'a>> Node<'a, (In1, In2)> for Ignore1 {
     type Out = In2;
     fn call(&mut self, _: &mut SubRuntime<'a>, (_, val): (In1, In2)) -> Self::Out {
         val
@@ -66,7 +66,7 @@ pub struct Ignore2 {}
 #[allow(non_upper_case_globals)]
 pub static Ignore2: Ignore2 = Ignore2 {};
 
-impl<'a, In1: 'a, In2: 'a> Node<'a, (In1, In2)> for Ignore2 {
+impl<'a, In1: Val<'a>, In2: Val<'a>> Node<'a, (In1, In2)> for Ignore2 {
     type Out = In1;
     fn call(&mut self, _: &mut SubRuntime<'a>, (val, _): (In1, In2)) -> Self::Out {
         val
@@ -87,16 +87,17 @@ pub struct NPar<N1, N2> {
     pub n2: N2,
 }
 
-impl<'a, N1, N2, In1: 'a, In2: 'a, Out1: 'a, Out2: 'a> Node<'a, (In1,In2)> for NPar<N1, N2>
-    where
+impl<'a, N1, N2, In1: Val<'a>, In2: Val<'a>, Out1: Val<'a>, Out2: Val<'a>> Node<'a, (In1, In2)>
+    for NPar<N1, N2>
+where
     N1: Node<'a, In1, Out = Out1>,
     N2: Node<'a, In2, Out = Out2>,
 {
     type Out = (Out1, Out2);
-    fn call(&mut self, t: &mut SubRuntime<'a>, (val1,val2):(In1,In2) ) -> Self::Out {
+    fn call(&mut self, t: &mut SubRuntime<'a>, (val1, val2): (In1, In2)) -> Self::Out {
         (self.n1.call(t, val1), self.n2.call(t, val2))
     }
-    fn printDot(&mut self, cfgd: &mut CFGDrawer){
+    fn printDot(&mut self, cfgd: &mut CFGDrawer) {
         print!("");
         self.n1.printDot(cfgd);
         print!("| |");
@@ -118,28 +119,111 @@ impl<T1, T2> Default for JoinPoint<T1, T2> {
     }
 }
 
-pub fn new_rcjp<T1, T2>() -> Rc<RefCell<JoinPoint<T1, T2>>> {
-    Rc::new(RefCell::new(JoinPoint::default()))
+impl<T1,T2> JoinPoint<T1,T2> {
+    pub fn set1(&mut self, t: T1) -> bool {
+        self.o1 = Some(t);
+        !self.o2.is_none()
+    }
+    pub fn set2(&mut self, t: T2) -> bool {
+        self.o2 = Some(t);
+        !self.o1.is_none()
+    }
+    pub fn get(self : Self) -> (T1, T2) {
+        (self.o1.unwrap(), self.o2.unwrap())
+    }
 }
+
+#[cfg(not(feature = "par"))]
+mod content {
+    use super::*;
+    pub struct Rcjp<T1, T2>(Rc<RefCell<JoinPoint<T1, T2>>>);
+
+    impl<T1,T2> Clone for Rcjp<T1,T2>{
+        fn clone(&self) -> Self{
+            Rcjp(self.0.clone())
+        }
+    }
+
+    impl<T1, T2> Rcjp<T1, T2> {
+        pub fn new() -> Self {
+            Rcjp(Rc::new(RefCell::new(JoinPoint::default())))
+        }
+        pub fn set1(&self, t: T1) -> bool {
+            self.0.borrow_mut().set1(t)
+        }
+        pub fn set2(&self, t: T2) -> bool {
+            self.0.borrow_mut().set2(t)
+        }
+        pub fn get(&self) -> (T1, T2) {
+            take(&mut *self.0.borrow_mut()).get()
+        }
+        pub fn get_ind(&self, cfgd: &mut CFGDrawer) -> usize {
+            cfgd.get_ind(Rc::into_raw(self.0.clone()))
+        }
+    }
+
+}
+
+#[cfg(all(feature = "par", not(feature = "funsafe")))]
+mod content {
+    use std::sync::Arc;
+    use std::sync::Mutex;
+    use super::*;
+
+    pub struct Rcjp<T1, T2>(Arc<Mutex<JoinPoint<T1, T2>>>);
+
+    impl<T1: Send,T2: Send> Clone for Rcjp<T1,T2>{
+        fn clone(&self) -> Self{
+            Rcjp(self.0.clone())
+        }
+    }
+
+    impl<T1: Send, T2: Send> Rcjp<T1, T2> {
+        pub fn new() -> Self {
+            Rcjp(Arc::new(Mutex::new(JoinPoint::default())))
+        }
+        pub fn set1(&self, t: T1) -> bool {
+            self.0.lock().unwrap().set1(t)
+        }
+        pub fn set2(&self, t: T2) -> bool {
+            self.0.lock().unwrap().set2(t)
+        }
+        pub fn get(&self) -> (T1, T2) {
+            take(&mut *self.0.lock().unwrap()).get();
+        }
+        pub fn get_ind(&self, cfgd: &mut CFGDrawer) -> usize {
+            cfgd.get_ind(Rc::into_raw(self.0.clone()))
+        }
+    }
+
+
+}
+
+#[cfg(all(feature = "par", feature = "funsafe"))]
+mod content {
+    use std::sync::Arc;
+    use std::cell::UnsafeCell;
+}
+
+pub use self::content::*;
 
 
 
 
 
 pub struct NSetVar1<T1, T2> {
-    rc: Rc<RefCell<JoinPoint<T1, T2>>>,
+    rc: Rcjp<T1, T2>,
     dest: usize,
 }
 
-pub fn set1<T1, T2>(rc: Rc<RefCell<JoinPoint<T1, T2>>>, dest: usize) -> NSetVar1<T1, T2> {
+pub fn set1<T1, T2>(rc: Rcjp<T1, T2>, dest: usize) -> NSetVar1<T1, T2> {
     NSetVar1 { rc, dest }
 }
 
-impl<'a, T1: 'a, T2: 'a> Node<'a, T1> for NSetVar1<T1, T2> {
+impl<'a, T1: Val<'a>, T2: Val<'a>> Node<'a, T1> for NSetVar1<T1, T2> {
     type Out = ();
     fn call(&mut self, t: &mut SubRuntime<'a>, val: T1) {
-        self.rc.borrow_mut().o1 = Some(val);
-        if !self.rc.borrow().o2.is_none() {
+        if self.rc.set1(val) {
             t.tasks.current.push(self.dest);
         }
     }
@@ -149,9 +233,9 @@ impl<'a, T1: 'a, T2: 'a> Node<'a, T1> for NSetVar1<T1, T2> {
             "<f{}> Set1: {} in {}",
             ind,
             tname::<T1>(),
-            cfgd.get_ind(Rc::into_raw(self.rc.clone()))
+            self.rc.get_ind(cfgd)
         );
-        cfgd.add_arrow((ind,self.dest));
+        cfgd.add_arrow((ind, self.dest));
     }
 }
 
@@ -159,19 +243,18 @@ impl<'a, T1: 'a, T2: 'a> Node<'a, T1> for NSetVar1<T1, T2> {
 
 
 pub struct NSetVar2<T1, T2> {
-    rc: Rc<RefCell<JoinPoint<T1, T2>>>,
+    rc: Rcjp<T1, T2>,
     dest: usize,
 }
 
-pub fn set2<T1, T2>(rc: Rc<RefCell<JoinPoint<T1, T2>>>, dest: usize) -> NSetVar2<T1, T2> {
+pub fn set2<T1, T2>(rc: Rcjp<T1, T2>, dest: usize) -> NSetVar2<T1, T2> {
     NSetVar2 { rc, dest }
 }
 
-impl<'a, T1: 'a, T2: 'a> Node<'a, T2> for NSetVar2<T1, T2> {
+impl<'a, T1: Val<'a>, T2: Val<'a>> Node<'a, T2> for NSetVar2<T1, T2> {
     type Out = ();
     fn call(&mut self, t: &mut SubRuntime<'a>, val: T2) {
-        self.rc.borrow_mut().o2 = Some(val);
-        if !self.rc.borrow().o1.is_none() {
+        if self.rc.set2(val) {
             t.tasks.current.push(self.dest);
         }
     }
@@ -181,111 +264,37 @@ impl<'a, T1: 'a, T2: 'a> Node<'a, T2> for NSetVar2<T1, T2> {
             "<f{}> Set2: {} in {}",
             ind,
             tname::<T2>(),
-            cfgd.get_ind(Rc::into_raw(self.rc.clone()))
+            self.rc.get_ind(cfgd)
         );
-        cfgd.add_arrow((ind,self.dest));
+        cfgd.add_arrow((ind, self.dest));
     }
-
 }
 
 
 
 
 pub struct NMerge<T1, T2> {
-    rc: Rc<RefCell<JoinPoint<T1, T2>>>,
+    rc: Rcjp<T1,T2>,
 }
 
-pub fn merge<T1, T2>(rc: Rc<RefCell<JoinPoint<T1, T2>>>) -> NMerge<T1, T2> {
+pub fn merge<T1, T2>(rc: Rcjp<T1, T2>) -> NMerge<T1, T2> {
     NMerge { rc }
 }
 
-impl<'a, T1: 'a, T2: 'a> Node<'a, ()> for NMerge<T1, T2> {
+impl<'a, T1: Val<'a>, T2: Val<'a>> Node<'a, ()> for NMerge<T1, T2> {
     type Out = (T1, T2);
     fn call(&mut self, _: &mut SubRuntime<'a>, _: ()) -> Self::Out {
-        let jp = take(&mut *self.rc.borrow_mut());
-        (jp.o1.unwrap(), jp.o2.unwrap())
+        self.rc.get()
     }
     fn printDot(&mut self, cfgd: &mut CFGDrawer) {
         print!(
             "Merge: {} in {}",
-            tname::<(T1,T2)>(),
-            cfgd.get_ind(Rc::into_raw(self.rc.clone()))
+            tname::<(T1, T2)>(),
+            self.rc.get_ind(cfgd)
         )
     }
 }
 
-
-//  ____            ____
-// |  _ \ __ _ _ __|  _ \ __ _ _ __
-// | |_) / _` | '__| |_) / _` | '__|
-// |  __/ (_| | |  |  __/ (_| | |
-// |_|   \__,_|_|  |_|   \__,_|_|
-
-
-pub fn new_arcjp<T1, T2>() -> Arc<Mutex<JoinPoint<T1, T2>>> {
-    Arc::new(Mutex::new(JoinPoint::default()))
-}
-
-
-pub struct NSetVar1Par<T1, T2> {
-    arc: Arc<Mutex<JoinPoint<T1, T2>>>,
-    dest: usize,
-}
-
-pub fn set1_par<T1, T2>(arc: Arc<Mutex<JoinPoint<T1, T2>>>, dest: usize) -> NSetVar1Par<T1, T2> {
-    NSetVar1Par { arc, dest }
-}
-
-impl<'a, T1: 'a, T2: 'a> Node<'a, T1> for NSetVar1Par<T1, T2> {
-    type Out = ();
-    fn call(&mut self, t: &mut SubRuntime<'a>, val: T1) {
-        let mut arc = self.arc.lock().unwrap();
-        arc.o1 = Some(val);
-        if !arc.o2.is_none() {
-            t.tasks.current.push(self.dest);
-        }
-    }
-}
-
-
-
-pub struct NSetVar2Par<T1, T2> {
-    arc: Arc<Mutex<JoinPoint<T1, T2>>>,
-    dest: usize,
-}
-
-pub fn set2_par<T1, T2>(arc: Arc<Mutex<JoinPoint<T1, T2>>>, dest: usize) -> NSetVar2Par<T1, T2> {
-    NSetVar2Par { arc, dest }
-}
-
-impl<'a, T1: 'a, T2: 'a> Node<'a, T2> for NSetVar2Par<T1, T2> {
-    type Out = ();
-    fn call(&mut self, t: &mut SubRuntime<'a>, val: T2) {
-        let mut arc = self.arc.lock().unwrap();
-        arc.o2 = Some(val);
-        if !arc.o1.is_none() {
-            t.tasks.current.push(self.dest);
-        }
-    }
-}
-
-
-
-pub struct NMergePar<T1, T2> {
-    arc: Arc<Mutex<JoinPoint<T1, T2>>>,
-}
-
-pub fn merge_par<T1, T2>(arc: Arc<Mutex<JoinPoint<T1, T2>>>) -> NMergePar<T1, T2> {
-    NMergePar { arc }
-}
-
-impl<'a, T1: 'a, T2: 'a> Node<'a, ()> for NMergePar<T1, T2> {
-    type Out = (T1, T2);
-    fn call(&mut self, _: &mut SubRuntime<'a>, _: ()) -> Self::Out {
-        let jp = take(&mut *self.arc.lock().unwrap());
-        (jp.o1.unwrap(), jp.o2.unwrap())
-    }
-}
 
 //  ____  _
 // | __ )(_) __ _
@@ -308,21 +317,97 @@ impl<'a> Node<'a, ()> for NBigPar {
     }
 }
 
-pub struct BigJoinPoint {
-    nb: usize,
-    total: usize,
-    dest: usize,
-}
-pub fn new_rcbjp(total: usize, dest: usize) -> Rc<RefCell<BigJoinPoint>> {
-    Rc::new(RefCell::new(BigJoinPoint { nb: 0, total, dest }))
+#[cfg(not(feature = "par"))]
+mod content2 {
+    use super::*;
+    pub struct BigJoinPoint {
+        nb: Cell<usize>,
+        total: usize,
+        dest: usize,
+    }
+
+
+    impl BigJoinPoint {
+        pub fn new(total: usize, dest: usize) -> Self{
+            BigJoinPoint { nb: Cell::new(0), total, dest }
+        }
+        pub fn incr(&self) -> Option<usize> {
+            let mut val = self.nb.get();
+            val+=1;
+            if val == self.total {
+                self.nb.set(0);
+                return Some(self.dest);
+            }
+            else {
+                self.nb.set(val);
+            }
+            return None;
+        }
+    }
+
+    #[derive(Clone)]
+    pub struct Rcbjp(Rc<BigJoinPoint>);
+
+    impl Rcbjp {
+        pub fn new(total: usize, dest: usize) -> Self {
+            Rcbjp(Rc::new(BigJoinPoint::new(total,dest)))
+        }
+        pub fn incr(&self) -> Option<usize> {
+            self.0.incr()
+        }
+        pub fn get_ind(&self, cfgd: &mut CFGDrawer) -> usize {
+            cfgd.get_ind(Rc::into_raw(self.0.clone()))
+        }
+    }
+
 }
 
+#[cfg(all(feature = "par"))]
+mod content2 {
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering::*;
+    use super::*;
+    pub struct BigJoinPoint {
+        nb: AtomicUsize,
+        total: usize,
+        dest: usize,
+    }
+
+    impl BigJoinPoint {
+        pub fn new(total: usize, dest: usize) -> Self{
+            BigJoinPoint { nb: AtomicUsize::new(0), total, dest }
+        }
+        pub fn incr(&self) -> Option<usize> {
+            self.nb.fetch_add(1,SeqCst);
+            if self.nb.compare_and_swap(self.total,0,SeqCst) == self.total {
+                return Some(self.dest);
+            }
+            return None;
+        }
+    }
+
+    #[derive(Clone)]
+    pub struct Rcbjp(Arc<BigJoinPoint>);
+
+    impl Rcbjp {
+        pub fn new(total: usize, dest: usize) -> Self {
+            Rcbjp(Arc::new(BigJoinPoint::new(total,dest)))
+        }
+        pub fn incr(&self) -> Option<usize> {
+            self.0.incr()
+        }
+        pub fn get_ind(&self, cfgd: &mut CFGDrawer) -> usize {
+            cfgd.get_ind(Arc::into_raw(self.0.clone()))
+        }
+    }
+}
+pub use self::content2::*;
 
 pub struct NBigMerge {
-    rc: Rc<RefCell<BigJoinPoint>>,
+    rc: Rcbjp,
 }
 
-pub fn big_merge(rc: Rc<RefCell<BigJoinPoint>>) -> NBigMerge {
+pub fn big_merge(rc: Rcbjp) -> NBigMerge {
     NBigMerge { rc }
 }
 
@@ -330,45 +415,8 @@ pub fn big_merge(rc: Rc<RefCell<BigJoinPoint>>) -> NBigMerge {
 impl<'a> Node<'a, ()> for NBigMerge {
     type Out = ();
     fn call(&mut self, t: &mut SubRuntime<'a>, _: ()) -> Self::Out {
-        let mut bjp = self.rc.borrow_mut();
-        bjp.nb += 1;
-        if bjp.nb == bjp.total {
-            bjp.nb = 0;
-            t.tasks.current.push(bjp.dest);
-        }
-    }
-}
-
-//  ____  _       ____
-// | __ )(_) __ _|  _ \ __ _ _ __
-// |  _ \| |/ _` | |_) / _` | '__|
-// | |_) | | (_| |  __/ (_| | |
-// |____/|_|\__, |_|   \__,_|_|
-//          |___/
-
-
-pub fn new_arcbjp(total: usize, dest: usize) -> Arc<Mutex<BigJoinPoint>> {
-    Arc::new(Mutex::new(BigJoinPoint { nb: 0, total, dest }))
-}
-
-
-pub struct NBigMergePar {
-    arc: Arc<Mutex<BigJoinPoint>>,
-}
-
-pub fn big_merge_par(arc: Arc<Mutex<BigJoinPoint>>) -> NBigMergePar {
-    NBigMergePar { arc }
-}
-
-
-impl<'a> Node<'a, ()> for NBigMergePar {
-    type Out = ();
-    fn call(&mut self, t: &mut SubRuntime<'a>, _: ()) -> Self::Out {
-        let mut bjp = self.arc.lock().unwrap();
-        bjp.nb += 1;
-        if bjp.nb == bjp.total {
-            bjp.nb = 0;
-            t.tasks.current.push(bjp.dest);
+        if let Some(ind) = self.rc.incr(){
+            t.tasks.current.push(ind);
         }
     }
 }

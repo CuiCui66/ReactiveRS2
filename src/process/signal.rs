@@ -15,7 +15,7 @@ pub struct EmitD {}
 #[allow(non_upper_case_globals)]
 pub static EmitD: EmitD = EmitD {};
 
-impl<'a, In: 'a, E: 'a, S: 'a> GProcess<'a, ((S, E),In)> for EmitD
+impl<'a, In: Val<'a>, E: Val<'a>, S> GProcess<'a, ((S, E),In)> for EmitD
     where
     S: Signal<'a,E=E>,
 {
@@ -28,7 +28,7 @@ impl<'a, In: 'a, E: 'a, S: 'a> GProcess<'a, ((S, E),In)> for EmitD
     }
 }
 
-impl<'a, In: 'a, E: 'a, S: 'a> Process<'a, ((S, E),In)> for EmitD
+impl<'a, In: Val<'a>, E: Val<'a>, S> Process<'a, ((S, E),In)> for EmitD
 where
     S: Signal<'a, E=E>,
 {
@@ -43,7 +43,7 @@ where
     }
 }
 
-impl<'a, E: 'a, S: 'a> GProcess<'a, (S, E)> for EmitD
+impl<'a, E: Val<'a>, S> GProcess<'a, (S, E)> for EmitD
     where
     S: Signal<'a,E = E>,
 {
@@ -56,7 +56,7 @@ impl<'a, E: 'a, S: 'a> GProcess<'a, (S, E)> for EmitD
     }
 }
 
-impl<'a, E: 'a, S: 'a> Process<'a, (S, E)> for EmitD
+impl<'a, E: Val<'a>, S> Process<'a, (S, E)> for EmitD
 where
     S: Signal<'a, E = E>,
 {
@@ -71,7 +71,7 @@ where
     }
 }
 
-impl<'a, In: 'a, E: 'a, S: 'a> GProcess<'a, (Vec<(S, E)>,In)> for EmitD
+impl<'a, In: Val<'a>, E: Val<'a>, S> GProcess<'a, (Vec<(S, E)>,In)> for EmitD
 where
     S: Signal<'a,E=E>,
 {
@@ -85,7 +85,7 @@ where
 }
 
 
-impl<'a, In: 'a, E: 'a, S: 'a> Process<'a, (Vec<(S, E)>,In)> for EmitD
+impl<'a, In: Val<'a>, E: Val<'a>, S> Process<'a, (Vec<(S, E)>,In)> for EmitD
 where
     S: Signal<'a, E=E>,
 {
@@ -100,7 +100,7 @@ where
     }
 }
 
-impl<'a, E: 'a, S: 'a> GProcess<'a, Vec<(S, E)>> for EmitD
+impl<'a, E: Val<'a>, S> GProcess<'a, Vec<(S, E)>> for EmitD
     where
     S: Signal<'a,E = E>,
 {
@@ -113,7 +113,7 @@ impl<'a, E: 'a, S: 'a> GProcess<'a, Vec<(S, E)>> for EmitD
     }
 }
 
-impl<'a, E: 'a, S: 'a> Process<'a, Vec<(S, E)>> for EmitD
+impl<'a, E: Val<'a>, S> Process<'a, Vec<(S, E)>> for EmitD
     where
         S: Signal<'a, E = E>,
 {
@@ -146,7 +146,7 @@ where
     EmitS(sr, PhantomData)
 }
 
-impl<'a, E: 'a, S: 'a> GProcess<'a, E> for EmitS<S, E>
+impl<'a, E: Val<'a>, S> GProcess<'a, E> for EmitS<S, E>
     where
     S: Signal<'a, E = E>,
 {
@@ -160,7 +160,7 @@ impl<'a, E: 'a, S: 'a> GProcess<'a, E> for EmitS<S, E>
 }
 
 
-impl<'a, E: 'a, S: 'a> Process<'a, E> for EmitS<S, E>
+impl<'a, E: Val<'a>, S> Process<'a, E> for EmitS<S, E>
 where
     S: Signal<'a, E = E>,
 {
@@ -176,7 +176,7 @@ where
 }
 
 
-impl<'a, S: 'a, E: 'a, In: 'a> GProcess<'a, (E,In)> for EmitS<S, E>
+impl<'a, S, E: Val<'a>, In: Val<'a>> GProcess<'a, (E,In)> for EmitS<S, E>
     where
     S: Signal<'a, E = E>,
 {
@@ -190,7 +190,7 @@ impl<'a, S: 'a, E: 'a, In: 'a> GProcess<'a, (E,In)> for EmitS<S, E>
 }
 
 
-impl<'a, S: 'a, E: 'a, In: 'a> Process<'a, (E,In)> for EmitS<S, E>
+impl<'a, S, E: Val<'a>, In: Val<'a>> Process<'a, (E,In)> for EmitS<S, E>
 where
     S: Signal<'a, E = E>,
 {
@@ -224,7 +224,7 @@ where
     EmitVecS(sr)
 }
 
-impl<'a, E: 'a, S: 'a> GProcess<'a, Vec<E>> for EmitVecS<S>
+impl<'a, E: Val<'a>, S> GProcess<'a, Vec<E>> for EmitVecS<S>
     where
     S: Signal<'a, E = E>,
 {
@@ -238,7 +238,7 @@ impl<'a, E: 'a, S: 'a> GProcess<'a, Vec<E>> for EmitVecS<S>
 }
 
 
-impl<'a, E: 'a, S: 'a> Process<'a, Vec<E>> for EmitVecS<S>
+impl<'a, E: Val<'a>, S> Process<'a, Vec<E>> for EmitVecS<S>
 where
     S: Signal<'a, E = E>,
 {
@@ -253,7 +253,7 @@ where
     }
 }
 
-impl<'a, S: 'a, E: 'a, In: 'a> GProcess<'a, (Vec<E>,In)> for EmitVecS<S>
+impl<'a, S, E: Val<'a>, In: Val<'a>> GProcess<'a, (Vec<E>,In)> for EmitVecS<S>
     where
     S: Signal<'a,E = E>,
 {
@@ -267,7 +267,7 @@ impl<'a, S: 'a, E: 'a, In: 'a> GProcess<'a, (Vec<E>,In)> for EmitVecS<S>
 }
 
 
-impl<'a, S: 'a, E: 'a, In: 'a> Process<'a, (Vec<E>,In)> for EmitVecS<S>
+impl<'a, S, E: Val<'a>, In: Val<'a>> Process<'a, (Vec<E>,In)> for EmitVecS<S>
 where
     S: Signal<'a, E = E>,
 {
@@ -303,7 +303,7 @@ E: Clone,
     EmitVS(sr, value)
 }
 
-impl<'a, In: 'a, E: 'a, S: 'a> GProcess<'a, In> for EmitVS<S, E>
+impl<'a, In: Val<'a>, E: Val<'a>, S> GProcess<'a, In> for EmitVS<S, E>
     where
     S: Signal<'a, E = E>,
     E: Clone,
@@ -319,7 +319,7 @@ impl<'a, In: 'a, E: 'a, S: 'a> GProcess<'a, In> for EmitVS<S, E>
 
 
 
-impl<'a, In: 'a, E: 'a, S: 'a> Process<'a, In> for EmitVS<S, E>
+impl<'a, In: Val<'a>, E: Val<'a>, S> Process<'a, In> for EmitVS<S, E>
 where
     S: Signal<'a, E = E>,
     E: Clone,
@@ -356,7 +356,7 @@ pub fn emit_value_vec<'a, S, E>(values: Vec<(S,E)>) -> EmitVVecS<S, E>
     EmitVVecS(values)
 }
 
-impl<'a, In: 'a, E: 'a, S: 'a> GProcess<'a, In> for EmitVVecS<S, E>
+impl<'a, In: Val<'a>, E: Val<'a>, S> GProcess<'a, In> for EmitVVecS<S, E>
     where
     S: Signal<'a, E = E>,
     E: Clone,
@@ -372,7 +372,7 @@ impl<'a, In: 'a, E: 'a, S: 'a> GProcess<'a, In> for EmitVVecS<S, E>
 
 
 
-impl<'a, In: 'a, E: 'a, S: 'a> Process<'a, In> for EmitVVecS<S, E>
+impl<'a, In: Val<'a>, E: Val<'a>, S> Process<'a, In> for EmitVVecS<S, E>
 where
     S: Signal<'a, E = E>,
     E: Clone,
@@ -404,7 +404,7 @@ pub struct AwaitD {}
 #[allow(non_upper_case_globals)]
 pub static AwaitD: AwaitD = AwaitD {};
 
-impl<'a, V: 'a, S: 'a> GProcess<'a, S> for AwaitD
+impl<'a, V: Val<'a>, S> GProcess<'a, S> for AwaitD
     where
     S: Signal<'a, V = V>,
 {
@@ -419,18 +419,18 @@ impl<'a, V: 'a, S: 'a> GProcess<'a, S> for AwaitD
 
 
 
-impl<'a, V: 'a, S: 'a> Process<'a, S> for AwaitD
+impl<'a, V: Val<'a>, S> Process<'a, S> for AwaitD
 where
     S: Signal<'a, V = V>,
 {
     type Mark = NotIm;
     type NIO = DummyN<V>;
-    type NI = NSeq<NAwaitD, RcStore<S>>;
-    type NO = NSeq<RcLoad<S>, NGetD>;
+    type NI = NSeq<NAwaitD, NStore<S>>;
+    type NO = NSeq<NLoad<S>, NGetD>;
     type MarkOnce = SNotOnce;
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
-        let rc = new_rcell();
+        let rc = RCell::new();
         let rc2 = rc.clone();
 
         let ni = node!(NAwaitD(out_id) >> store(rc));
@@ -439,7 +439,7 @@ where
     }
 }
 
-impl<'a, In: 'a, V: 'a, S: 'a> GProcess<'a, (S, In)> for AwaitD
+impl<'a, In: Val<'a>, V: Val<'a>, S> GProcess<'a, (S, In)> for AwaitD
 where
     S: Signal<'a,V=V>,
 {
@@ -452,19 +452,19 @@ where
     }
 }
 
-impl<'a, In: 'a, V: 'a, S: 'a> Process<'a, (S, In)> for AwaitD
+impl<'a, In: Val<'a>, V: Val<'a>, S> Process<'a, (S, In)> for AwaitD
 where
     S: Signal<'a, V=V>,
 {
     type Mark = NotIm;
     type NIO = DummyN<(V,In)>;
-    type NI = NSeq<NPar<NAwaitD,NIdentity>,RcStore<(S, In)>>;
-    type NO = NSeq<RcLoad<(S, In)>, NGetD>;
+    type NI = NSeq<NPar<NAwaitD,NIdentity>,NStore<(S, In)>>;
+    type NO = NSeq<NLoad<(S, In)>, NGetD>;
     type MarkOnce = SNotOnce;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
-        let rc = new_rcell();
+        let rc = RCell::new();
         let rc2 = rc.clone();
 
         // Type inference won't work here
@@ -487,7 +487,7 @@ where
 #[derive(Clone)]
 pub struct AwaitS<S>(pub S);
 
-impl<'a, In: 'a, V: 'a, S: 'a> GProcess<'a, In> for AwaitS<S>
+impl<'a, In: Val<'a>, V: Val<'a>, S> GProcess<'a, In> for AwaitS<S>
 where
     S: Signal<'a, V=V>,
 {
@@ -501,19 +501,19 @@ where
 }
 
 
-impl<'a, In: 'a, V: 'a, S: 'a> Process<'a, In> for AwaitS<S>
+impl<'a, In: Val<'a>, V: Val<'a>, S> Process<'a, In> for AwaitS<S>
 where
     S: Signal<'a, V=V> + Clone,
 {
     type Mark = NotIm;
     type NIO = DummyN<(V,In)>;
-    type NI = NSeq<RcStore<In>,NAwaitS<S>>;
-    type NO = NSeq<GenP, NPar<NGetS<S>, RcLoad<In>>>;
+    type NI = NSeq<NStore<In>,NAwaitS<S>>;
+    type NO = NSeq<GenP, NPar<NGetS<S>, NLoad<In>>>;
     type MarkOnce = SNotOnce;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
-        let rc = new_rcell();
+        let rc = RCell::new();
         let rc2 = rc.clone();
 
         let ni = node!(store(rc) >> NAwaitS(self.0.clone(), out_id));
@@ -538,7 +538,7 @@ pub struct AwaitImmediateD {}
 #[allow(non_upper_case_globals)]
 pub static AwaitImmediateD: AwaitImmediateD = AwaitImmediateD {};
 
-impl<'a, S: 'a> GProcess<'a, S> for AwaitImmediateD
+impl<'a, S> GProcess<'a, S> for AwaitImmediateD
 where
     S: Signal<'a>,
 {
@@ -551,7 +551,7 @@ where
     }
 }
 
-impl<'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
+impl<'a, SV: Val<'a>> Process<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
     where
     SV: SignalValue,
 {
@@ -567,7 +567,7 @@ impl<'a, SV: 'a> Process<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
     }
 }
 
-impl<'a, In: 'a, S: 'a> GProcess<'a, (S, In)> for AwaitImmediateD
+impl<'a, In: Val<'a>, S> GProcess<'a, (S, In)> for AwaitImmediateD
 where
     S: Signal<'a>,
 {
@@ -581,24 +581,24 @@ where
 }
 
 
-impl<'a, In: 'a, S: 'a> Process<'a, (S, In)> for AwaitImmediateD
+impl<'a, In: Val<'a>, S> Process<'a, (S, In)> for AwaitImmediateD
     where
         S: Signal<'a>,
 {
     type Mark = NotIm;
     type NIO = DummyN<In>;
-    type NI = NSeq<NSeq<NPar<NIdentity,RcStore<In>>, Ignore2>,NAwaitImmediateD>;
-    type NO = RcLoad<In>;
+    type NI = NSeq<NSeq<NPar<NIdentity,NStore<In>>, Ignore2>,NAwaitImmediateD>;
+    type NO = NLoad<In>;
     type MarkOnce = SNotOnce;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
-        let rc = new_rcell();
+        let rc = RCell::new();
         let rc2 = rc.clone();
 
-        let ni_first = <NIdentity as Node<'a,S>>::njoin::<In, RcStore<In>>(NIdentity {}, store(rc));
-        let ni_second = <NPar<NIdentity,RcStore<In>> as Node<'a, (S, In)>>::nseq(ni_first, Ignore2);
-        let ni = <NSeq<NPar<NIdentity,RcStore<In>>,Ignore2> as Node<'a, (S, In)>>::nseq(ni_second, NAwaitImmediateD(out_id));
+        let ni_first = <NIdentity as Node<'a,S>>::njoin::<In, NStore<In>>(NIdentity {}, store(rc));
+        let ni_second = <NPar<NIdentity,NStore<In>> as Node<'a, (S, In)>>::nseq(ni_first, Ignore2);
+        let ni = <NSeq<NPar<NIdentity,NStore<In>>,Ignore2> as Node<'a, (S, In)>>::nseq(ni_second, NAwaitImmediateD(out_id));
         let no = load(rc2);
         (ni, out_id, no)
     }
@@ -617,7 +617,7 @@ impl<'a, In: 'a, S: 'a> Process<'a, (S, In)> for AwaitImmediateD
 pub struct AwaitImmediateS<S>(pub S);
 
 
-impl<'a, In: 'a, V: 'a, S: 'a> GProcess<'a, In> for AwaitImmediateS<S>
+impl<'a, In: Val<'a>, V: Val<'a>, S> GProcess<'a, In> for AwaitImmediateS<S>
     where
         S: Signal<'a, V=V>,
 {
@@ -631,19 +631,19 @@ impl<'a, In: 'a, V: 'a, S: 'a> GProcess<'a, In> for AwaitImmediateS<S>
     }
 }
 
-impl<'a, In: 'a, V: 'a, S: 'a> Process<'a, In> for AwaitImmediateS<S>
+impl<'a, In: Val<'a>, V: Val<'a>, S> Process<'a, In> for AwaitImmediateS<S>
 where
     S: Signal<'a, V=V> + Clone,
 {
     type Mark = NotIm;
     type NIO = DummyN<In>;
-    type NI = NSeq<RcStore<In>,NAwaitImmediateS<S>>;
-    type NO = RcLoad<In>;
+    type NI = NSeq<NStore<In>,NAwaitImmediateS<S>>;
+    type NO = NLoad<In>;
     type MarkOnce = SNotOnce;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
-        let rc = new_rcell();
+        let rc = RCell::new();
         let rc2 = rc.clone();
 
         let ni = node!(store(rc) >> NAwaitImmediateS(self.0.clone(), out_id));
@@ -666,7 +666,7 @@ pub struct PresentD<PT, PF> {
     pub(crate) pf: PF,
 }
 
-impl<'a, PT, PF, S: 'a, Out: 'a> GProcess<'a, S>
+impl<'a, PT, PF, S, Out: Val<'a>> GProcess<'a, S>
     for PresentD<PT, PF>
 where
     PT: GProcess<'a, (), Out=Out>,
@@ -683,7 +683,7 @@ where
 }
 
 
-impl<'a, PT, PF, S: 'a, Out: 'a> Process<'a, S>
+impl<'a, PT, PF, S, Out: Val<'a>> Process<'a, S>
     for PresentD<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>>
 where
     PT: Process<'a, (), Out=Out>,
@@ -691,13 +691,13 @@ where
     S: Signal<'a>,
 {
     type NI = NPresentD;
-    type NO = RcLoad<Out>;
+    type NO = NLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rct = new_rcell();
+        let rct = RCell::new();
         let rcf = rct.clone();
         let rc_out = rct.clone();
         let (ptni, ptind, ptno) = self.pt.p.compile(g);
@@ -718,7 +718,7 @@ where
     }
 }
 
-impl<'a, PT, PF, S: 'a, Out: 'a> Process<'a, S>
+impl<'a, PT, PF, S, Out: Val<'a>> Process<'a, S>
 for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>>
     where
         PT: Process<'a, (), Out=Out>,
@@ -726,13 +726,13 @@ for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>>
         S: Signal<'a>,
 {
     type NI = NPresentD;
-    type NO = RcLoad<Out>;
+    type NO = NLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rct = new_rcell();
+        let rct = RCell::new();
         let rcf = rct.clone();
         let rc_out = rct.clone();
         let ptnio = self.pt.p.compileIm(g);
@@ -752,7 +752,7 @@ for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>>
     }
 }
 
-impl<'a, PT, PF, S: 'a, Out: 'a> Process<'a, S>
+impl<'a, PT, PF, S, Out: Val<'a>> Process<'a, S>
 for PresentD<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>>
     where
         PT: Process<'a, (), Out=Out>,
@@ -760,13 +760,13 @@ for PresentD<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>>
         S: Signal<'a>,
 {
     type NI = NPresentD;
-    type NO = RcLoad<Out>;
+    type NO = NLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rct = new_rcell();
+        let rct = RCell::new();
         let rcf = rct.clone();
         let rc_out = rct.clone();
         let pfnio = self.pf.p.compileIm(g);
@@ -787,7 +787,7 @@ for PresentD<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>>
 }
 
 
-impl<'a, PT, PF, S: 'a, Out: 'a> Process<'a, S>
+impl<'a, PT, PF, S, Out: Val<'a>> Process<'a, S>
 for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>>
     where
         PT: Process<'a, (), Out=Out>,
@@ -795,13 +795,13 @@ for PresentD<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>>
         S: Signal<'a>,
 {
     type NI = NPresentD;
-    type NO = RcLoad<Out>;
+    type NO = NLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rct = new_rcell();
+        let rct = RCell::new();
         let rcf = rct.clone();
         let rc_out = rct.clone();
         let pfnio = self.pf.p.compileIm(g);
@@ -835,7 +835,7 @@ pub struct PresentS<PT,PF,S> {
     pub(crate) signal_runtime: S,
 }
 
-impl<'a, PT, PF, S: 'a, Out: 'a> GProcess<'a, ()>
+impl<'a, PT, PF, S, Out: Val<'a>> GProcess<'a, ()>
 for PresentS<PT, PF, S>
 where
     PT: GProcess<'a, (), Out=Out>,
@@ -852,7 +852,7 @@ where
 }
 
 
-impl<'a, PT, PF, S: 'a, Out: 'a> Process<'a, ()>
+impl<'a, PT, PF, S, Out: Val<'a>> Process<'a, ()>
 for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>, S>
     where
         PT: Process<'a, (), Out=Out>,
@@ -860,13 +860,13 @@ for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>, S>
         S: Signal<'a>,
 {
     type NI = NPresentS<S>;
-    type NO = RcLoad<Out>;
+    type NO = NLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rct = new_rcell();
+        let rct = RCell::new();
         let rcf = rct.clone();
         let rc_out = rct.clone();
         let (ptni, ptind, ptno) = self.pt.p.compile(g);
@@ -889,7 +889,7 @@ for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>, S>
 }
 
 
-impl<'a, PT, PF, S: 'a, Out: 'a> Process<'a, ()>
+impl<'a, PT, PF, S, Out: Val<'a>> Process<'a, ()>
 for PresentS<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>, S>
     where
         PT: Process<'a, (), Out=Out>,
@@ -897,13 +897,13 @@ for PresentS<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>, S>
         S: Signal<'a>,
 {
     type NI = NPresentS<S>;
-    type NO = RcLoad<Out>;
+    type NO = NLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rct = new_rcell();
+        let rct = RCell::new();
         let rcf = rct.clone();
         let rc_out = rct.clone();
         let ptnio = self.pt.p.compileIm(g);
@@ -925,7 +925,7 @@ for PresentS<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>, S>
 }
 
 
-impl<'a, PT, PF, S: 'a, Out: 'a> Process<'a, ()>
+impl<'a, PT, PF, S, Out: Val<'a>> Process<'a, ()>
 for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>, S>
     where
         PT: Process<'a, (), Out=Out>,
@@ -933,13 +933,13 @@ for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>, S>
         S: Signal<'a>,
 {
     type NI = NPresentS<S>;
-    type NO = RcLoad<Out>;
+    type NO = NLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rct = new_rcell();
+        let rct = RCell::new();
         let rcf = rct.clone();
         let rc_out = rct.clone();
         let pfnio = self.pf.p.compileIm(g);
@@ -961,7 +961,7 @@ for PresentS<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>, S>
 }
 
 
-impl<'a, PT, PF, S: 'a, Out: 'a> Process<'a, ()>
+impl<'a, PT, PF, S, Out: Val<'a>> Process<'a, ()>
 for PresentS<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>, S>
     where
         PT: Process<'a, (), Out=Out>,
@@ -969,13 +969,13 @@ for PresentS<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>, S>
         S: Signal<'a>,
 {
     type NI = NPresentS<S>;
-    type NO = RcLoad<Out>;
+    type NO = NLoad<Out>;
     type NIO = DummyN<Out>;
     type Mark = NotIm;
     type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rct = new_rcell();
+        let rct = RCell::new();
         let rcf = rct.clone();
         let rc_out = rct.clone();
         let pfnio = self.pf.p.compileIm(g);

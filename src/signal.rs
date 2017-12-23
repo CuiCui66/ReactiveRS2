@@ -3,6 +3,7 @@ use std::cell::{RefCell, RefMut};
 use std::mem;
 use take::take;
 use engine::{SubRuntime, Tasks, EndOfInstantCallback};
+use super::*;
 //  ____  _                   _ ____              _   _
 // / ___|(_) __ _ _ __   __ _| |  _ \ _   _ _ __ | |_(_)_ __ ___   ___
 // \___ \| |/ _` | '_ \ / _` | | |_) | | | | '_ \| __| | '_ ` _ \ / _ \
@@ -244,7 +245,7 @@ impl<SV> Clone for SignalRuntimeRef<SV>
 /// Trait only used to store many signals in one vector, without having problems
 /// with their types
 /// Note that they cannot be Clone to be able to have trait object
-pub trait PureSignal<'a> {
+pub trait PureSignal<'a> : Val<'a> {
     fn await(&self, sub_runtime: &mut SubRuntime<'a>, node: usize);
     fn await_immediate(&self, sub_runtime: &mut SubRuntime<'a>, node: usize);
     fn present(&self, sub_runtime: &mut SubRuntime<'a>, node_true: usize, node_false: usize);

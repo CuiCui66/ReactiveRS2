@@ -75,7 +75,7 @@ pub struct NChoice<NT, NF> {
     pub nf: NF,
 }
 
-impl<'a,NT,NF, InT: 'a, InF: 'a, Out: 'a> Node<'a, ChoiceData<InT, InF>> for NChoice<NT,NF>
+impl<'a,NT,NF, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>> Node<'a, ChoiceData<InT, InF>> for NChoice<NT,NF>
     where
     NT : Node<'a,InT,Out = Out>,
     NF : Node<'a,InF,Out = Out>,
@@ -110,7 +110,7 @@ impl<'a,NT,NF, InT: 'a, InF: 'a, Out: 'a> Node<'a, ChoiceData<InT, InF>> for NCh
 
 pub struct LoopIm<N>(pub N);
 
-impl<'a, N, In: 'a, Out: 'a> Node<'a, In> for LoopIm<N>
+impl<'a, N, In: Val<'a>, Out: Val<'a>> Node<'a, In> for LoopIm<N>
 where
     N: Node<'a, In, Out = ChoiceData<In, Out>>,
 {

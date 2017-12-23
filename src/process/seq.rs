@@ -8,7 +8,7 @@ pub struct Seq<P, Q>
     pub(crate) q: Q,
 }
 
-impl<'a, P, Q, In: 'a, Mid: 'a, Out: 'a> GProcess<'a, In>
+impl<'a, P, Q, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>> GProcess<'a, In>
     for Seq<P,Q>
     where
     P: GProcess<'a, In, Out = Mid>,
@@ -24,7 +24,7 @@ impl<'a, P, Q, In: 'a, Mid: 'a, Out: 'a> GProcess<'a, In>
 }
 
 
-impl<'a, P, Q, In: 'a, Mid: 'a, Out: 'a> Process<'a, In>
+impl<'a, P, Q, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>> Process<'a, In>
     for Seq<MarkedProcess<P, NotIm>, MarkedProcess<Q, NotIm>>
 where
     P: Process<'a, In, Out = Mid>,
@@ -44,7 +44,7 @@ where
     }
 }
 
-impl<'a, P, Q, In: 'a, Mid: 'a, Out: 'a> Process<'a, In>
+impl<'a, P, Q, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>> Process<'a, In>
     for Seq<MarkedProcess<P, IsIm>, MarkedProcess<Q, NotIm>>
 where
     P: Process<'a, In, Out = Mid>,
@@ -63,7 +63,7 @@ where
     }
 }
 
-impl<'a, P, Q, In: 'a, Mid: 'a, Out: 'a> Process<'a, In>
+impl<'a, P, Q, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>> Process<'a, In>
     for Seq<MarkedProcess<P, NotIm>, MarkedProcess<Q, IsIm>>
 where
     P: Process<'a, In, Out = Mid>,
@@ -82,7 +82,7 @@ where
     }
 }
 
-impl<'a, P, Q, In: 'a, Mid: 'a, Out: 'a> Process<'a, In>
+impl<'a, P, Q, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>> Process<'a, In>
     for Seq<MarkedProcess<P, IsIm>, MarkedProcess<Q, IsIm>>
 where
     P: Process<'a, In, Out = Mid>,

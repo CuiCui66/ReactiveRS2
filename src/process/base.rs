@@ -46,7 +46,7 @@ pub fn value<V>(value: V) -> PValue<V> {
     PValue(value)
 }
 
-impl<'a, V: 'a> GProcess<'a, ()> for PValue<V>
+impl<'a, V: Val<'a>> GProcess<'a, ()> for PValue<V>
     where
     V: Clone
 {
@@ -60,7 +60,7 @@ impl<'a, V: 'a> GProcess<'a, ()> for PValue<V>
 }
 
 
-impl<'a, V: 'a> Process<'a, ()> for PValue<V>
+impl<'a, V: Val<'a>> Process<'a, ()> for PValue<V>
 where
     V: Clone
 {
@@ -88,7 +88,7 @@ pub struct PFnOnce<F>(pub F);
 pub fn once<F>(f: F) -> PFnOnce<F> {
     PFnOnce(f)
 }
-impl<'a, F: 'a, In: 'a, Out: 'a> GProcess<'a, In> for PFnOnce<F>
+impl<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>> GProcess<'a, In> for PFnOnce<F>
     where
     F: FnOnce(In) -> Out,
 {
@@ -101,7 +101,7 @@ impl<'a, F: 'a, In: 'a, Out: 'a> GProcess<'a, In> for PFnOnce<F>
     }
 }
 
-impl<'a, F: 'a, In: 'a, Out: 'a> Process<'a, In> for PFnOnce<F>
+impl<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>> Process<'a, In> for PFnOnce<F>
 where
     F: FnOnce(In) -> Out,
 {
@@ -122,7 +122,7 @@ where
 // |  _|| | | | |  | | |_| | |_
 // |_|  |_| |_|_|  |_|\__,_|\__|
 
-impl<'a, F: 'a, In: 'a, Out: 'a> GProcess<'a, In> for F
+impl<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>> GProcess<'a, In> for F
     where
     F: FnMut(In) -> Out,
 {
@@ -135,7 +135,7 @@ impl<'a, F: 'a, In: 'a, Out: 'a> GProcess<'a, In> for F
     }
 }
 
-impl<'a, F: 'a, In: 'a, Out: 'a> Process<'a, In> for F
+impl<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>> Process<'a, In> for F
     where
     F: FnMut(In) -> Out,
 {
@@ -167,7 +167,7 @@ pub struct Jump {}
 #[allow(non_upper_case_globals)]
 pub static Jump: Jump = Jump {};
 
-impl<'a, In: 'a> GProcess<'a, In> for Jump {
+impl<'a, In: Val<'a>> GProcess<'a, In> for Jump {
     type Out = In;
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -178,15 +178,15 @@ impl<'a, In: 'a> GProcess<'a, In> for Jump {
 }
 
 
-impl<'a, In: 'a> Process<'a, In> for Jump {
-    type NI = NSeq<RcStore<In>, NJump>;
-    type NO = RcLoad<In>;
+impl<'a, In: Val<'a>> Process<'a, In> for Jump {
+    type NI = NSeq<NStore<In>, NJump>;
+    type NO = NLoad<In>;
     type NIO = DummyN<In>;
     type Mark = NotIm;
     type MarkOnce = SNotOnce;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rcin = new_rcell();
+        let rcin = RCell::new();
         let rcout = rcin.clone();
         let out = g.reserve();
         (node!(store(rcin) >> jump(out)), out, load(rcout))
@@ -208,7 +208,7 @@ pub struct Pause {}
 pub static Pause: Pause = Pause {};
 
 
-impl<'a, In: 'a> GProcess<'a, In> for Pause {
+impl<'a, In: Val<'a>> GProcess<'a, In> for Pause {
     type Out = In;
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -218,15 +218,15 @@ impl<'a, In: 'a> GProcess<'a, In> for Pause {
     }
 }
 
-impl<'a, In: 'a> Process<'a, In> for Pause {
-    type NI = NSeq<RcStore<In>, NPause>;
-    type NO = RcLoad<In>;
+impl<'a, In: Val<'a>> Process<'a, In> for Pause {
+    type NI = NSeq<NStore<In>, NPause>;
+    type NO = NLoad<In>;
     type NIO = DummyN<In>;
     type Mark = NotIm;
     type MarkOnce = SNotOnce;
 
     fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rcin = new_rcell();
+        let rcin = RCell::new();
         let rcout = rcin.clone();
         let out = g.reserve();
         (node!(store(rcin) >> pause(out)), out, load(rcout))
