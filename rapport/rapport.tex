@@ -1,0 +1,152 @@
+\documentclass[a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{relsize}
+\usepackage{dsfont}
+\usepackage{graphicx}
+\usepackage[margin=1in]{geometry}
+
+\newcommand{\K}{\ensuremath\mathbb{K}}
+\newcommand{\N}{\ensuremath\mathbb{N}}
+\newcommand{\Z}{\ensuremath\mathbb{Z}}
+\newcommand{\Q}{\ensureFmath\mathbb{Q}}
+\newcommand{\R}{\ensuremath\mathbb{R}}
+\newcommand{\U}{\ensuremath\mathbb{U}}
+\newcommand{\C}{\ensuremath\mathbb{C}}
+\newcommand{\E}{\ensuremath\mathbb{E}}
+\newcommand{\V}{\ensuremath\mathbb{V}}
+\renewcommand{\P}{\ensuremath\mathbb{P}}
+
+\renewcommand{\(}{\left(}
+\renewcommand{\)}{\right)}
+
+\newcommand{\la}{\leftarrow}
+\newcommand{\xla}{\xleftarrow}
+\newcommand{\ra}{\rightarrow}
+\newcommand{\xra}{\xrightarrow}
+
+\renewcommand\labelitemi{---}
+
+\setlength\parindent{0pt}
+
+\newtheorem*{definition}{Définition}
+\newtheorem*{theorem}{Théorème}
+\newtheorem*{algo}{Algorithme}
+\renewcommand*{\proofname}{Preuve}
+
+\title{Rapport: ReactiveRS2}
+\author{Thibaut Pérami, Mathieu Fehr}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+Pour ce projet deSignalRuntimeRef programmation parallèle et réactive, nous avons d'abord écrit
+une première version (qui n'a pas été finie), en suivant la structure proposée
+dans les TP.
+
+Cependant, nous avons ensuite décidé de changer la structure de la bibliothèque.
+Nous pensons que cette nouvelle structure permet d'être plus efficace, et offre
+une représentation des programmes réactifs plus intuitive. Cependant, cette
+nouvelle structure est plus difficile à programmer (en Rust), et pose quelques
+problèmes pour l'écriture des fonctions and\_then et flatten (que nous n'avons
+pas codé par soucis de temps).
+
+\section{Fonctionnement de la bibliothèque}
+
+La bibliothèque se repose non pas sur un vecteur de continuations, mais sur un
+graphe. 
+
+\subsection{Noeuds}
+
+Un noeud est essentiellement une fonction, qui exécute une opération élémentaire
+réactive. L'éxecution d'un noeud peut être l'éxecution d'une fonction non
+réactive (comme un FnMut ou un FnOnce), une pause, une emission d'un signal, un
+await d'un signal, etc... Un noeud possède une entrée et une sortie, afin de
+passer des valeurs dans le programme.
+
+Pour stocker des noeuds dans le graphe, il faut qu'ils aient le même type. Pour
+cela, nous ne stockons que des noeuds prenant en entrée () et en sortie ().
+Cela nous oblige à passer par des Rc<Cell> ou des Arc<Mutex> pour passer des
+valeurs, ce qui ralentit l'éxecution du code. Pour remédier à ce problème, nous
+pouvons associer deux noeuds séquentiellement dans un même noeud, pour pouvoir
+par exemple appliquer la fonction f(g(x)) dans un même noeud, au lieu de passer
+g(x) dans un Rc/Arc.
+
+Pour simplifier l'écriture de ce graphe, l'utilisateur n'a pas à utiliser les
+noeuds directement, et utilise une autre structure: les processus.
+
+\subsection{Processus}
+Un processus permet à l'utilisateur de compiler une opération élémentaire
+réactive en plusieurs noeuds. Cela permet de ne pas toujours réécrire les mêmes
+blocs, et d'avoir une compilation efficace vers le graphe de noeuds.
+
+Un processus possède aussi une entrée, et une sortie. Il y à deux types de
+processus: les processus immédiats et les processus non immediats. Les processus
+immédiats se compilent en un unique noeud, tandis que les processus non
+immédiats se compilent en plusieurs noeuds, dont un d'entrée et de sortie.
+L'utilité de cette structure est que plusieurs processus immédiats compilés
+séquentiellement peuvent se compiler en un unique noeud, contenant la séquence
+de tout les noeuds immédiats, et réduisant ainsi le nombre de Rc/Arc utilisés.
+Aussi, un processus non immédiat en les noeuds (Nentrée, Nmilieu,
+Nsortie), mis en séquence avec un noeud non immédiat (Nimmédiat), a son noeud
+Nsortie compilé dans un même noeud avec Nimmédiat. Cela permet d'avoir un
+minimum de Rc/Arc utilisés.
+
+\subsection{Signaux}
+
+Les signaux utiliset l'attente passive pour pouvoir effectuer les actions. Cela
+permet de ne pas avoir à effectuer des calculs pour un signal lorsque celui-ci
+n'est pas utilisé. Pour cela, on garde en mémoire les deux derniers instants
+dans lesquels un signal à été émis, et on ne met a jour le signal que lorsqu'on
+intéragit avec lui (a travers un emit, ou lorsqu'on récupère sa valeur).
+
+\subsection{Macros}
+
+Pour simplifier l'écriture d'un programme réactif, nous avons utilisé des macros
+procédurales. Ces macros, écritent dans un crate à part, permettent d'avoir une
+syntaxe plus simple, en réduisant l'imbrication. La macro parcours l'arbre de
+syntaxe reçue par le compilateur, et effectue des modifications à cet arbre pour
+obtenir le code Rust souhaité.
+
+\section{Améliorations possibles}
+
+Par manque de temps, du à des complications avec Rust, nous n'avons pas pu
+écrire certaines structure. Nous présentons ici des idées d'implémentations pour
+ces structures: 
+
+\section{Exemple de compilation de noeuds}
+
+% TODO Afficher des graphes ici.
+
+\section{Exemple d'application}
+
+En idée d'application simple hautement parallèle, nous avons pensé au jeu de la
+vie. Pour utiliser au maximum l'aspect réactif, nous avons utilisé des signaux
+pour faire communiquer les cases entre elles. Chaque case contient un signal, et
+lorsque la case est allumée, elle envoie un signal a toute ses cases voisines.
+La réception des signaux permet alors de calculer l'étape suivante. La
+structure, étant sparse, n'a pas besoin de calculer la valeur d'une case lorsque
+celle ci ne possède pas de voisins allumés. Pour afficher un état, nous
+utilisons un signal qui est émis pour chaque case allumée. Ce signal contient
+donc l'état du tableau.
+
+\section{Liste (non exhaustive) de problèmes avec Rust}
+\subsection{Bug Luc}
+-Bug (qu'a trouvé Luc) qui a été corrigé depuis.
+
+\subsection{Trait A ou B}
+-On ne peut pas dire qu'un trait est soit A, soit B.
+
+\subsection{Inférence de type}
+-La compilation prends 5 minutes car l'inférence de types est broken.
+
+\end{document}

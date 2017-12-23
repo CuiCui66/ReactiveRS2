@@ -14,7 +14,7 @@ mod par;
 pub use self::par::*;
 mod signal;
 pub use self::signal::*;
-mod sig_control;
+pub mod sig_control;
 pub use self::sig_control::*;
 
 

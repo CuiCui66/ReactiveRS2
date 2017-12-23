@@ -189,10 +189,10 @@ mod content {
             self.0.lock().unwrap().set2(t)
         }
         pub fn get(&self) -> (T1, T2) {
-            take(&mut *self.0.lock().unwrap()).get();
+            take(&mut *self.0.lock().unwrap()).get()
         }
         pub fn get_ind(&self, cfgd: &mut CFGDrawer) -> usize {
-            cfgd.get_ind(Rc::into_raw(self.0.clone()))
+            cfgd.get_ind(Arc::into_raw(self.0.clone()))
         }
     }
 

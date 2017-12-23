@@ -551,9 +551,9 @@ where
     }
 }
 
-impl<'a, SV: Val<'a>> Process<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
-    where
-    SV: SignalValue,
+impl<'a, S: Val<'a>> Process<'a, S> for AwaitImmediateD
+where
+    S: Signal<'a>,
 {
     type Mark = NotIm;
     type NIO = DummyN<()>;
