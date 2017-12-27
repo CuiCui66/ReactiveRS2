@@ -28,6 +28,10 @@ impl<'a> IntProcessIm<'a, ()> for PNothing {
     }
 }
 
+pub fn nothing<'a>() -> ProcessIm<'a,(),(),Nothing>{
+    ProcessIm(box PNothing {})
+}
+
 //  _____      __  __       _
 // |  ___| __ |  \/  |_   _| |_
 // | |_ | '_ \| |\/| | | | | __|

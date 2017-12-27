@@ -58,7 +58,7 @@ mod tests {
     fn sequence() {
         let mut i = 0;
         run!{|_ :()| 42;
-             |v : usize| i = v
+             |v : usize| i = v;
         };
         assert_eq!(i, 42);
     }
@@ -71,7 +71,7 @@ mod tests {
             let mut r = rt!{
                 |_| 42;
                 pause();
-                |v| i = v
+                |v| i = v;
             };
             r.instant();
             unsafe {

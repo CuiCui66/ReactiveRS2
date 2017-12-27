@@ -107,7 +107,8 @@ fn parse_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
     // printtts(args);
 
     if args.len() == 0 {
-        cx.expr_ident(sp,cx.ident_of("PNothing"));
+        let name = cx.expr_ident(sp,cx.ident_of("nothing"));
+        return cx.expr_call(sp,name,vec![]);
     }
     if args.len() == 1 {
         match &args[0] {

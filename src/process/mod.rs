@@ -127,15 +127,16 @@ pub trait Process<'a, In: 'a>: IntProcess<'a, In> + Sized {
     fn join<InQ: 'a, Q>(self, q: Q) -> <Par<Self, Q> as ToBoxedProcess<'a, (In, InQ)>>::Boxed
     where
         Q: Process<'a, InQ>,
-        Par<Self,Q>: ToBoxedProcess<'a, (In,InQ)>,
+        Par<Self, Q>: ToBoxedProcess<'a, (In, InQ)>,
     {
-        Par(self,q).tobox()
+        Par(self, q).tobox()
     }
 }
 
-pub fn big_join<'a, In: 'a, PNI,PNO>(vp: Vec<ProcessNotIm<'a,In,(),PNI,PNO>>) ->
-    ProcessNotIm<'a,In,(),NSeq<RcStore<In>, NBigPar>,Nothing>
-    where
+pub fn big_join<'a, In: 'a, PNI, PNO>(
+    vp: Vec<ProcessNotIm<'a, In, (), PNI, PNO>>,
+) -> ProcessNotIm<'a, In, (), NSeq<RcStore<In>, NBigPar>, Nothing>
+where
     PNI: Node<'a, In, Out = ()>,
     PNO: Node<'a, (), Out = ()>,
     In: Copy,
@@ -144,7 +145,7 @@ pub fn big_join<'a, In: 'a, PNI,PNO>(vp: Vec<ProcessNotIm<'a,In,(),PNI,PNO>>) ->
     for p in vp {
         res.push(p);
     }
-    ProcessNotIm(box BigPar (res))
+    ProcessNotIm(box BigPar(res))
 }
 
 pub trait GraphFiller<'a> {
