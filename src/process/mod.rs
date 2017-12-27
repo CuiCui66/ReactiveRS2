@@ -21,7 +21,6 @@
 
 use node::*;
 use engine::*;
-//use signal::*;
 pub use std::intrinsics::type_name;
 
 /// Contains all basic struct of reactive processes, closure, Pause, ...
@@ -44,12 +43,11 @@ mod par;
 #[doc(hidden)]
 pub use self::par::*;
 
-/*
 /// Contains signal related control structures.
 mod signal;
 #[doc(hidden)]
 pub use self::signal::*;
-*/
+
 
 
 
