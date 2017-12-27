@@ -189,7 +189,6 @@ impl<'a, P, In: 'a, Out: 'a> IntProcess<'a, In>
 }
 
 
-
 implNI!{
     In,
     impl<'a, In: 'a, Out: 'a, PNI, PNO>

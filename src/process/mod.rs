@@ -17,12 +17,13 @@ pub use self::control::*;
 mod seq;
 use self::seq::*;
 
-/*
+
 /// Contains parallel structures i.e `||` and `BigPar`
 mod par;
 #[doc(hidden)]
 pub use self::par::*;
 
+/*
 /// Contains signal related control structures.
 mod signal;
 #[doc(hidden)]
@@ -117,11 +118,33 @@ pub trait Process<'a, In: 'a>: IntProcess<'a, In> + Sized {
 
     fn ploop<Out: 'a>(self) -> <PLoop<Self> as ToBoxedProcess<'a, In>>::Boxed
     where
-        Self: Process<'a, In, Out = ChoiceData<In,Out>>,
+        Self: Process<'a, In, Out = ChoiceData<In, Out>>,
         PLoop<Self>: ToBoxedProcess<'a, In>,
     {
         PLoop(self).tobox()
     }
+
+    fn join<InQ: 'a, Q>(self, q: Q) -> <Par<Self, Q> as ToBoxedProcess<'a, (In, InQ)>>::Boxed
+    where
+        Q: Process<'a, InQ>,
+        Par<Self,Q>: ToBoxedProcess<'a, (In,InQ)>,
+    {
+        Par(self,q).tobox()
+    }
+}
+
+pub fn big_join<'a, In: 'a, PNI,PNO>(vp: Vec<ProcessNotIm<'a,In,(),PNI,PNO>>) ->
+    ProcessNotIm<'a,In,(),NSeq<RcStore<In>, NBigPar>,Nothing>
+    where
+    PNI: Node<'a, In, Out = ()>,
+    PNO: Node<'a, (), Out = ()>,
+    In: Copy,
+{
+    let mut res = vec![];
+    for p in vp {
+        res.push(p);
+    }
+    ProcessNotIm(box BigPar (res))
 }
 
 pub trait GraphFiller<'a> {

@@ -131,7 +131,7 @@ mod tests {
         }
     }
 
-    /*#[test]
+    #[test]
     fn par() {
         run!{
             |_| (0,0);
@@ -144,7 +144,7 @@ mod tests {
                     else{
                         False(i)
                     };
-                    Pause
+                    pause()
                 } || loop {
                     |i : usize|
                     if i < 21 {
@@ -153,52 +153,16 @@ mod tests {
                     else{
                         False(i)
                     };
-                    Pause
+                    pause()
                 }
             };
             |(v1,v2)| v1 + v2;
-            Pause;
+            pause();
             |i| {
                 assert_eq!(i,42)
             }
         }
     }
-
-    #[test]
-    fn box_par() {
-        run!{
-            |_| (0,0);
-            {
-                box {
-                    loop {
-                        |i : usize|
-                        if i < 21 {
-                            True(i+1)
-                        }
-                        else{
-                            False(i)
-                        };
-                        Pause
-                    }
-                }|| loop {
-                    |i : usize|
-                    if i < 21 {
-                        True(i+1)
-                    }
-                    else{
-                        False(i)
-                    };
-                    Pause
-                }
-            };
-            |(v1,v2)| v1 + v2;
-            Pause;
-            |i| {
-                assert_eq!(i,42)
-            }
-        }
-    }
-
 
     #[test]
     fn par_half_im() {
@@ -213,11 +177,11 @@ mod tests {
                     else{
                         False(i)
                     };
-                    Pause
+                    pause()
                 } || |_| 21
             };
             |(v1,v2)| v1 + v2;
-            Pause;
+            pause();
             |i| {
                 assert_eq!(i,42)
             }
@@ -232,7 +196,7 @@ mod tests {
                 |_| 21 || |_| 21
             };
             |(v1,v2)| v1 + v2;
-            Pause;
+            pause();
             |i| {
                 assert_eq!(i,42)
             }
@@ -241,7 +205,7 @@ mod tests {
 
 
 
-    #[test]
+    /*#[test]
     fn emitd_await() {
         let mut value = RefCell::new(0);
         let signal = SignalRuntimeRef::new_mc(0, box |e:i32, v:&mut i32| { *v = e;});
@@ -396,7 +360,7 @@ mod tests {
             assert_eq!(*value.borrow_mut(), 21);
         }
     }
-
+*/
 
     #[test]
     fn big_par(){
@@ -410,7 +374,7 @@ mod tests {
                     move |_|{
                         *value2.borrow_mut() += i;
                     };
-                    Pause
+                    pause()
                 });
             }
             run!(big_join(processes));
@@ -419,6 +383,7 @@ mod tests {
     }
 
 
+/*
     #[bench]
     fn bench_emitd_pause(bencher: &mut Bencher) {
         let signal = SignalRuntimeRef::new_pure();
