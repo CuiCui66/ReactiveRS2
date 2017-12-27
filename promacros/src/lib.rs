@@ -7,9 +7,10 @@ extern crate rustc_plugin;
 
 use std::vec::Vec;
 use syntax::ptr::P;
-use syntax::ast::{Expr};
+use syntax::ast::{Expr,Item};
 use syntax::parse::token::*;
 use syntax::tokenstream::*;
+use syntax::util::small_vector::SmallVector;
 
 use syntax::ext::base::{ExtCtxt, MacResult, DummyResult, MacEager};
 use syntax::ext::build::AstBuilder; // A trait for expr_usize.
@@ -249,9 +250,98 @@ fn expand_node(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> Box<MacResult 
     MacEager::expr(parse_node(cx, sp, args))
 }
 
+fn expand_mimpl(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> Box<MacResult + 'static> {
+    MacEager::items(parse_mimpl(cx, sp, args))
+}
+
+
+fn parse_mimpl(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> SmallVector<P<Item>>{
+    if args.len() < 6 {
+        cx.span_err(sp,
+                    "mimpl minimal structure : impl for type trait trait_name {...}");
+        return SmallVector::new()
+    }
+
+    macro_rules! checkkw {
+        ($num:tt,$keyword:expr) => {{
+            if let TokenTree::Token(_,Ident(id)) = args[$num]{
+                if id.name.as_str() != $keyword {
+                    cx.span_err(sp, &format!("mimpl: first token must be {}",$keyword));
+                    return SmallVector::new();
+                }
+            }
+            else {
+                cx.span_err(sp, &format!("mimpl: first token must be {}",$keyword));
+                return SmallVector::new();
+            }
+        }}
+    };
+    checkkw!(0,"impl");
+    let mut forpos : usize = 0;
+    let mut traitpos : Vec<usize> = vec![];
+
+    for i in 1..args.len() {
+        match &args[i] {
+            &TokenTree::Token(spfor, Ident(id)) => {
+                if id.name.as_str() == "for" {
+                    if forpos != 0 {
+                        cx.span_err(spfor, "mimpl: two for keyword" );
+                        cx.span_warn(args[forpos].span(), "mimpl: first for here" );
+                        return SmallVector::new();
+                    }
+                    forpos = i;
+                }
+                if id.name.as_str() == "trait" {
+                    traitpos.push(i);
+                }
+            }
+            _ => {}
+        }
+    }
+    if traitpos.is_empty(){
+        cx.span_err(sp, "mimpl: no trait");
+        return SmallVector::new();
+    }
+    let mut traitposend : Vec<usize> = traitpos.iter().skip(1).cloned().collect();
+    traitposend.push(args.len());
+    let mut v = SmallVector::new();
+    for (beg,end) in traitpos.iter().zip(traitposend.iter()){
+        let mut code = vec![];
+        // impl <...>
+        for val in &args[0..forpos]{
+            code.push(val.clone());
+        }
+        // trait_name
+        for val in &args[beg +1.. end -1]{
+            code.push(val.clone());
+        }
+        // for ... where ...
+        for val in &args[forpos..traitpos[0]]{
+            code.push(val.clone());
+        }
+        // {...}
+        code.push(args[end-1].clone());
+
+        // println!("code:");
+        // printtts(&code);
+
+        let mut parser = cx.new_parser_from_tts(&code);
+        match parser.parse_item(){
+            Ok(Some(ii)) => {v.push(ii)}
+            Ok(None) => {}
+            Err(mut d) => {
+                d.emit();
+                return SmallVector::new();
+            }
+        }
+    }
+    return v;
+}
+
 
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_macro("pro", expand_pro);
     reg.register_macro("node", expand_node);
+    reg.register_macro("mimpl", expand_mimpl);
 }

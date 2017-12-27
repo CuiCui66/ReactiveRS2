@@ -10,35 +10,17 @@ use super::*;
 //  \____|_| |_|\___/|_|\___\___|
 
 
-pub struct PChoice<PT, PF> {
-    pub(crate) pt: PT,
-    pub(crate) pf: PF,
-}
-impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
-    for PChoice<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>>
-where
+pub struct PChoice<PT, PF> (pub(crate) PT, pub(crate) PF,);
+impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> IntProcess<'a, ChoiceData<InT, InF>>
+    for PChoice<PT, PF>
+    where
     PT: Process<'a, InT, Out = Out>,
     PF: Process<'a, InF, Out = Out>,
 {
     type Out = Out;
-    type NI = NChoice<PT::NI, PF::NI>;
-    type NO = RcLoad<Out>;
-    type NIO = DummyN<Out>;
-    type Mark = NotIm;
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let (ptni, ptind, ptno) = self.pt.p.compile(g);
-        let (pfni, pfind, pfno) = self.pf.p.compile(g);
-        let rct = new_rcell();
-        let rcf = rct.clone();
-        let rcout = rct.clone();
-        let out = g.reserve();
-        g.set(ptind, box node!(ptno >> store(rct) >> jump(out)));
-        g.set(pfind, box node!(pfno >> store(rcf) >> jump(out)));
-        (node!(choice ptni pfni), out, load(rcout))
-    }
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begt,endt) = self.pt.p.printDot(curNum);
-        let (begf,endf) = self.pf.p.printDot(curNum);
+        let (begt,endt) = self.0.printDot(curNum);
+        let (begf,endf) = self.1.printDot(curNum);
         let numbeg = *curNum;
         let numend = numbeg +1;
         *curNum += 2;
@@ -52,123 +34,128 @@ where
     }
 }
 
-impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
-    for PChoice<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>>
-where
-    PT: Process<'a, InT, Out = Out>,
-    PF: Process<'a, InF, Out = Out>,
-{
-    type Out = Out;
-    type NI = NChoice<NSeq<PT::NIO, NSeq<RcStore<Out>, NJump>>, PF::NI>;
-    type NO = RcLoad<Out>;
-    type NIO = DummyN<Out>;
-    type Mark = NotIm;
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let ptnio = self.pt.p.compileIm(g);
-        let (pfni, pfind, pfno) = self.pf.p.compile(g);
-        let rct = new_rcell();
-        let rcf = rct.clone();
-        let rcout = rct.clone();
-        let out = g.reserve();
-        g.set(pfind, box node!(pfno >> store(rcf) >> jump(out)));
-        (
-            node!(choice {ptnio >> store(rct)>>jump(out)} pfni),
-            out,
-            load(rcout),
-        )
+// NI - NI
+implNI!{
+    ChoiceData<InT,InF>,
+    impl<'a, InT: 'a, InF: 'a, Out: 'a, PTNI, PTNO, PFNI, PFNO>
+        for PChoice<ProcessNotIm<'a, InT, Out, PTNI, PTNO>, ProcessNotIm<'a, InF, Out, PFNI, PFNO>>
+        where
+        PTNI: Node<'a, InT, Out = ()>,
+        PTNO: Node<'a, (), Out = Out>,
+        PFNI: Node<'a, InF, Out = ()>,
+        PFNO: Node<'a, (), Out = Out>,
 
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begt,endt) = self.pt.p.printDot(curNum);
-        let (begf,endf) = self.pf.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape=diamond, label=\"if\"]",numbeg);
-        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
-        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
-        println!("{} [size = 0.1]",numend);
-        println!("{} -> {}:w",endt,numend);
-        println!("{} -> {}:e",endf,numend);
-        (numbeg,numend)
+    trait IntProcessNotIm<'a, ChoiceData<InT,InF>>
+    {
+        type NI = NChoice<PTNI, PFNI>;
+        type NO = RcLoad<Out>;
+        fn compile(self :Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+            let s = *self;
+            let PChoice(pt, pf) = s;
+            let (ptni, ptind, ptno) = pt.compile(g);
+            let (pfni, pfind, pfno) = pf.compile(g);
+            let rct = new_rcell();
+            let rcf = rct.clone();
+            let rcout = rct.clone();
+            let out = g.reserve();
+            g.set(ptind, box node!(ptno >> store(rct) >> njump(out)));
+            g.set(pfind, box node!(pfno >> store(rcf) >> njump(out)));
+            (node!(choice ptni pfni), out, load(rcout))
+        }
     }
 }
 
+// NI - Im
+implNI!{
+    ChoiceData<InT,InF>,
+    impl<'a, InT: 'a, InF: 'a, Out: 'a, PTNI, PTNO, PFNIO>
+        for PChoice<ProcessNotIm<'a, InT, Out, PTNI, PTNO>, ProcessIm<'a, InF, Out, PFNIO>>
+        where
+        PTNI: Node<'a, InT, Out = ()>,
+        PTNO: Node<'a, (), Out = Out>,
+        PFNIO: Node<'a, InF, Out = Out>,
 
-impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
-    for PChoice<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>>
-where
-    PT: Process<'a, InT, Out = Out>,
-    PF: Process<'a, InF, Out = Out>,
-{
-    type Out = Out;
-    type NI = NChoice<PT::NI, NSeq<PF::NIO, NSeq<RcStore<Out>, NJump>>>;
-    type NO = RcLoad<Out>;
-    type NIO = DummyN<Out>;
-    type Mark = NotIm;
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let (ptni, ptind, ptno) = self.pt.p.compile(g);
-        let pfnio = self.pf.p.compileIm(g);
-        let rct = new_rcell();
-        let rcf = rct.clone();
-        let rcout = rct.clone();
-        let out = g.reserve();
-        g.set(ptind, box node!(ptno >> store(rct) >> jump(out)));
-        (
-            node!(choice ptni {pfnio >> store(rcf) >> jump(out)}),
-            out,
-            load(rcout),
-        )
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begt,endt) = self.pt.p.printDot(curNum);
-        let (begf,endf) = self.pf.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape=diamond, label=\"if\"]",numbeg);
-        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
-        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
-        println!("{} [size = 0.1]",numend);
-        println!("{} -> {}:w",endt,numend);
-        println!("{} -> {}:e",endf,numend);
-        (numbeg,numend)
+    trait IntProcessNotIm<'a, ChoiceData<InT,InF>>
+    {
+        type NI = NChoice<PTNI, NSeq<PFNIO, NSeq<RcStore<Out>, NJump>>>;
+        type NO = RcLoad<Out>;
+        fn compile(self :Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+            let s = *self;
+            let PChoice(pt, pf) = s;
+            let (ptni, ptind, ptno) = pt.compile(g);
+            let pfnio = pf.compileIm(g);
+            let rct = new_rcell();
+            let rcf = rct.clone();
+            let rcout = rct.clone();
+            let out = g.reserve();
+            g.set(ptind, box node!(ptno >> store(rct) >> njump(out)));
+            (
+                node!(choice ptni {pfnio >> store(rcf) >> njump(out)}),
+                out,
+                load(rcout),
+            )
+        }
     }
 }
 
-impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
-    for PChoice<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>>
-where
-    PT: Process<'a, InT, Out = Out>,
-    PF: Process<'a, InF, Out = Out>,
-{
-    type Out = Out;
-    type NI = DummyN<()>;
-    type NO = DummyN<Out>;
-    type NIO = NChoice<PT::NIO, PF::NIO>;
-    type Mark = IsIm;
-    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
-        let ptnio = self.pt.p.compileIm(g);
-        let pfnio = self.pf.p.compileIm(g);
-        node!(choice ptnio pfnio)
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begt,endt) = self.pt.p.printDot(curNum);
-        let (begf,endf) = self.pf.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape=diamond, label=\"if\"]",numbeg);
-        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
-        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
-        println!("{} [size = 0.1]",numend);
-        println!("{} -> {}:w",endt,numend);
-        println!("{} -> {}:e",endf,numend);
-        (numbeg,numend)
+// Im - NI
+implNI!{
+    ChoiceData<InT,InF>,
+    impl<'a, InT: 'a, InF: 'a, Out: 'a, PTNIO, PFNI, PFNO>
+        for PChoice<ProcessIm<'a, InT, Out, PTNIO>, ProcessNotIm<'a, InF, Out, PFNI, PFNO>>
+        where
+        PTNIO: Node<'a, InT, Out = Out>,
+        PFNI: Node<'a, InF, Out = ()>,
+        PFNO: Node<'a, (), Out = Out>,
+
+    trait IntProcessNotIm<'a, ChoiceData<InT,InF>>
+    {
+        type NI = NChoice<NSeq<PTNIO, NSeq<RcStore<Out>, NJump>>, PFNI>;
+        type NO = RcLoad<Out>;
+        fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+            let s = *self;
+            let PChoice(pt, pf) = s;
+            let ptnio = pt.compileIm(g);
+            let (pfni, pfind, pfno) = pf.compile(g);
+            let rct = new_rcell();
+            let rcf = rct.clone();
+            let rcout = rct.clone();
+            let out = g.reserve();
+            g.set(pfind, box node!(pfno >> store(rcf) >> njump(out)));
+            (
+                node!(choice {ptnio >> store(rct) >> njump(out)} pfni),
+                out,
+                load(rcout),
+            )
+
+        }
     }
 }
 
+// Im - Im
+implIm!{
+    ChoiceData<InT,InF>,
+    impl<'a, InT: 'a, InF: 'a, Out: 'a, PTNIO, PFNIO>
+        for PChoice<ProcessIm<'a, InT, Out, PTNIO>, ProcessIm<'a, InF, Out, PFNIO>>
+        where
+        PTNIO: Node<'a, InT, Out = Out>,
+        PFNIO: Node<'a, InF, Out = Out>,
 
+    trait IntProcessIm<'a, ChoiceData<InT,InF>>
+    {
+        type NIO = NChoice<PTNIO, PFNIO>;
+        fn compileIm(self :Box<Self>, g: &mut Graph<'a>) -> Self::NIO {
+            let s = *self;
+            let PChoice(pt, pf) = s;
+            let ptnio = pt.compileIm(g);
+            let pfnio = pf.compileIm(g);
+            node!(choice ptnio pfnio)
+        }
+
+    }
+}
+
+/*
 
 //  _
 // | |    ___   ___  _ __
@@ -256,3 +243,5 @@ impl<'a, P, In: 'a, Out: 'a> Process<'a, In>
         (numbeg,numend)
     }
 }
+
+*/

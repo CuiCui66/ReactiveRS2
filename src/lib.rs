@@ -8,6 +8,7 @@
 #![feature(core_intrinsics)]
 #![feature(arbitrary_self_types)]
 #![feature(conservative_impl_trait)]
+#![feature(associated_type_defaults)]
 
 extern crate core;
 #[macro_use] extern crate log;
@@ -69,8 +70,8 @@ mod tests {
         {
             let mut r =
                 Runtime::new(
-                    fnmut2pro(|_ : ()| { ()}).seq(ProcessNotIm(box Pause {}))//.seq(
-                   // fnmut2pro(|v:i32| i = v))
+                    fnmut2pro(|_ : ()| { 42 }).seq(ProcessNotIm(box Pause {})).seq(
+                    fnmut2pro(|v:i32| i = v))
                 );
             r.instant();
             unsafe {
@@ -81,7 +82,7 @@ mod tests {
         assert_eq!(i, 42);
     }
 
-    /*#[test]
+    #[test]
     fn choice() {
         let mut i = 0;
         run!{
@@ -95,7 +96,7 @@ mod tests {
         assert_eq!(i, 42);
     }
 
-    #[test]
+    /*#[test]
     fn choice_pause() {
         let mut i = 0;
         run!{

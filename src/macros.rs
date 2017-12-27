@@ -35,5 +35,75 @@ macro_rules! nodepi {
     }};
 }
 
+#[macro_export]
+macro_rules! boxed_ni {
+    ($in:ty) => (
+        type Boxed = ProcessNotIm<
+            'a,
+        $in,
+        <Self as IntProcess<'a, $in>>::Out,
+        <Self as IntProcessNotIm<'a, $in>>::NI,
+        <Self as IntProcessNotIm<'a, $in>>::NO,
+        >;
+    );
+}
+
+#[macro_export]
+macro_rules! tobox_ni {
+    () => (
+        fn tobox(self) -> Self::Boxed {
+            ProcessNotIm(box self)
+        }
+    );
+}
+
+#[macro_export]
+macro_rules! boxed_i {
+    ($in:ty) => (
+        type Boxed = ProcessIm<
+            'a,
+        $in,
+        <Self as IntProcess<'a, $in>>::Out,
+        <Self as IntProcessIm<'a, $in>>::NIO,
+        >;
+    );
+}
+
+#[macro_export]
+macro_rules! tobox_i {
+    () => (
+        fn tobox(self) -> Self::Boxed {
+            ProcessIm(box self)
+        }
+    );
+}
+
+#[macro_export]
+macro_rules! implIm {
+    ($in:ty,$($x:tt)+) => (
+        mimpl!(
+            $($x)*
+            trait ToBoxedProcess<'a, $in>
+            {
+                boxed_i!($in);
+                tobox_i!();
+            }
+        );
+    );
+}
+
+#[macro_export]
+macro_rules! implNI {
+    ($in:ty,$($x:tt)+) => (
+        mimpl!(
+            $($x)*
+            trait ToBoxedProcess<'a, $in>
+            {
+                boxed_ni!($in);
+                tobox_ni!();
+            }
+        );
+    );
+}
 
 

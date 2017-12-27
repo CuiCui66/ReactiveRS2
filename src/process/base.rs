@@ -9,7 +9,7 @@ use super::*;
 // |_| \_|\___/ \__|_| |_|_|_| |_|\__, |
 //                                |___/
 
-pub(crate) struct PNothing {}
+pub struct PNothing {}
 impl<'a> IntProcess<'a, ()> for PNothing {
     type Out = ();
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
