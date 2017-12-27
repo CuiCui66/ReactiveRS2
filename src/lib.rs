@@ -112,7 +112,7 @@ mod tests {
         assert_eq!(i, 42);
     }
 
-    /*#[test]
+    #[test]
     fn loop_test() {
         run!{
             |_| 0;
@@ -123,7 +123,7 @@ mod tests {
                 else{
                     False(i)
                 };
-                Pause
+                pause()
             };
             |i| {
                 assert_eq!(i,42)
@@ -131,7 +131,7 @@ mod tests {
         }
     }
 
-    #[test]
+    /*#[test]
     fn par() {
         run!{
             |_| (0,0);

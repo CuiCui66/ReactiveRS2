@@ -109,10 +109,18 @@ pub trait Process<'a, In: 'a>: IntProcess<'a, In> + Sized {
         p: PF,
     ) -> <PChoice<Self, PF> as ToBoxedProcess<'a, ChoiceData<In, InF>>>::Boxed
     where
-        PF: Process<'a, InF>,
-        PChoice<Self, PF>: ToBoxedProcess<'a, ChoiceData<In,InF>>,
+        PF: Process<'a, InF, Out = Self::Out>,
+        PChoice<Self, PF>: ToBoxedProcess<'a, ChoiceData<In, InF>>,
     {
         PChoice(self, p).tobox()
+    }
+
+    fn ploop<Out: 'a>(self) -> <PLoop<Self> as ToBoxedProcess<'a, In>>::Boxed
+    where
+        Self: Process<'a, In, Out = ChoiceData<In,Out>>,
+        PLoop<Self>: ToBoxedProcess<'a, In>,
+    {
+        PLoop(self).tobox()
     }
 }
 

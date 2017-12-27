@@ -11,6 +11,8 @@ use super::*;
 
 
 pub struct PChoice<PT, PF> (pub(crate) PT, pub(crate) PF,);
+
+
 impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> IntProcess<'a, ChoiceData<InT, InF>>
     for PChoice<PT, PF>
     where
@@ -155,7 +157,7 @@ implIm!{
     }
 }
 
-/*
+
 
 //  _
 // | |    ___   ___  _ __
@@ -164,44 +166,16 @@ implIm!{
 // |_____\___/ \___/| .__/
 //                  |_|
 
-pub struct PLoop<P> {
-    pub(crate) p: P,
-}
+pub struct PLoop<P> (pub(crate) P);
 
-impl<'a, P, In: 'a, Out: 'a> Process<'a, In>
-    for PLoop<MarkedProcess<P,NotIm>>
+impl<'a, P, In: 'a, Out: 'a> IntProcess<'a, In>
+    for PLoop<P>
     where
     P: Process<'a, In, Out = ChoiceData<In,Out>>,
 {
     type Out = Out;
-    type NI = NSeq<RcStore<In>,NJump>;
-    type NO = RcLoad<Out>;
-    type NIO = DummyN<Out>;
-    type Mark = NotIm;
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI,usize,Self::NO){
-        trace!("");
-        let (pni, pind, pno) = self.p.p.compile(g);
-        let rcextin = new_rcell();
-        let rcbegin = rcextin.clone();
-        let rcendin = rcextin.clone();
-        let rcendout = new_rcell();
-        let rcextout = rcendout.clone();
-        let in_id = g.add(box node!(load(rcbegin) >> pni));
-        let out_id = g.reserve();
-        g.set(pind,box node!(
-            pno >> choice {
-                store(rcendin) >> jump(in_id)
-            }{
-                store(rcendout) >> jump(out_id)
-            }));
-        (
-            node!(store(rcextin) >> jump(in_id)),
-            out_id,
-            node!(load(rcextout))
-        )
-    }
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (beg,end) = self.p.p.printDot(curNum);
+        let (beg,end) = self.0.printDot(curNum);
         let numbeg = *curNum;
         let numend = numbeg +1;
         *curNum += 2;
@@ -214,34 +188,53 @@ impl<'a, P, In: 'a, Out: 'a> Process<'a, In>
     }
 }
 
-impl<'a, P, In: 'a, Out: 'a> Process<'a, In>
-    for PLoop<MarkedProcess<P,IsIm>>
-    where
-    P: Process<'a, In, Out = ChoiceData<In,Out>>,
-{
-    type Out = Out;
-    type NI = DummyN<()>;
-    type NO = DummyN<Out>;
-    type NIO = LoopIm<P::NIO>;
-    type Mark = IsIm;
-    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO{
 
-        trace!("");
-        let pnio = self.p.p.compileIm(g);
-        LoopIm(pnio)
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (beg,end) = self.p.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [label = \"loop\"]",numbeg);
-        println!("{}:s -> {} [label = \"{}\"]",numbeg,beg,tname::<In>());
-        println!("{} [shape=diamond]",numend);
-        println!("{} -> {}:n [label = \"{}\"]",end,numend,tname::<ChoiceData<In,Out>>());
-        println!("{}:w -> {}:w [label = \"Continue: {}\"];",numend,numbeg,tname::<In>());
-        (numbeg,numend)
+
+implNI!{
+    In,
+    impl<'a, In: 'a, Out: 'a, PNI, PNO>
+        for PLoop<ProcessNotIm<'a, In, ChoiceData<In,Out>, PNI, PNO>>
+        where
+        PNI: Node<'a, In, Out = ()>,
+        PNO: Node<'a, (), Out = ChoiceData<In,Out>>,
+    trait IntProcessNotIm<'a, In> {
+        type NI = NSeq<RcStore<In>,NJump>;
+        type NO = RcLoad<Out>;
+        fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI,usize,Self::NO){
+            let (pni, pind, pno) = self.0.compile(g);
+            let rcextin = new_rcell();
+            let rcbegin = rcextin.clone();
+            let rcendin = rcextin.clone();
+            let rcendout = new_rcell();
+            let rcextout = rcendout.clone();
+            let in_id = g.add(box node!(load(rcbegin) >> pni));
+            let out_id = g.reserve();
+            g.set(pind,box node!(
+                pno >> choice {
+                    store(rcendin) >> njump(in_id)
+                }{
+                    store(rcendout) >> njump(out_id)
+                }));
+            (
+                node!(store(rcextin) >> njump(in_id)),
+                out_id,
+                node!(load(rcextout))
+            )
+        }
     }
 }
 
-*/
+implIm!{
+    In,
+    impl<'a, In: 'a, Out: 'a, PNIO>
+        for PLoop<ProcessIm<'a,In,ChoiceData<In,Out>,PNIO>>
+        where
+        PNIO: Node<'a, In, Out = ChoiceData<In,Out>>,
+    trait IntProcessIm<'a, In> {
+        type NIO = LoopIm<PNIO>;
+        fn compileIm(self: Box<Self>, g: &mut Graph<'a>) -> Self::NIO{
+            LoopIm(self.0.compileIm(g))
+        }
+
+    }
+}
