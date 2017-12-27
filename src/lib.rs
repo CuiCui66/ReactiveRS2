@@ -10,9 +10,8 @@
 #![feature(conservative_impl_trait)]
 #![feature(associated_type_defaults)]
 
-extern crate core;
-#[macro_use] extern crate log;
-extern crate env_logger;
+// #[macro_use] extern crate log;
+// extern crate env_logger;
 extern crate test;
 
 
@@ -24,11 +23,12 @@ pub mod process;
 pub mod signal;
 mod take;
 
-
 #[cfg(test)]
 mod tests {
     use engine::*;
+
     use process::*;
+    use process::pause;
     use node::ChoiceData::*;
     use signal::*;
     use test::test::Bencher;
@@ -64,15 +64,15 @@ mod tests {
     }
 
     #[test]
-    fn pause() {
+    fn pauset() {
         let mut i = 0;
         let p = &mut i as *mut i32;
         {
-            let mut r =
-                Runtime::new(
-                    fnmut2pro(|_ : ()| { 42 }).seq(ProcessNotIm(box Pause {})).seq(
-                    fnmut2pro(|v:i32| i = v))
-                );
+            let mut r = rt!{
+                |_| 42;
+                pause();
+                |v| i = v
+            };
             r.instant();
             unsafe {
                 assert_eq!(*p, 0);
@@ -96,14 +96,14 @@ mod tests {
         assert_eq!(i, 42);
     }
 
-    /*#[test]
+    #[test]
     fn choice_pause() {
         let mut i = 0;
         run!{
             |_| True(42);
-            Pause;
+            pause();
             choice {
-                Pause;
+                pause();
                 |v :usize| i = v
             } {
                 |()| unreachable!()
@@ -112,7 +112,7 @@ mod tests {
         assert_eq!(i, 42);
     }
 
-    #[test]
+    /*#[test]
     fn loop_test() {
         run!{
             |_| 0;
