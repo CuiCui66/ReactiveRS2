@@ -12,7 +12,7 @@ pub struct NJump {
     dest: usize,
 }
 
-pub fn jump(pos: usize) -> NJump {
+pub fn njump(pos: usize) -> NJump {
     NJump { dest: pos }
 }
 
@@ -39,7 +39,7 @@ pub struct NPause {
     dest: usize,
 }
 
-pub fn pause(pos: usize) -> NPause {
+pub fn npause(pos: usize) -> NPause {
     NPause { dest: pos }
 }
 

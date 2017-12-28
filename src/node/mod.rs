@@ -3,8 +3,8 @@ use std::marker::PhantomData;
 use engine::*;
 use take::take;
 use std::collections::HashMap;
-use std::intrinsics::type_name;
 use super::*;
+use tname::tname;
 
 mod mem_manip;
 pub use self::mem_manip::*;
@@ -211,14 +211,6 @@ pub struct CFGDrawer {
     arrow: Vec<(usize, usize)>,
 }
 
-
-fn tname<T : ?Sized>() -> String{
-    let s = String::from(unsafe { type_name::<T>() });
-    s.replace("ReactiveRS2::node::ChoiceData","CD")
-        .replace("ReactiveRS2::node::","")
-        .replace("<","\\<")
-        .replace(">","\\>")
-}
 
 impl CFGDrawer {
     pub fn new() -> CFGDrawer {

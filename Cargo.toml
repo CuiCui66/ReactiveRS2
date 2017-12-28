@@ -21,4 +21,3 @@ funsafe = [] # Faster unsafe code, may UB
 # [[bin]]
 # name = "sb"
 # path = "src/sandbox.rs"
-

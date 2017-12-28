@@ -221,13 +221,13 @@ impl<'a> Runtime<'a> {
     /// Creates a Runtime by using a value implementing [``][gf].
     ///
     /// After this function, the runtime is ready to be used
-    /// Normally,types that implement [``][gf] are [`MarkedProcess`][mp]
-    pub fn new<GF>(gf: GF) -> Self
+    /// Normally,types that implement [`GraphFiller`][gf] are [`MarkedProcess`][mp]
+    pub fn new<P>(p: P) -> Self
     where
-        GF: GraphFiller<'a>,
+        P: GraphFiller<'a>,
     {
         let mut g = Graph::new();
-        let start = gf.fill_graph(&mut g);
+        let start = p.fill_graph(&mut g);
         let mut r = Runtime::fromgraph(g);
         r.sub_runtime.tasks.current.push(start);
         r
