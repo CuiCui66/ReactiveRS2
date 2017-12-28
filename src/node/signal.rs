@@ -277,6 +277,20 @@ where
     }
 }
 
+#[derive(Clone)]
+pub struct NGetSIn<S>(pub S);
+
+impl<'a, S, V: Val<'a>, In: 'a> Node<'a, In> for NGetSIn<S>
+where
+    S: Signal<'a, V = V>,
+{
+    type Out = (V, In);
+
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, val: In) -> Self::Out {
+        (self.0.get_pre_value(sub_runtime.get_current_instant()), val)
+    }
+}
+
 
 //     _                _ _   ____
 //    / \__      ____ _(_) |_|  _ \

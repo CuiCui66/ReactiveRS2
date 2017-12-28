@@ -2,6 +2,168 @@ use super::*;
 use signal::*;
 use std::marker::PhantomData;
 
+
+//  ____           ____
+// |  _ \ _ __ ___|  _ \
+// | |_) | '__/ _ \ | | |
+// |  __/| | |  __/ |_| |
+// |_|   |_|  \___|____/
+
+/// Process returning the last value of the signal,
+/// where the signal is given as the process input.
+#[derive(Copy, Clone)]
+pub struct PreD {}
+
+impl<'a, S> IntProcess<'a, S> for PreD
+where
+    S: Signal<'a>
+{
+    type Out = S::V;
+
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
+        let num = *curNum;
+        *curNum += 1;
+        println!("{} [shape = box, label= \"PreD\"];", num);
+        (num, num)
+    }
+}
+
+
+impl<'a, S> IntProcessIm<'a, S> for PreD
+where
+    S: Signal<'a>
+{
+    type NIO = NGetD;
+    fn compileIm(self: Box<Self>, _: &mut Graph) -> Self::NIO {
+        NGetD {}
+    }
+}
+
+pub fn pre_d<'a, S>() -> ProcessIm<'a, S, S::V, NGetD>
+where
+    S: Signal<'a>
+{
+    ProcessIm(box PreD {})
+}
+
+impl<'a, S, In: Val<'a>> IntProcess<'a, (S, In)> for PreD
+where
+    S: Signal<'a>
+{
+    type Out = (S::V, In);
+
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
+        let num = *curNum;
+        *curNum += 1;
+        println!("{} [shape = box, label= \"PreD\"];", num);
+        (num, num)
+    }
+}
+
+
+impl<'a, S, In: Val<'a>> IntProcessIm<'a, (S, In)> for PreD
+where
+    S: Signal<'a>
+{
+    type NIO = NGetD;
+    fn compileIm(self: Box<Self>, _: &mut Graph) -> Self::NIO {
+        NGetD {}
+    }
+}
+
+
+pub fn pre_d_in<'a, S, In: Val<'a>>() -> ProcessIm<'a, (S, In), (S::V, In), NGetD>
+where
+    S: Signal<'a>
+{
+    ProcessIm(box PreD {})
+}
+
+//  ____           ____
+// |  _ \ _ __ ___/ ___|
+// | |_) | '__/ _ \___ \
+// |  __/| | |  __/___) |
+// |_|   |_|  \___|____/
+
+
+/// Process returning the last value of the signal,
+/// where the signal is given as the process input.
+#[derive(Copy, Clone)]
+pub struct PreS<S>(pub S);
+
+
+/// Process returning the last value of the signal,
+/// where the signal is fixed
+impl<'a, S> IntProcess<'a, ()> for PreS<S>
+where
+    S: Signal<'a>
+{
+    type Out = S::V;
+
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
+        let num = *curNum;
+        *curNum += 1;
+        println!("{} [shape = box, label= \"PreS\"];", num);
+        (num, num)
+    }
+}
+
+
+impl<'a, S: Val<'a>> IntProcessIm<'a, ()> for PreS<S>
+where
+    S: Signal<'a>
+{
+    type NIO = NGetS<S>;
+    fn compileIm(self: Box<Self>, _: &mut Graph) -> Self::NIO {
+        NGetS(self.0)
+    }
+}
+
+pub fn pre_s<'a, S>(signal: S) -> ProcessIm<'a, (), S::V, NGetS<S>>
+where
+    S: Signal<'a>
+{
+    ProcessIm(box PreS(signal))
+}
+
+#[derive(Copy, Clone)]
+pub struct PreSIn<S>(pub S);
+
+
+/// Process returning the last value of the signal,
+/// where the signal is fixed
+impl<'a, S: Val<'a>, In: Val<'a>> IntProcess<'a, In> for PreSIn<S>
+where
+    S: Signal<'a>
+{
+    type Out = (S::V, In);
+
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
+        let num = *curNum;
+        *curNum += 1;
+        println!("{} [shape = box, label= \"PreS\"];", num);
+        (num, num)
+    }
+}
+
+
+impl<'a, S: Val<'a>, In: Val<'a>> IntProcessIm<'a, In> for PreSIn<S>
+where
+    S: Signal<'a>
+{
+    type NIO = NGetSIn<S>;
+    fn compileIm(self: Box<Self>, _: &mut Graph) -> Self::NIO {
+        NGetSIn(self.0)
+    }
+}
+
+pub fn pre_s_in<'a, S, In: 'a>(signal: S) -> ProcessIm<'a, In, (S::V, In), NGetSIn<S>>
+where
+    S: Signal<'a>
+{
+    ProcessIm(box PreSIn(signal))
+}
+
 //  _____           _ _   ____
 // | ____|_ __ ___ (_) |_|  _ \
 // |  _| | '_ ` _ \| | __| | | |
