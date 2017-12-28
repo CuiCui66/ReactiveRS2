@@ -452,12 +452,12 @@ impl<'a, SV: Val<'a>> IntProcessNotIm<'a, SignalRuntimeRef<SV>> for AwaitD
 where
     SV: SignalValue,
 {
-    type NI = NSeq<NAwaitD, RcStore<SignalRuntimeRef<SV>>>;
-    type NO = NSeq<RcLoad<SignalRuntimeRef<SV>>, NGetD>;
+    type NI = NSeq<NAwaitD, NStore<SignalRuntimeRef<SV>>>;
+    type NO = NSeq<NLoad<SignalRuntimeRef<SV>>, NGetD>;
 
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
-        let rc = new_rcell();
+        let rc = RCell::new();
         let rc2 = rc.clone();
 
         let ni = node!(NAwaitD(out_id) >> store(rc));
@@ -467,7 +467,7 @@ where
 }
 
 pub fn await_d<'a, SV: Val<'a>>()
-    -> ProcessNotIm<'a, SignalRuntimeRef<SV>, SV::V, NSeq<NAwaitD, RcStore<SignalRuntimeRef<SV>>>, NSeq<RcLoad<SignalRuntimeRef<SV>>, NGetD>>
+    -> ProcessNotIm<'a, SignalRuntimeRef<SV>, SV::V, NSeq<NAwaitD, NStore<SignalRuntimeRef<SV>>>, NSeq<NLoad<SignalRuntimeRef<SV>>, NGetD>>
     where
         SV: SignalValue,
         SV::E: Clone,
@@ -493,12 +493,12 @@ impl<'a, In: Val<'a>, SV: Val<'a>> IntProcessNotIm<'a, (SignalRuntimeRef<SV>, In
 where
     SV: SignalValue,
 {
-    type NI = NSeq<NPar<NAwaitD,NIdentity>,RcStore<(SignalRuntimeRef<SV>, In)>>;
-    type NO = NSeq<RcLoad<(SignalRuntimeRef<SV>, In)>, NGetD>;
+    type NI = NSeq<NPar<NAwaitD,NIdentity>,NStore<(SignalRuntimeRef<SV>, In)>>;
+    type NO = NSeq<NLoad<(SignalRuntimeRef<SV>, In)>, NGetD>;
 
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
-        let rc = new_rcell();
+        let rc = RCell::new();
         let rc2 = rc.clone();
 
         // Type inference won't work here
@@ -510,7 +510,7 @@ where
 }
 
 pub fn await_d_in<'a, In: Val<'a>, SV: Val<'a>>()
-    -> ProcessNotIm<'a, (SignalRuntimeRef<SV>,In), (SV::V, In), NSeq<NPar<NAwaitD,NIdentity>,RcStore<(SignalRuntimeRef<SV>, In)>>, NSeq<RcLoad<(SignalRuntimeRef<SV>, In)>, NGetD>>
+    -> ProcessNotIm<'a, (SignalRuntimeRef<SV>,In), (SV::V, In), NSeq<NPar<NAwaitD,NIdentity>,NStore<(SignalRuntimeRef<SV>, In)>>, NSeq<NLoad<(SignalRuntimeRef<SV>, In)>, NGetD>>
 where
     SV: SignalValue,
     SV::E: Clone,
@@ -594,12 +594,12 @@ impl<'a, In: Val<'a>, SV: Val<'a>> IntProcessNotIm<'a, In> for AwaitSIn<SV>
 where
     SV: SignalValue,
 {
-    type NI = NSeq<RcStore<In>,NAwaitS<SV>>;
-    type NO = NSeq<GenP, NPar<NGetS<SV>, RcLoad<In>>>;
+    type NI = NSeq<NStore<In>,NAwaitS<SV>>;
+    type NO = NSeq<GenP, NPar<NGetS<SV>, NLoad<In>>>;
 
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
-        let rc = new_rcell();
+        let rc = RCell::new();
         let rc2 = rc.clone();
 
         let ni = node!(store(rc) >> NAwaitS(self.0.clone(), out_id));
@@ -609,7 +609,7 @@ where
 }
 
 pub fn await_s_in<'a, In: Val<'a>, SV: Val<'a>>(signal_runtime: SignalRuntimeRef<SV>)
-    -> ProcessNotIm<'a, In, (SV::V, In), NSeq<RcStore<In>,NAwaitS<SV>>, NSeq<GenP, NPar<NGetS<SV>, RcLoad<In>>>>
+    -> ProcessNotIm<'a, In, (SV::V, In), NSeq<NStore<In>,NAwaitS<SV>>, NSeq<GenP, NPar<NGetS<SV>, NLoad<In>>>>
 where
     SV: SignalValue,
     SV::E: Clone,
@@ -685,24 +685,24 @@ impl<'a, In: Val<'a>, SV: Val<'a>> IntProcessNotIm<'a, (SignalRuntimeRef<SV>,In)
 where
     SV: SignalValue,
 {
-    type NI = NSeq<NSeq<NPar<NIdentity,RcStore<In>>, Ignore2>,NAwaitImmediateD>;
-    type NO = RcLoad<In>;
+    type NI = NSeq<NSeq<NPar<NIdentity,NStore<In>>, Ignore2>,NAwaitImmediateD>;
+    type NO = NLoad<In>;
 
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
-        let rc = new_rcell();
+        let rc = RCell::new();
         let rc2 = rc.clone();
 
-        let ni_first = <NIdentity as Node<'a,SignalRuntimeRef<SV>>>::njoin::<In, RcStore<In>>(NIdentity {}, store(rc));
-        let ni_second = <NPar<NIdentity,RcStore<In>> as Node<'a, (SignalRuntimeRef<SV>, In)>>::nseq(ni_first, Ignore2);
-        let ni = <NSeq<NPar<NIdentity,RcStore<In>>,Ignore2> as Node<'a, (SignalRuntimeRef<SV>, In)>>::nseq(ni_second, NAwaitImmediateD(out_id));
+        let ni_first = <NIdentity as Node<'a,SignalRuntimeRef<SV>>>::njoin::<In, NStore<In>>(NIdentity {}, store(rc));
+        let ni_second = <NPar<NIdentity,NStore<In>> as Node<'a, (SignalRuntimeRef<SV>, In)>>::nseq(ni_first, Ignore2);
+        let ni = <NSeq<NPar<NIdentity,NStore<In>>,Ignore2> as Node<'a, (SignalRuntimeRef<SV>, In)>>::nseq(ni_second, NAwaitImmediateD(out_id));
         let no = load(rc2);
         (ni, out_id, no)
     }
 }
 
 pub fn await_immediate_d_in<'a, In: Val<'a>, SV: Val<'a>>()
-    -> ProcessNotIm<'a, (SignalRuntimeRef<SV>, In), In, NSeq<NSeq<NPar<NIdentity,RcStore<In>>, Ignore2>,NAwaitImmediateD>, RcLoad<In>>
+    -> ProcessNotIm<'a, (SignalRuntimeRef<SV>, In), In, NSeq<NSeq<NPar<NIdentity,NStore<In>>, Ignore2>,NAwaitImmediateD>, NLoad<In>>
 where
     SV: SignalValue,
 {
@@ -740,12 +740,12 @@ impl<'a, In: Val<'a>, SV: Val<'a>> IntProcessNotIm<'a, In> for AwaitImmediateS<S
 where
     SV: SignalValue,
 {
-    type NI = NSeq<RcStore<In>,NAwaitImmediateS<SV>>;
-    type NO = RcLoad<In>;
+    type NI = NSeq<NStore<In>,NAwaitImmediateS<SV>>;
+    type NO = NLoad<In>;
 
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
-        let rc = new_rcell();
+        let rc = RCell::new();
         let rc2 = rc.clone();
 
         let ni = node!(store(rc) >> NAwaitImmediateS(self.0.clone(), out_id));
@@ -755,7 +755,7 @@ where
 }
 
 pub fn await_immediate_s<'a, In: Val<'a>, SV: Val<'a>>(signal_runtime: SignalRuntimeRef<SV>)
-    -> ProcessNotIm<'a, In, In, NSeq<RcStore<In>,NAwaitImmediateS<SV>>, RcLoad<In>>
+    -> ProcessNotIm<'a, In, In, NSeq<NStore<In>,NAwaitImmediateS<SV>>, NLoad<In>>
 where
     SV: SignalValue,
 {
@@ -808,10 +808,10 @@ implNI! {
     trait IntProcessNotIm<'a, SignalRuntimeRef<SV>>
     {
          type NI = NPresentD;
-         type NO = RcLoad<Out>;
+         type NO = NLoad<Out>;
 
          fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-            let rct = new_rcell();
+            let rct = RCell::new();
             let rcf = rct.clone();
             let rc_out = rct.clone();
 
@@ -849,10 +849,10 @@ implNI! {
     trait IntProcessNotIm<'a, SignalRuntimeRef<SV>>
     {
          type NI = NPresentD;
-         type NO = RcLoad<Out>;
+         type NO = NLoad<Out>;
 
          fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-            let rct = new_rcell();
+            let rct = RCell::new();
             let rcf = rct.clone();
             let rc_out = rct.clone();
             let s = *self;
@@ -888,10 +888,10 @@ implNI! {
     trait IntProcessNotIm<'a, SignalRuntimeRef<SV>>
     {
          type NI = NPresentD;
-         type NO = RcLoad<Out>;
+         type NO = NLoad<Out>;
 
          fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-            let rct = new_rcell();
+            let rct = RCell::new();
             let rcf = rct.clone();
             let rc_out = rct.clone();
 
@@ -928,10 +928,10 @@ implNI! {
     trait IntProcessNotIm<'a, SignalRuntimeRef<SV>>
     {
          type NI = NPresentD;
-         type NO = RcLoad<Out>;
+         type NO = NLoad<Out>;
 
          fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-            let rct = new_rcell();
+            let rct = RCell::new();
             let rcf = rct.clone();
             let rc_out = rct.clone();
 
@@ -1000,10 +1000,10 @@ implNI! {
     trait IntProcessNotIm<'a, ()>
     {
          type NI = NPresentS<SV>;
-         type NO = RcLoad<Out>;
+         type NO = NLoad<Out>;
 
          fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-            let rct = new_rcell();
+            let rct = RCell::new();
             let rcf = rct.clone();
             let rc_out = rct.clone();
 
@@ -1042,10 +1042,10 @@ implNI! {
     trait IntProcessNotIm<'a, ()>
     {
          type NI = NPresentS<SV>;
-         type NO = RcLoad<Out>;
+         type NO = NLoad<Out>;
 
          fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-            let rct = new_rcell();
+            let rct = RCell::new();
             let rcf = rct.clone();
             let rc_out = rct.clone();
 
@@ -1083,10 +1083,10 @@ implNI! {
     trait IntProcessNotIm<'a, ()>
     {
          type NI = NPresentS<SV>;
-         type NO = RcLoad<Out>;
+         type NO = NLoad<Out>;
 
          fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-            let rct = new_rcell();
+            let rct = RCell::new();
             let rcf = rct.clone();
             let rc_out = rct.clone();
 
@@ -1124,10 +1124,10 @@ implNI! {
     trait IntProcessNotIm<'a, ()>
     {
          type NI = NPresentS<SV>;
-         type NO = RcLoad<Out>;
+         type NO = NLoad<Out>;
 
          fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-            let rct = new_rcell();
+            let rct = RCell::new();
             let rcf = rct.clone();
             let rc_out = rct.clone();
 

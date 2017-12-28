@@ -227,7 +227,7 @@ pub trait Process<'a, In: Val<'a>>: IntProcess<'a, In> + Sized {
 /// puts a lot of processes in parallel.
 pub fn big_join<'a, In: Val<'a>, PNI, PNO>(
     vp: Vec<ProcessNotIm<'a, In, (), PNI, PNO>>,
-) -> ProcessNotIm<'a, In, (), NSeq<RcStore<In>, NBigPar>, Nothing>
+) -> ProcessNotIm<'a, In, (), NSeq<NStore<In>, NBigPar>, Nothing>
 where
     PNI: Node<'a, In, Out = ()>,
     PNO: Node<'a, (), Out = ()>,

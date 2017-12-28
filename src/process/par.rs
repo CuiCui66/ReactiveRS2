@@ -48,7 +48,7 @@ implNI!{
             let (pni, pind, pno) = p.compile(g);
             let (qni, qind, qno) = q.compile(g);
             let out_ind = g.reserve();
-            let rc1 = new_rcjp();
+            let rc1 = Rcjp::new();
             let rc2 = rc1.clone();
             let rcout = rc1.clone();
             g.set(pind, box node!(pno >> set1(rc1, out_ind)));
@@ -71,14 +71,14 @@ implNI!{
 
     trait IntProcessNotIm<'a, (InP,InQ)>
     {
-        type NI = NSeq<NPar<NSeq<PNIO, RcStore<OutP>>, QNI>, Ignore>;
-        type NO = NSeq<GenP, NPar<RcLoad<OutP>, QNO>>;
+        type NI = NSeq<NPar<NSeq<PNIO, NStore<OutP>>, QNI>, Ignore>;
+        type NO = NSeq<GenP, NPar<NLoad<OutP>, QNO>>;
         fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
             let s = *self;
             let Par(p, q) = s;
             let pnio = p.compileIm(g);
             let (qni, qind, qno) = q.compile(g);
-            let rcin = new_rcell();
+            let rcin = RCell::new();
             let rcout = rcin.clone();
             (
                 nodei!((pnio >> store(rcin)) || qni),
@@ -103,14 +103,14 @@ implNI!{
 
     trait IntProcessNotIm<'a, (InP,InQ)>
     {
-        type NI = NSeq<NPar<PNI, NSeq<QNIO, RcStore<OutQ>>>, Ignore>;
-        type NO = NSeq<GenP, NPar<PNO, RcLoad<OutQ>>>;
+        type NI = NSeq<NPar<PNI, NSeq<QNIO, NStore<OutQ>>>, Ignore>;
+        type NO = NSeq<GenP, NPar<PNO, NLoad<OutQ>>>;
         fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
             let s = *self;
             let Par(p, q) = s;
             let (pni, pind, pno) = p.compile(g);
             let qnio = q.compileIm(g);
-            let rcin = new_rcell();
+            let rcin = RCell::new();
             let rcout = rcin.clone();
             (
                 nodei!(pni || (qnio >> store(rcin))),
@@ -179,13 +179,13 @@ where
     PNO: Node<'a, (), Out = ()>,
     In: Copy,
 {
-    type NI = NSeq<RcStore<In>, NBigPar>;
+    type NI = NSeq<NStore<In>, NBigPar>;
     type NO = Nothing;
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let mut dests: Vec<usize> = vec![];
         let end_point = g.reserve();
-        let rcbjp = new_rcbjp(self.0.len(), end_point);
-        let rcin = new_rcell();
+        let rcbjp = Rcbjp::new(self.0.len(), end_point);
+        let rcin = RCell::new();
         for p in self.0 {
             let (pni, pind, pno) = p.compile(g);
             g.set(pind, box node!(pno >> big_merge(rcbjp.clone())));

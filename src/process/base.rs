@@ -1,7 +1,6 @@
 use node::*;
-//use node::rcmanip::*;
-//use node::control::*;
 use super::*;
+
 //  _   _       _   _     _
 // | \ | | ___ | |_| |__ (_)_ __   __ _
 // |  \| |/ _ \| __| '_ \| | '_ \ / _` |
@@ -92,10 +91,10 @@ impl<'a, In: Val<'a>> IntProcess<'a, In> for Jump {
 
 
 impl<'a, In: Val<'a>> IntProcessNotIm<'a, In> for Jump {
-    type NI = NSeq<RcStore<In>, NJump>;
-    type NO = RcLoad<In>;
+    type NI = NSeq<NStore<In>, NJump>;
+    type NO = NLoad<In>;
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rcin = new_rcell();
+        let rcin = RCell::new();
         let rcout = rcin.clone();
         let out = g.reserve();
         (node!(store(rcin) >> njump(out)), out, load(rcout))
@@ -127,16 +126,16 @@ impl<'a, In: Val<'a>> IntProcess<'a, In> for Pause {
 
 
 impl<'a, In: Val<'a>> IntProcessNotIm<'a, In> for Pause {
-    type NI = NSeq<RcStore<In>, NPause>;
-    type NO = RcLoad<In>;
+    type NI = NSeq<BStore<In>, NPause>;
+    type NO = NLoad<In>;
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let rcin = new_rcell();
+        let rcin = RCell::new();
         let rcout = rcin.clone();
         let out = g.reserve();
         (node!(store(rcin) >> npause(out)), out, load(rcout))
     }
 }
 
-pub fn pause<'a, In: Val<'a>>() -> ProcessNotIm<'a,In,In,NSeq<RcStore<In>, NPause>,RcLoad<In>> {
+pub fn pause<'a, In: Val<'a>>() -> ProcessNotIm<'a,In,In,NSeq<NStore<In>, NPause>,NLoad<In>> {
     ProcessNotIm(box Pause {})
 }

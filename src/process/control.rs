@@ -50,13 +50,13 @@ implNI!{
     trait IntProcessNotIm<'a, ChoiceData<InT,InF>>
     {
         type NI = NChoice<PTNI, PFNI>;
-        type NO = RcLoad<Out>;
+        type NO = NLoad<Out>;
         fn compile(self :Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
             let s = *self;
             let PChoice(pt, pf) = s;
             let (ptni, ptind, ptno) = pt.compile(g);
             let (pfni, pfind, pfno) = pf.compile(g);
-            let rct = new_rcell();
+            let rct = RCell::new();
             let rcf = rct.clone();
             let rcout = rct.clone();
             let out = g.reserve();
@@ -79,14 +79,14 @@ implNI!{
 
     trait IntProcessNotIm<'a, ChoiceData<InT,InF>>
     {
-        type NI = NChoice<PTNI, NSeq<PFNIO, NSeq<RcStore<Out>, NJump>>>;
-        type NO = RcLoad<Out>;
+        type NI = NChoice<PTNI, NSeq<PFNIO, NSeq<NStore<Out>, NJump>>>;
+        type NO = NLoad<Out>;
         fn compile(self :Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
             let s = *self;
             let PChoice(pt, pf) = s;
             let (ptni, ptind, ptno) = pt.compile(g);
             let pfnio = pf.compileIm(g);
-            let rct = new_rcell();
+            let rct = RCell::new();
             let rcf = rct.clone();
             let rcout = rct.clone();
             let out = g.reserve();
@@ -112,14 +112,14 @@ implNI!{
 
     trait IntProcessNotIm<'a, ChoiceData<InT,InF>>
     {
-        type NI = NChoice<NSeq<PTNIO, NSeq<RcStore<Out>, NJump>>, PFNI>;
-        type NO = RcLoad<Out>;
+        type NI = NChoice<NSeq<PTNIO, NSeq<NStore<Out>, NJump>>, PFNI>;
+        type NO = NLoad<Out>;
         fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
             let s = *self;
             let PChoice(pt, pf) = s;
             let ptnio = pt.compileIm(g);
             let (pfni, pfind, pfno) = pf.compile(g);
-            let rct = new_rcell();
+            let rct = RCell::new();
             let rcf = rct.clone();
             let rcout = rct.clone();
             let out = g.reserve();
@@ -197,14 +197,14 @@ implNI!{
         PNI: Node<'a, In, Out = ()>,
         PNO: Node<'a, (), Out = ChoiceData<In,Out>>,
     trait IntProcessNotIm<'a, In> {
-        type NI = NSeq<RcStore<In>,NJump>;
-        type NO = RcLoad<Out>;
+        type NI = NSeq<NStore<In>,NJump>;
+        type NO = NLoad<Out>;
         fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI,usize,Self::NO){
             let (pni, pind, pno) = self.0.compile(g);
-            let rcextin = new_rcell();
+            let rcextin = RCell::new();
             let rcbegin = rcextin.clone();
             let rcendin = rcextin.clone();
-            let rcendout = new_rcell();
+            let rcendout = RCell::new();
             let rcextout = rcendout.clone();
             let in_id = g.add(box node!(load(rcbegin) >> pni));
             let out_id = g.reserve();
