@@ -16,8 +16,8 @@ pub struct EmitD {}
 #[allow(non_upper_case_globals)]
 pub static EmitD: EmitD = EmitD {};
 
-impl<'a, In: Val<'a>, SV: Val<'a>> IntProcess<'a, ((SignalRuntimeRef<SV>, SV::E), In)> for EmitD
-where SV: SignalValue {
+impl<'a, In: Val<'a>, S: Val<'a>> IntProcess<'a, ((S, S::E), In)> for EmitD
+where S: Signal<'a> {
     type Out = In;
 
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
@@ -28,9 +28,9 @@ where SV: SignalValue {
     }
 }
 
-impl<'a, In: Val<'a>, SV: Val<'a>> IntProcessIm<'a, ((SignalRuntimeRef<SV>, SV::E), In)> for EmitD
+impl<'a, In: Val<'a>, S: Val<'a>> IntProcessIm<'a, ((S, S::E), In)> for EmitD
 where
-    SV: SignalValue
+    S: Signal<'a>
 {
     type NIO = NEmitD;
     fn compileIm(self: Box<Self>, _: &mut Graph) -> Self::NIO {
@@ -38,9 +38,9 @@ where
     }
 }
 
-impl<'a, SV: Val<'a>> IntProcess<'a, (SignalRuntimeRef<SV>, SV::E)> for EmitD
+impl<'a, S: Val<'a>> IntProcess<'a, (S, S::E)> for EmitD
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
     type Out = ();
 
@@ -52,9 +52,9 @@ where
     }
 }
 
-impl<'a, SV: Val<'a>> IntProcessIm<'a, (SignalRuntimeRef<SV>, SV::E)> for EmitD
+impl<'a, S: Val<'a>> IntProcessIm<'a, (S, S::E)> for EmitD
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
     type NIO = NEmitD;
     fn compileIm(self: Box<Self>, _: &mut Graph) -> Self::NIO {
@@ -63,9 +63,9 @@ where
 }
 
 
-impl<'a, In: Val<'a>, SV: Val<'a>> IntProcess<'a, (Vec<(SignalRuntimeRef<SV>, SV::E)>, In)> for EmitD
+impl<'a, In: Val<'a>, S: Val<'a>> IntProcess<'a, (Vec<(S, S::E)>, In)> for EmitD
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
     type Out = In;
 
@@ -77,9 +77,9 @@ where
     }
 }
 
-impl<'a, In: Val<'a>, SV: Val<'a>> IntProcessIm<'a, (Vec<(SignalRuntimeRef<SV>, SV::E)>, In)> for EmitD
+impl<'a, In: Val<'a>, S: Val<'a>> IntProcessIm<'a, (Vec<(S, S::E)>, In)> for EmitD
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
     type NIO = NEmitD;
     fn compileIm(self: Box<Self>, _: &mut Graph) -> Self::NIO {
@@ -88,9 +88,9 @@ where
 }
 
 
-impl<'a, SV: Val<'a>> IntProcess<'a, Vec<(SignalRuntimeRef<SV>, SV::E)>> for EmitD
-    where
-        SV: SignalValue,
+impl<'a, S: Val<'a>> IntProcess<'a, Vec<(S, S::E)>> for EmitD
+where
+    S: Signal<'a>,
 {
     type Out = ();
 
@@ -102,9 +102,9 @@ impl<'a, SV: Val<'a>> IntProcess<'a, Vec<(SignalRuntimeRef<SV>, SV::E)>> for Emi
     }
 }
 
-impl<'a, SV: Val<'a>> IntProcessIm<'a, Vec<(SignalRuntimeRef<SV>, SV::E)>> for EmitD
+impl<'a, S: Val<'a>> IntProcessIm<'a, Vec<(S, S::E)>> for EmitD
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
     type NIO = NEmitD;
     fn compileIm(self: Box<Self>, _: &mut Graph) -> Self::NIO {
@@ -113,35 +113,35 @@ where
 }
 
 
-pub fn emit_d_in<'a, SV: Val<'a>, In: Val<'a>>()
-    -> ProcessIm<'a, ((SignalRuntimeRef<SV>, SV::E), In), In, NEmitD>
+pub fn emit_d_in<'a, S: Val<'a>, In: Val<'a>>()
+    -> ProcessIm<'a, ((S, S::E), In), In, NEmitD>
 where
-    SV: SignalValue
+    S: Signal<'a>
 {
     ProcessIm(box EmitD {})
 }
 
-pub fn emit_d<'a, SV: Val<'a>>()
-    -> ProcessIm<'a, (SignalRuntimeRef<SV>, SV::E), (), NEmitD>
+pub fn emit_d<'a, S: Val<'a>>()
+    -> ProcessIm<'a, (S, S::E), (), NEmitD>
 where
-    SV: SignalValue
+    S: Signal<'a>
 {
     ProcessIm(box EmitD {})
 }
 
 
-pub fn emit_d_vec_in<'a, SV: Val<'a>, In: Val<'a>>()
-    -> ProcessIm<'a, (Vec<(SignalRuntimeRef<SV>, SV::E)>, In), In, NEmitD>
+pub fn emit_d_vec_in<'a, S: Val<'a>, In: Val<'a>>()
+    -> ProcessIm<'a, (Vec<(S, S::E)>, In), In, NEmitD>
 where
-    SV: SignalValue
+    S: Signal<'a>
 {
     ProcessIm(box EmitD {})
 }
 
-pub fn emit_d_vec<'a, SV: Val<'a>>()
-    -> ProcessIm<'a, Vec<(SignalRuntimeRef<SV>, SV::E)>, (), NEmitD>
+pub fn emit_d_vec<'a, S: Val<'a>>()
+    -> ProcessIm<'a, Vec<(S, S::E)>, (), NEmitD>
 where
-    SV: SignalValue
+    S: Signal<'a>
 {
     ProcessIm(box EmitD {})
 }
@@ -157,11 +157,11 @@ where
 /// Process representing the emission of a signal,
 /// where the signal is fixed and the value is given as the process input.
 #[derive(Clone)]
-pub struct EmitS<SV, E>(pub SignalRuntimeRef<SV>, pub PhantomData<E>);
+pub struct EmitS<S, E>(pub S, pub PhantomData<E>);
 
-impl<'a, SV: Val<'a>> IntProcess<'a, SV::E> for EmitS<SV, SV::E>
+impl<'a, S: Val<'a>> IntProcess<'a, S::E> for EmitS<S, S::E>
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
     type Out = ();
 
@@ -173,11 +173,11 @@ where
     }
 }
 
-impl<'a, SV: Val<'a>> IntProcessIm<'a, SV::E> for EmitS<SV, SV::E>
+impl<'a, S: Val<'a>> IntProcessIm<'a, S::E> for EmitS<S, S::E>
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
-    type NIO = NEmitS<SV, SV::E>;
+    type NIO = NEmitS<S, S::E>;
 
     fn compileIm(self: Box<Self>, _: &mut Graph<'a>) -> Self::NIO {
         let s = *self;
@@ -185,10 +185,10 @@ where
     }
 }
 
-pub fn emit_s<'a, SV: Val<'a>>(signal_runtime: SignalRuntimeRef<SV>)
-    -> ProcessIm<'a, SV::E, (), NEmitS<SV,SV::E>>
+pub fn emit_s<'a, S: Val<'a>>(signal_runtime: S)
+    -> ProcessIm<'a, S::E, (), NEmitS<S,S::E>>
 where
-    SV: SignalValue
+    S: Signal<'a>
 {
     ProcessIm(box EmitS(signal_runtime, PhantomData))
 }
@@ -196,13 +196,13 @@ where
 /// Process representing the emission of a signal,
 /// where the signal is fixed and the value is given as the process input.
 /// This structure is needed to passe a value to the next process
-/// Rust does not understand that (SV::E,In) can't be equal to SV::E
+/// Rust does not understand that (S::E,In) can't be equal to S::E
 #[derive(Clone)]
-pub struct EmitSIn<SV, E>(pub SignalRuntimeRef<SV>, pub PhantomData<E>);
+pub struct EmitSIn<S, E>(pub S, pub PhantomData<E>);
 
-impl<'a, In: Val<'a>, SV: Val<'a>> IntProcess<'a, (SV::E, In)> for EmitSIn<SV, SV::E>
+impl<'a, In: Val<'a>, S: Val<'a>> IntProcess<'a, (S::E, In)> for EmitSIn<S, S::E>
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
     type Out = In;
 
@@ -214,11 +214,11 @@ where
     }
 }
 
-impl<'a, In: Val<'a>, SV: Val<'a>> IntProcessIm<'a, (SV::E, In)> for EmitSIn<SV, SV::E>
+impl<'a, In: Val<'a>, S: Val<'a>> IntProcessIm<'a, (S::E, In)> for EmitSIn<S, S::E>
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
-    type NIO = NEmitS<SV, SV::E>;
+    type NIO = NEmitS<S, S::E>;
 
     fn compileIm(self: Box<Self>, _: &mut Graph<'a>) -> Self::NIO {
         let s = *self;
@@ -226,10 +226,10 @@ where
     }
 }
 
-pub fn emit_s_in<'a, In: Val<'a>, SV: Val<'a>>(signal_runtime: SignalRuntimeRef<SV>)
-    -> ProcessIm<'a, (SV::E, In), In, NEmitS<SV,SV::E>>
+pub fn emit_s_in<'a, In: Val<'a>, S: Val<'a>>(signal_runtime: S)
+    -> ProcessIm<'a, (S::E, In), In, NEmitS<S,S::E>>
 where
-    SV: SignalValue
+    S: Signal<'a>
 {
     ProcessIm(box EmitSIn(signal_runtime, PhantomData))
 }
@@ -244,11 +244,11 @@ where
 /// Process representing the emission of multiple signals,
 /// where the signals are fixed and the values are given as the process input.
 #[derive(Clone)]
-pub struct EmitVecS<SV>(pub Vec<SignalRuntimeRef<SV>>);
+pub struct EmitVecS<S>(pub Vec<S>);
 
-impl<'a, SV: Val<'a>> IntProcess<'a, Vec<SV::E>> for EmitVecS<SV>
+impl<'a, S: Val<'a>> IntProcess<'a, Vec<S::E>> for EmitVecS<S>
 where
-    SV: SignalValue
+    S: Signal<'a>
 {
     type Out = ();
 
@@ -260,30 +260,30 @@ where
     }
 }
 
-impl<'a, SV: Val<'a>> IntProcessIm<'a, Vec<SV::E>> for EmitVecS<SV>
+impl<'a, S: Val<'a>> IntProcessIm<'a, Vec<S::E>> for EmitVecS<S>
 where
-    SV: SignalValue
+    S: Signal<'a>
 {
-    type NIO = NEmitVecS<SV>;
+    type NIO = NEmitVecS<S>;
 
     fn compileIm(self: Box<Self>, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVecS(self.0)
     }
 }
 
-pub fn emit_vec_s<'a, SV: Val<'a>>(signal_runtimes: Vec<SignalRuntimeRef<SV>>)
-    -> ProcessIm<'a, Vec<SV::E>, (), NEmitVecS<SV>>
+pub fn emit_vec_s<'a, S: Val<'a>>(signal_runtimes: Vec<S>)
+    -> ProcessIm<'a, Vec<S::E>, (), NEmitVecS<S>>
 where
-    SV: SignalValue
+    S: Signal<'a>
 {
     ProcessIm(box EmitVecS(signal_runtimes))
 }
 
 
 
-impl<'a, SV: Val<'a>, In: Val<'a>> IntProcess<'a, (Vec<SV::E>, In)> for EmitVecS<SV>
+impl<'a, S: Val<'a>, In: Val<'a>> IntProcess<'a, (Vec<S::E>, In)> for EmitVecS<S>
 where
-    SV: SignalValue
+    S: Signal<'a>
 {
     type Out = In;
 
@@ -295,11 +295,11 @@ where
     }
 }
 
-impl<'a, SV: Val<'a>, In: Val<'a>> IntProcessIm<'a, (Vec<SV::E>, In)> for EmitVecS<SV>
+impl<'a, S: Val<'a>, In: Val<'a>> IntProcessIm<'a, (Vec<S::E>, In)> for EmitVecS<S>
 where
-    SV: SignalValue
+    S: Signal<'a>
 {
-    type NIO = NEmitVecS<SV>;
+    type NIO = NEmitVecS<S>;
 
     fn compileIm(self: Box<Self>, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVecS(self.0)
@@ -307,10 +307,10 @@ where
 }
 
 
-pub fn emit_vec_s_in<'a, In: Val<'a>, SV: Val<'a>>(signal_runtimes: Vec<SignalRuntimeRef<SV>>)
-    -> ProcessIm<'a, (Vec<SV::E>,In), In, NEmitVecS<SV>>
+pub fn emit_vec_s_in<'a, In: Val<'a>, S: Val<'a>>(signal_runtimes: Vec<S>)
+    -> ProcessIm<'a, (Vec<S::E>,In), In, NEmitVecS<S>>
 where
-    SV: SignalValue
+    S: Signal<'a>
 {
     ProcessIm(box EmitVecS(signal_runtimes))
 }
@@ -327,12 +327,12 @@ where
 /// Process representing the emission of a signal,
 /// where the signal and the value are fixed.
 #[derive(Clone)]
-pub struct EmitVS<SV, E>(pub SignalRuntimeRef<SV>, pub E);
+pub struct EmitVS<S, E>(pub S, pub E);
 
-impl<'a, SV: Val<'a>, In: Val<'a>> IntProcess<'a, In> for EmitVS<SV, SV::E>
+impl<'a, S: Val<'a>, In: Val<'a>> IntProcess<'a, In> for EmitVS<S, S::E>
 where
-    SV: SignalValue,
-    SV::E: Clone,
+    S: Signal<'a>,
+    S::E: Clone,
 {
     type Out = In;
 
@@ -344,12 +344,12 @@ where
     }
 }
 
-impl<'a, SV: Val<'a>, In: Val<'a>> IntProcessIm<'a, In> for EmitVS<SV, SV::E>
+impl<'a, S: Val<'a>, In: Val<'a>> IntProcessIm<'a, In> for EmitVS<S, S::E>
 where
-    SV: SignalValue,
-    SV::E: Clone
+    S: Signal<'a>,
+    S::E: Clone
 {
-    type NIO = NEmitVS<SV, SV::E>;
+    type NIO = NEmitVS<S, S::E>;
 
     fn compileIm(self: Box<Self>, _: &mut Graph<'a>) -> Self::NIO {
         let s = *self;
@@ -358,11 +358,11 @@ where
 }
 
 
-pub fn emit_vs<'a, In: Val<'a>, SV: Val<'a>>(signal_runtime: SignalRuntimeRef<SV>, value: SV::E)
-    -> ProcessIm<'a, In, In, NEmitVS<SV, SV::E>>
+pub fn emit_vs<'a, In: Val<'a>, S: Val<'a>>(signal_runtime: S, value: S::E)
+    -> ProcessIm<'a, In, In, NEmitVS<S, S::E>>
 where
-    SV: SignalValue,
-    SV::E: Clone,
+    S: Signal<'a>,
+    S::E: Clone,
 {
     ProcessIm(box EmitVS(signal_runtime, value))
 }
@@ -378,13 +378,13 @@ where
 /// Process representing the emission of multiple signals,
 /// where the signals and the values are fixed.
 #[derive(Clone)]
-pub struct EmitVVecS<SV, E>(pub Vec<(SignalRuntimeRef<SV>,E)>);
+pub struct EmitVVecS<S, E>(pub Vec<(S,E)>);
 
 
-impl<'a, SV: Val<'a>, In: Val<'a>> IntProcess<'a, In> for EmitVVecS<SV, SV::E>
+impl<'a, S: Val<'a>, In: Val<'a>> IntProcess<'a, In> for EmitVVecS<S, S::E>
 where
-    SV: SignalValue,
-    SV::E: Clone,
+    S: Signal<'a>,
+    S::E: Clone,
 {
     type Out = In;
 
@@ -396,23 +396,23 @@ where
     }
 }
 
-impl<'a, SV: Val<'a>, In: Val<'a>> IntProcessIm<'a, In> for EmitVVecS<SV, SV::E>
+impl<'a, S: Val<'a>, In: Val<'a>> IntProcessIm<'a, In> for EmitVVecS<S, S::E>
 where
-    SV: SignalValue,
-    SV::E: Clone
+    S: Signal<'a>,
+    S::E: Clone
 {
-    type NIO = NEmitVVecS<SV, SV::E>;
+    type NIO = NEmitVVecS<S, S::E>;
 
     fn compileIm(self: Box<Self>, _: &mut Graph<'a>) -> Self::NIO {
         NEmitVVecS(self.0)
     }
 }
 
-pub fn emit_vec_vs<'a, In: Val<'a>, SV: Val<'a>>(signal_values: Vec<(SignalRuntimeRef<SV>, SV::E)>)
-    -> ProcessIm<'a, In, In, NEmitVVecS<SV, SV::E>>
+pub fn emit_vec_vs<'a, In: Val<'a>, S: Val<'a>>(signal_values: Vec<(S, S::E)>)
+    -> ProcessIm<'a, In, In, NEmitVVecS<S, S::E>>
 where
-    SV: SignalValue,
-    SV::E: Clone,
+    S: Signal<'a>,
+    S::E: Clone,
 {
     ProcessIm(box EmitVVecS(signal_values))
 }
@@ -434,11 +434,11 @@ pub struct AwaitD {}
 #[allow(non_upper_case_globals)]
 pub static AwaitD: AwaitD = AwaitD {};
 
-impl<'a, SV: Val<'a>> IntProcess<'a, SignalRuntimeRef<SV>> for AwaitD
+impl<'a, S: Val<'a>> IntProcess<'a, S> for AwaitD
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
-    type Out = SV::V;
+    type Out = S::V;
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -448,12 +448,12 @@ where
     }
 }
 
-impl<'a, SV: Val<'a>> IntProcessNotIm<'a, SignalRuntimeRef<SV>> for AwaitD
+impl<'a, S: Val<'a>> IntProcessNotIm<'a, S> for AwaitD
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
-    type NI = NSeq<NAwaitD, NStore<SignalRuntimeRef<SV>>>;
-    type NO = NSeq<NLoad<SignalRuntimeRef<SV>>, NGetD>;
+    type NI = NSeq<NAwaitD, NStore<S>>;
+    type NO = NSeq<NLoad<S>, NGetD>;
 
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
@@ -466,20 +466,20 @@ where
     }
 }
 
-pub fn await_d<'a, SV: Val<'a>>()
-    -> ProcessNotIm<'a, SignalRuntimeRef<SV>, SV::V, NSeq<NAwaitD, NStore<SignalRuntimeRef<SV>>>, NSeq<NLoad<SignalRuntimeRef<SV>>, NGetD>>
+pub fn await_d<'a, S: Val<'a>>()
+    -> ProcessNotIm<'a, S, S::V, NSeq<NAwaitD, NStore<S>>, NSeq<NLoad<S>, NGetD>>
     where
-        SV: SignalValue,
-        SV::E: Clone,
+        S: Signal<'a>,
+        S::E: Clone,
 {
     ProcessNotIm(box AwaitD {})
 }
 
-impl<'a, SV: Val<'a>, In: Val<'a>> IntProcess<'a, (SignalRuntimeRef<SV>, In)> for AwaitD
+impl<'a, S: Val<'a>, In: Val<'a>> IntProcess<'a, (S, In)> for AwaitD
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
-    type Out = (SV::V, In);
+    type Out = (S::V, In);
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -489,12 +489,12 @@ where
     }
 }
 
-impl<'a, In: Val<'a>, SV: Val<'a>> IntProcessNotIm<'a, (SignalRuntimeRef<SV>, In)> for AwaitD
+impl<'a, In: Val<'a>, S: Val<'a>> IntProcessNotIm<'a, (S, In)> for AwaitD
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
-    type NI = NSeq<NPar<NAwaitD,NIdentity>,NStore<(SignalRuntimeRef<SV>, In)>>;
-    type NO = NSeq<NLoad<(SignalRuntimeRef<SV>, In)>, NGetD>;
+    type NI = NSeq<NPar<NAwaitD,NIdentity>,NStore<(S, In)>>;
+    type NO = NSeq<NLoad<(S, In)>, NGetD>;
 
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
@@ -502,18 +502,18 @@ where
         let rc2 = rc.clone();
 
         // Type inference won't work here
-        let ni_first = <NAwaitD as Node<'a,SignalRuntimeRef<SV>>>::njoin::<In, NIdentity>(NAwaitD(out_id), NIdentity {});
+        let ni_first = <NAwaitD as Node<'a,S>>::njoin::<In, NIdentity>(NAwaitD(out_id), NIdentity {});
         let ni = node!(ni_first >> store(rc));
         let no = node!(load(rc2) >> NGetD{});
         (ni, out_id, no)
     }
 }
 
-pub fn await_d_in<'a, In: Val<'a>, SV: Val<'a>>()
-    -> ProcessNotIm<'a, (SignalRuntimeRef<SV>,In), (SV::V, In), NSeq<NPar<NAwaitD,NIdentity>,NStore<(SignalRuntimeRef<SV>, In)>>, NSeq<NLoad<(SignalRuntimeRef<SV>, In)>, NGetD>>
+pub fn await_d_in<'a, In: Val<'a>, S: Val<'a>>()
+    -> ProcessNotIm<'a, (S,In), (S::V, In), NSeq<NPar<NAwaitD,NIdentity>,NStore<(S, In)>>, NSeq<NLoad<(S, In)>, NGetD>>
 where
-    SV: SignalValue,
-    SV::E: Clone,
+    S: Signal<'a>,
+    S::E: Clone,
 {
     ProcessNotIm(box AwaitD {})
 }
@@ -529,14 +529,14 @@ where
 /// Process awaiting for the emission of a signal, and executing the next process the next instant,
 /// where the signal is fixed.
 #[derive(Clone)]
-pub struct AwaitS<SV>(pub SignalRuntimeRef<SV>);
+pub struct AwaitS<S>(pub S);
 
 
-impl<'a, SV: Val<'a>> IntProcess<'a, ()> for AwaitS<SV>
+impl<'a, S: Val<'a>> IntProcess<'a, ()> for AwaitS<S>
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
-    type Out = SV::V;
+    type Out = S::V;
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -546,12 +546,12 @@ where
     }
 }
 
-impl<'a, SV: Val<'a>> IntProcessNotIm<'a, ()> for AwaitS<SV>
+impl<'a, S: Val<'a>> IntProcessNotIm<'a, ()> for AwaitS<S>
 where
-    SV: SignalValue,
+    S: Signal<'a> + Clone,
 {
-    type NI = NAwaitS<SV>;
-    type NO = NGetS<SV>;
+    type NI = NAwaitS<S>;
+    type NO = NGetS<S>;
 
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
@@ -561,11 +561,11 @@ where
     }
 }
 
-pub fn await_s<'a, SV: Val<'a>>(signal_runtime: SignalRuntimeRef<SV>)
-    -> ProcessNotIm<'a, (), SV::V, NAwaitS<SV>, NGetS<SV>>
+pub fn await_s<'a, S: Val<'a>>(signal_runtime: S)
+    -> ProcessNotIm<'a, (), S::V, NAwaitS<S>, NGetS<S>>
 where
-    SV: SignalValue,
-    SV::E: Clone,
+    S: Signal<'a> + Clone,
+    S::E: Clone,
 {
     ProcessNotIm(box AwaitS(signal_runtime))
 }
@@ -573,14 +573,14 @@ where
 
 
 #[derive(Clone)]
-pub struct AwaitSIn<SV>(pub SignalRuntimeRef<SV>);
+pub struct AwaitSIn<S>(pub S);
 
 
-impl<'a, In: Val<'a>, SV: Val<'a>> IntProcess<'a, In> for AwaitSIn<SV>
+impl<'a, In: Val<'a>, S: Val<'a>> IntProcess<'a, In> for AwaitSIn<S>
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
-    type Out = (SV::V, In);
+    type Out = (S::V, In);
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -590,12 +590,12 @@ where
     }
 }
 
-impl<'a, In: Val<'a>, SV: Val<'a>> IntProcessNotIm<'a, In> for AwaitSIn<SV>
+impl<'a, In: Val<'a>, S: Val<'a>> IntProcessNotIm<'a, In> for AwaitSIn<S>
 where
-    SV: SignalValue,
+    S: Signal<'a> + Clone,
 {
-    type NI = NSeq<NStore<In>,NAwaitS<SV>>;
-    type NO = NSeq<GenP, NPar<NGetS<SV>, NLoad<In>>>;
+    type NI = NSeq<NStore<In>,NAwaitS<S>>;
+    type NO = NSeq<GenP, NPar<NGetS<S>, NLoad<In>>>;
 
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let out_id = g.reserve();
@@ -608,11 +608,11 @@ where
     }
 }
 
-pub fn await_s_in<'a, In: Val<'a>, SV: Val<'a>>(signal_runtime: SignalRuntimeRef<SV>)
-    -> ProcessNotIm<'a, In, (SV::V, In), NSeq<NStore<In>,NAwaitS<SV>>, NSeq<GenP, NPar<NGetS<SV>, NLoad<In>>>>
+pub fn await_s_in<'a, In: Val<'a>, S: Val<'a>>(signal_runtime: S)
+    -> ProcessNotIm<'a, In, (S::V, In), NSeq<NStore<In>,NAwaitS<S>>, NSeq<GenP, NPar<NGetS<S>, NLoad<In>>>>
 where
-    SV: SignalValue,
-    SV::E: Clone,
+    S: Signal<'a> + Clone,
+    S::E: Clone,
 {
     ProcessNotIm(box AwaitSIn(signal_runtime))
 }
@@ -631,9 +631,9 @@ where
 #[derive(Clone, Copy)]
 pub struct AwaitImmediateD {}
 
-impl<'a, SV: Val<'a>> IntProcess<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
+impl<'a, S: Val<'a>> IntProcess<'a, S> for AwaitImmediateD
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
     type Out = ();
 
@@ -645,9 +645,9 @@ where
     }
 }
 
-impl<'a, SV: Val<'a>> IntProcessNotIm<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
+impl<'a, S: Val<'a>> IntProcessNotIm<'a, S> for AwaitImmediateD
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
     type NI = NAwaitImmediateD;
     type NO = Nothing;
@@ -658,18 +658,18 @@ where
     }
 }
 
-pub fn await_immediate_d<'a, SV: Val<'a>>()
-    -> ProcessNotIm<'a, SignalRuntimeRef<SV>, (), NAwaitImmediateD, Nothing>
+pub fn await_immediate_d<'a, S: Val<'a>>()
+    -> ProcessNotIm<'a, S, (), NAwaitImmediateD, Nothing>
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
     ProcessNotIm(box AwaitImmediateD {})
 }
 
 
-impl<'a, SV: Val<'a>, In: Val<'a>> IntProcess<'a, (SignalRuntimeRef<SV>, In)> for AwaitImmediateD
+impl<'a, S: Val<'a>, In: Val<'a>> IntProcess<'a, (S, In)> for AwaitImmediateD
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
     type Out = In;
 
@@ -681,9 +681,9 @@ where
     }
 }
 
-impl<'a, In: Val<'a>, SV: Val<'a>> IntProcessNotIm<'a, (SignalRuntimeRef<SV>,In)> for AwaitImmediateD
+impl<'a, In: Val<'a>, S: Val<'a>> IntProcessNotIm<'a, (S,In)> for AwaitImmediateD
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
     type NI = NSeq<NSeq<NPar<NIdentity,NStore<In>>, Ignore2>,NAwaitImmediateD>;
     type NO = NLoad<In>;
@@ -693,18 +693,18 @@ where
         let rc = RCell::new();
         let rc2 = rc.clone();
 
-        let ni_first = <NIdentity as Node<'a,SignalRuntimeRef<SV>>>::njoin::<In, NStore<In>>(NIdentity {}, store(rc));
-        let ni_second = <NPar<NIdentity,NStore<In>> as Node<'a, (SignalRuntimeRef<SV>, In)>>::nseq(ni_first, Ignore2);
-        let ni = <NSeq<NPar<NIdentity,NStore<In>>,Ignore2> as Node<'a, (SignalRuntimeRef<SV>, In)>>::nseq(ni_second, NAwaitImmediateD(out_id));
+        let ni_first = <NIdentity as Node<'a,S>>::njoin::<In, NStore<In>>(NIdentity {}, store(rc));
+        let ni_second = <NPar<NIdentity,NStore<In>> as Node<'a, (S, In)>>::nseq(ni_first, Ignore2);
+        let ni = <NSeq<NPar<NIdentity,NStore<In>>,Ignore2> as Node<'a, (S, In)>>::nseq(ni_second, NAwaitImmediateD(out_id));
         let no = load(rc2);
         (ni, out_id, no)
     }
 }
 
-pub fn await_immediate_d_in<'a, In: Val<'a>, SV: Val<'a>>()
-    -> ProcessNotIm<'a, (SignalRuntimeRef<SV>, In), In, NSeq<NSeq<NPar<NIdentity,NStore<In>>, Ignore2>,NAwaitImmediateD>, NLoad<In>>
+pub fn await_immediate_d_in<'a, In: Val<'a>, S: Val<'a>>()
+    -> ProcessNotIm<'a, (S, In), In, NSeq<NSeq<NPar<NIdentity,NStore<In>>, Ignore2>,NAwaitImmediateD>, NLoad<In>>
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
     ProcessNotIm(box AwaitImmediateD {})
 }
@@ -720,11 +720,11 @@ where
 /// Process awaiting for the emission of a signal, and executing the next process the current instant,
 /// where the signal is fixed.
 #[derive(Clone)]
-pub struct AwaitImmediateS<SV>(pub SignalRuntimeRef<SV>);
+pub struct AwaitImmediateS<S>(pub S);
 
-impl<'a, SV: Val<'a>, In: Val<'a>> IntProcess<'a, In> for AwaitImmediateS<SV>
+impl<'a, S: Val<'a>, In: Val<'a>> IntProcess<'a, In> for AwaitImmediateS<S>
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
     type Out = In;
 
@@ -736,11 +736,11 @@ where
     }
 }
 
-impl<'a, In: Val<'a>, SV: Val<'a>> IntProcessNotIm<'a, In> for AwaitImmediateS<SV>
+impl<'a, In: Val<'a>, S: Val<'a>> IntProcessNotIm<'a, In> for AwaitImmediateS<S>
 where
-    SV: SignalValue,
+    S: Signal<'a> + Clone,
 {
-    type NI = NSeq<NStore<In>,NAwaitImmediateS<SV>>;
+    type NI = NSeq<NStore<In>,NAwaitImmediateS<S>>;
     type NO = NLoad<In>;
 
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
@@ -754,10 +754,10 @@ where
     }
 }
 
-pub fn await_immediate_s<'a, In: Val<'a>, SV: Val<'a>>(signal_runtime: SignalRuntimeRef<SV>)
-    -> ProcessNotIm<'a, In, In, NSeq<NStore<In>,NAwaitImmediateS<SV>>, NLoad<In>>
+pub fn await_immediate_s<'a, In: Val<'a>, S: Val<'a>>(signal_runtime: S)
+    -> ProcessNotIm<'a, In, In, NSeq<NStore<In>,NAwaitImmediateS<S>>, NLoad<In>>
 where
-    SV: SignalValue,
+    S: Signal<'a> + Clone,
 {
     ProcessNotIm(box AwaitImmediateS(signal_runtime))
 }
@@ -777,11 +777,11 @@ pub struct PresentD<PT, PF> {
     pub(crate) pf: PF,
 }
 
-impl<'a, PT, PF, SV: Val<'a>, Out: Val<'a>> IntProcess<'a, SignalRuntimeRef<SV>> for PresentD<PT, PF>
+impl<'a, PT, PF, S: Val<'a>, Out: Val<'a>> IntProcess<'a, S> for PresentD<PT, PF>
 where
     PT: Process<'a, (), Out = Out>,
     PF: Process<'a, (), Out = Out>,
-    SV: SignalValue,
+    S: Signal<'a>,
 {
     type Out = Out;
 
@@ -795,17 +795,17 @@ where
 
 // NI - NI
 implNI! {
-    SignalRuntimeRef<SV>,
-    impl<'a, Out: Val<'a>, SV: Val<'a>, PTNI, PTNO, PFNI, PFNO>
+    S,
+    impl<'a, Out: Val<'a>, S: Val<'a>, PTNI, PTNO, PFNI, PFNO>
         for PresentD<ProcessNotIm<'a, (), Out, PTNI, PTNO>, ProcessNotIm<'a, (), Out, PFNI, PFNO>>
         where
         PTNI: Node<'a, (), Out = ()>,
         PTNO: Node<'a, (), Out = Out>,
         PFNI: Node<'a, (), Out = ()>,
         PFNO: Node<'a, (), Out = Out>,
-        SV: SignalValue,
+        S: Signal<'a>,
 
-    trait IntProcessNotIm<'a, SignalRuntimeRef<SV>>
+    trait IntProcessNotIm<'a, S>
     {
          type NI = NPresentD;
          type NO = NLoad<Out>;
@@ -837,16 +837,16 @@ implNI! {
 
 // Im - NI
 implNI! {
-    SignalRuntimeRef<SV>,
-    impl<'a, Out: Val<'a>, SV: Val<'a>, PTNIO, PFNI, PFNO>
+    S,
+    impl<'a, Out: Val<'a>, S: Val<'a>, PTNIO, PFNI, PFNO>
         for PresentD<ProcessIm<'a, (), Out, PTNIO>, ProcessNotIm<'a, (), Out, PFNI, PFNO>>
         where
         PTNIO: Node<'a, (), Out = Out>,
         PFNI: Node<'a, (), Out = ()>,
         PFNO: Node<'a, (), Out = Out>,
-        SV: SignalValue,
+        S: Signal<'a>,
 
-    trait IntProcessNotIm<'a, SignalRuntimeRef<SV>>
+    trait IntProcessNotIm<'a, S>
     {
          type NI = NPresentD;
          type NO = NLoad<Out>;
@@ -876,16 +876,16 @@ implNI! {
 
 // NI - Im
 implNI! {
-    SignalRuntimeRef<SV>,
-    impl<'a, Out: Val<'a>, SV: Val<'a>, PTNI, PTNO, PFNIO>
+    S,
+    impl<'a, Out: Val<'a>, S: Val<'a>, PTNI, PTNO, PFNIO>
         for PresentD<ProcessNotIm<'a, (), Out, PTNI, PTNO>, ProcessIm<'a, (), Out, PFNIO>>
         where
         PFNIO: Node<'a, (), Out = Out>,
         PTNI: Node<'a, (), Out = ()>,
         PTNO: Node<'a, (), Out = Out>,
-        SV: SignalValue,
+        S: Signal<'a>,
 
-    trait IntProcessNotIm<'a, SignalRuntimeRef<SV>>
+    trait IntProcessNotIm<'a, S>
     {
          type NI = NPresentD;
          type NO = NLoad<Out>;
@@ -917,15 +917,15 @@ implNI! {
 
 // Im - Im
 implNI! {
-    SignalRuntimeRef<SV>,
-    impl<'a, Out: Val<'a>, SV: Val<'a>, PTNIO, PFNIO>
+    S,
+    impl<'a, Out: Val<'a>, S: Val<'a>, PTNIO, PFNIO>
         for PresentD<ProcessIm<'a, (), Out, PTNIO>, ProcessIm<'a, (), Out, PFNIO>>
         where
         PFNIO: Node<'a, (), Out = Out>,
         PTNIO: Node<'a, (), Out = Out>,
-        SV: SignalValue,
+        S: Signal<'a>,
 
-    trait IntProcessNotIm<'a, SignalRuntimeRef<SV>>
+    trait IntProcessNotIm<'a, S>
     {
          type NI = NPresentD;
          type NO = NLoad<Out>;
@@ -963,17 +963,17 @@ implNI! {
 /// Process that executes pt in the current instant if the signal is present this instant,
 /// and executes pf in the next instant otherwise,
 /// where the signal is given as the process input.
-pub struct PresentS<PT,PF,SV> {
+pub struct PresentS<PT,PF,S> {
     pub(crate) pt: PT,
     pub(crate) pf: PF,
-    pub(crate) signal_runtime: SignalRuntimeRef<SV>,
+    pub(crate) signal_runtime: S,
 }
 
-impl<'a, PT, PF, SV: Val<'a>, Out: Val<'a>> IntProcess<'a, ()> for PresentS<PT, PF, SV>
+impl<'a, PT, PF, S: Val<'a>, Out: Val<'a>> IntProcess<'a, ()> for PresentS<PT, PF, S>
 where
     PT: Process<'a, (), Out = Out>,
     PF: Process<'a, (), Out = Out>,
-    SV: SignalValue,
+    S: Signal<'a>,
 {
     type Out = Out;
 
@@ -988,18 +988,18 @@ where
 // NI - NI
 implNI! {
     (),
-    impl<'a, Out: Val<'a>, SV: Val<'a>, PTNI, PTNO, PFNI, PFNO>
-        for PresentS<ProcessNotIm<'a, (), Out, PTNI, PTNO>, ProcessNotIm<'a, (), Out, PFNI, PFNO>, SV>
+    impl<'a, Out: Val<'a>, S: Val<'a>, PTNI, PTNO, PFNI, PFNO>
+        for PresentS<ProcessNotIm<'a, (), Out, PTNI, PTNO>, ProcessNotIm<'a, (), Out, PFNI, PFNO>, S>
         where
         PTNI: Node<'a, (), Out = ()>,
         PTNO: Node<'a, (), Out = Out>,
         PFNI: Node<'a, (), Out = ()>,
         PFNO: Node<'a, (), Out = Out>,
-        SV: SignalValue,
+        S: Signal<'a>,
 
     trait IntProcessNotIm<'a, ()>
     {
-         type NI = NPresentS<SV>;
+         type NI = NPresentS<S>;
          type NO = NLoad<Out>;
 
          fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
@@ -1031,17 +1031,17 @@ implNI! {
 // Im - NI
 implNI! {
     (),
-    impl<'a, Out: Val<'a>, SV: Val<'a>, PTNIO, PFNI, PFNO>
-        for PresentS<ProcessIm<'a, (), Out, PTNIO>, ProcessNotIm<'a, (), Out, PFNI, PFNO>, SV>
+    impl<'a, Out: Val<'a>, S: Val<'a>, PTNIO, PFNI, PFNO>
+        for PresentS<ProcessIm<'a, (), Out, PTNIO>, ProcessNotIm<'a, (), Out, PFNI, PFNO>, S>
         where
         PTNIO: Node<'a, (), Out = Out>,
         PFNI: Node<'a, (), Out = ()>,
         PFNO: Node<'a, (), Out = Out>,
-        SV: SignalValue,
+        S: Signal<'a>,
 
     trait IntProcessNotIm<'a, ()>
     {
-         type NI = NPresentS<SV>;
+         type NI = NPresentS<S>;
          type NO = NLoad<Out>;
 
          fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
@@ -1072,17 +1072,17 @@ implNI! {
 // NI - Im
 implNI! {
     (),
-    impl<'a, Out: Val<'a>, SV: Val<'a>, PTNI, PTNO, PFNIO>
-        for PresentS<ProcessNotIm<'a, (), Out, PTNI, PTNO>, ProcessIm<'a, (), Out, PFNIO>, SV>
+    impl<'a, Out: Val<'a>, S: Val<'a>, PTNI, PTNO, PFNIO>
+        for PresentS<ProcessNotIm<'a, (), Out, PTNI, PTNO>, ProcessIm<'a, (), Out, PFNIO>, S>
         where
         PFNIO: Node<'a, (), Out = Out>,
         PTNI: Node<'a, (), Out = ()>,
         PTNO: Node<'a, (), Out = Out>,
-        SV: SignalValue,
+        S: Signal<'a>,
 
     trait IntProcessNotIm<'a, ()>
     {
-         type NI = NPresentS<SV>;
+         type NI = NPresentS<S>;
          type NO = NLoad<Out>;
 
          fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
@@ -1114,16 +1114,16 @@ implNI! {
 // Im - Im
 implNI! {
     (),
-    impl<'a, Out: Val<'a>, SV: Val<'a>, PTNIO, PFNIO>
-        for PresentS<ProcessIm<'a, (), Out, PTNIO>, ProcessIm<'a, (), Out, PFNIO>, SV>
+    impl<'a, Out: Val<'a>, S: Val<'a>, PTNIO, PFNIO>
+        for PresentS<ProcessIm<'a, (), Out, PTNIO>, ProcessIm<'a, (), Out, PFNIO>, S>
         where
         PFNIO: Node<'a, (), Out = Out>,
         PTNIO: Node<'a, (), Out = Out>,
-        SV: SignalValue,
+        S: Signal<'a>,
 
     trait IntProcessNotIm<'a, ()>
     {
-         type NI = NPresentS<SV>;
+         type NI = NPresentS<S>;
          type NO = NLoad<Out>;
 
          fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
