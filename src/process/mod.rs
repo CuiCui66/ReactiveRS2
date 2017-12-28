@@ -189,7 +189,7 @@ pub trait Process<'a, In: Val<'a>>: IntProcess<'a, In> + Sized {
     /// If we input False(x), b will run with input x.
     /// a and b must return the same type that will be return by the choice construct.
     /// a.choice(b) is equivalent to pro!{choice{a}{b}}
-    fn choice<PF, InF>(
+    fn choice<PF, InF : Val<'a>>(
         self,
         p: PF,
     ) -> <PChoice<Self, PF> as ToBoxedProcess<'a, ChoiceData<In, InF>>>::Boxed
