@@ -280,7 +280,7 @@ where
 #[derive(Clone)]
 pub struct NGetSIn<S>(pub S);
 
-impl<'a, S, V: Val<'a>, In: 'a> Node<'a, In> for NGetSIn<S>
+impl<'a, S, V: Val<'a>, In: Val<'a>> Node<'a, In> for NGetSIn<S>
 where
     S: Signal<'a, V = V>,
 {

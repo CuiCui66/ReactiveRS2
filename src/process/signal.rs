@@ -157,7 +157,7 @@ where
     }
 }
 
-pub fn pre_s_in<'a, S, In: 'a>(signal: S) -> ProcessIm<'a, In, (S::V, In), NGetSIn<S>>
+pub fn pre_s_in<'a, S, In: Val<'a>>(signal: S) -> ProcessIm<'a, In, (S::V, In), NGetSIn<S>>
 where
     S: Signal<'a>
 {
