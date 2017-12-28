@@ -13,8 +13,7 @@ use super::*;
 //          |___/
 
 /// Structure representing a signal runtime
-pub(crate) struct SignalRuntime<SV>
-{
+pub(crate) struct SignalRuntime<SV> {
     /// The last instant where the signal was set
     pub(crate) last_set: usize,
 
@@ -31,7 +30,7 @@ pub(crate) struct SignalRuntime<SV>
     pub(crate) pending_await_immediate: Vec<usize>,
 
     /// Contains the ids of the nodes that present the signal
-    pub(crate) pending_present: Vec<(usize,usize)>,
+    pub(crate) pending_present: Vec<(usize, usize)>,
 
     /// Contains the values of the signal
     pub(crate) values: SV,
@@ -43,8 +42,7 @@ where
     SV: SignalValue,
 {
     /// Create a new signal runtime, given a structure representing its value
-    pub(crate) fn new(signal_value: SV) -> Self
-    {
+    pub(crate) fn new(signal_value: SV) -> Self {
         SignalRuntime {
             last_set: 0,
             pre_last_set: 0,
@@ -52,7 +50,7 @@ where
             pending_await: vec![],
             pending_await_immediate: vec![],
             pending_present: vec![],
-            values: signal_value
+            values: signal_value,
         }
     }
 
@@ -112,7 +110,12 @@ where
 
     /// If the signal is present at the current instant, execute node_true.
     /// Otherwise, execute node_false at the next instant.
-    fn present<'a>(&mut self, sub_runtime: &mut SubRuntime<'a>, node_true: usize, node_false: usize) {
+    fn present<'a>(
+        &mut self,
+        sub_runtime: &mut SubRuntime<'a>,
+        node_true: usize,
+        node_false: usize,
+    ) {
         if self.last_set == sub_runtime.get_current_instant() {
             sub_runtime.add_current(node_true);
         } else {
@@ -190,12 +193,11 @@ impl SignalRuntime<PureSignalValue> {
 
 /// Trait used to represent the values stored in a signal runtime
 pub trait SignalValue {
-
     /// The type of the values that are emitted
-    type E;
+    type E: OptSend;
 
     /// The value of the signal that is stored
-    type V;
+    type V: OptSend;
 
     /// Get the value of the signal of the last instant
     fn get_pre_value(&self) -> Self::V;
@@ -221,7 +223,7 @@ pub struct PureSignalValue {}
 
 impl PureSignalValue {
     fn new() -> Self {
-        PureSignalValue{}
+        PureSignalValue {}
     }
 }
 
@@ -260,9 +262,9 @@ mod mcvalue_content {
         pub(crate) gather: Box<FnMut(E, &mut V)>,
     }
 
-    impl<E,V> MCSignalValue<E,V>
+    impl<E, V> MCSignalValue<E, V>
     where
-        V: Clone
+        V: Clone,
     {
         /// Creates a new multi consumer signal, given a default value and a gather function
         fn new(default_value: V, gather: Box<FnMut(E, &mut V)>) -> Self {
@@ -275,13 +277,13 @@ mod mcvalue_content {
         }
     }
 
-    impl<E,V> SignalRuntime<MCSignalValue<E,V>>
+    impl<E, V> SignalRuntime<MCSignalValue<E, V>>
     where
-        V: Clone
+        V: Clone,
     {
         /// Create a new signal runtime, which has a value that can be cloned
         pub(crate) fn new_mc(default_value: V, gather: Box<FnMut(E, &mut V)>) -> Self {
-            SignalRuntime::new(MCSignalValue::new(default_value,gather))
+            SignalRuntime::new(MCSignalValue::new(default_value, gather))
         }
     }
 }
@@ -291,7 +293,7 @@ mod mcvalue_content {
     use super::*;
 
     /// Structure representing the values of a multi consumer signal
-    pub struct MCSignalValue<E, V> {
+    pub struct MCSignalValue<E: Send, V: Send> {
         /// The default value of the signal
         pub(crate) default_value: V,
 
@@ -305,9 +307,9 @@ mod mcvalue_content {
         pub(crate) gather: Box<FnMut(E, &mut V) + Send>,
     }
 
-    impl<E,V> MCSignalValue<E,V>
+    impl<E: Send, V: Send> MCSignalValue<E, V>
     where
-        V: Clone
+        V: Clone,
     {
         /// Creates a new multi consumer signal, given a default value and a gather function
         pub fn new(default_value: V, gather: Box<FnMut(E, &mut V) + Send>) -> Self {
@@ -320,13 +322,13 @@ mod mcvalue_content {
         }
     }
 
-    impl<E,V> SignalRuntime<MCSignalValue<E,V>>
-        where
-            V: Clone
+    impl<E: Send, V: Send> SignalRuntime<MCSignalValue<E, V>>
+    where
+        V: Clone,
     {
         /// Create a new signal runtime, which has a value that can be cloned
         pub(crate) fn new_mc(default_value: V, gather: Box<FnMut(E, &mut V) + Send>) -> Self {
-            SignalRuntime::new(MCSignalValue::new(default_value,gather))
+            SignalRuntime::new(MCSignalValue::new(default_value, gather))
         }
     }
 }
@@ -335,9 +337,9 @@ pub use self::mcvalue_content::*;
 
 
 
-impl<E,V> SignalValue for MCSignalValue<E,V>
+impl<E: OptSend, V: OptSend> SignalValue for MCSignalValue<E, V>
 where
-    V: Clone
+    V: Clone,
 {
     type E = E;
     type V = V;
@@ -367,7 +369,7 @@ where
 /// Trait only used to store many signals in one vector, without having problems
 /// with their types
 /// Note that they cannot be Clone to be able to have trait object
-pub trait PureSignal<'a> : Val<'a> {
+pub trait PureSignal<'a>: Val<'a> {
     fn await(&self, sub_runtime: &mut SubRuntime<'a>, node: usize);
     fn await_immediate(&self, sub_runtime: &mut SubRuntime<'a>, node: usize);
     fn present(&self, sub_runtime: &mut SubRuntime<'a>, node_true: usize, node_false: usize);
@@ -383,8 +385,8 @@ pub trait PureSignal<'a> : Val<'a> {
 
 /// A Signal with a value
 pub trait Signal<'a>: PureSignal<'a> {
-    type E;
-    type V;
+    type E: Val<'a>;
+    type V: Val<'a>;
 
     fn emit(&self, emit_value: Self::E, sub_runtime: &mut SubRuntime<'a>);
     fn get_pre_value(&self, current_instant: usize) -> Self::V;
@@ -400,7 +402,6 @@ pub trait Signal<'a>: PureSignal<'a> {
 
 
 /// A shared pointer to a signal runtime
-
 #[cfg(not(feature = "par"))]
 mod content {
     use std::rc::Rc;
@@ -408,56 +409,51 @@ mod content {
     use super::*;
 
     pub struct SignalRuntimeRef<SV> {
-        pub ( crate ) signal_runtime: Rc<RefCell<SignalRuntime<SV>>>,
+        pub(crate) signal_runtime: Rc<RefCell<SignalRuntime<SV>>>,
     }
 
     impl SignalRuntimeRef<PureSignalValue> {
         /// Create a shared pointer to a new pure signal runtime
         pub fn new_pure() -> Self {
-            SignalRuntimeRef {
-                signal_runtime: Rc::new(RefCell::new(SignalRuntime::new_pure()))
-            }
+            SignalRuntimeRef { signal_runtime: Rc::new(RefCell::new(SignalRuntime::new_pure())) }
         }
     }
 
     impl<E, V> SignalRuntimeRef<MCSignalValue<E, V>>
-        where
-            V: Clone
+    where
+        V: Clone,
     {
         /// Create a shared pointer to a new multi consumer signal runtime
         pub fn new_mc(default_value: V, gather: Box<FnMut(E, &mut V)>) -> Self {
             SignalRuntimeRef {
-                signal_runtime: Rc::new(RefCell::new(SignalRuntime::new_mc(default_value, gather)))
+                signal_runtime: Rc::new(RefCell::new(SignalRuntime::new_mc(default_value, gather))),
             }
         }
     }
 
     impl<SV> SignalRuntimeRef<SV>
-        where
-            SV: SignalValue
+    where
+        SV: SignalValue,
     {
         /// Create a shared pointer to a new signal runtime, given its value manager
         pub fn new(signal_value: SV) -> Self {
             SignalRuntimeRef {
-                signal_runtime: Rc::new(RefCell::new(SignalRuntime::new(signal_value)))
+                signal_runtime: Rc::new(RefCell::new(SignalRuntime::new(signal_value))),
             }
         }
     }
 
 
-    impl<SV> Clone for SignalRuntimeRef<SV>
-    {
+    impl<SV> Clone for SignalRuntimeRef<SV> {
         fn clone(&self) -> Self {
-            SignalRuntimeRef {
-                signal_runtime: self.signal_runtime.clone(),
-            }
+            SignalRuntimeRef { signal_runtime: self.signal_runtime.clone() }
         }
     }
 
 
     impl<'a, E: 'a, V: 'a, SV: 'a> PureSignal<'a> for SignalRuntimeRef<SV>
     where
-        SV: SignalValue<E=E,V=V>,
+        SV: SignalValue<E = E, V = V>,
     {
         /// Await the signal to be emitted, and then execute the node at the next instant,
         fn await(&self, sub_runtime: &mut SubRuntime<'a>, node: usize) {
@@ -466,7 +462,10 @@ mod content {
 
         /// Await the signal to be emitted, and then exexute the node at the current instant
         fn await_immediate(&self, sub_runtime: &mut SubRuntime<'a>, node: usize) {
-            self.signal_runtime.borrow_mut().await_immediate(sub_runtime, node);
+            self.signal_runtime.borrow_mut().await_immediate(
+                sub_runtime,
+                node,
+            );
         }
 
         /// If the signal is present at the current instant, execute node_true.
@@ -500,30 +499,37 @@ mod content {
         }
     }
 
-    impl<'a, E:'a, V: 'a, SV: 'a> Signal<'a> for SignalRuntimeRef<SV>
-        where
-            SV: SignalValue<E=E,V=V>
+    impl<'a, E: 'a, V: 'a, SV: 'a> Signal<'a> for SignalRuntimeRef<SV>
+    where
+        SV: SignalValue<E = E, V = V>,
     {
         type E = E;
         type V = V;
 
         /// Emit a value to the signal
         fn emit(&self, emit_value: E, sub_runtime: &mut SubRuntime<'a>) {
-            self.signal_runtime.borrow_mut().emit(emit_value, sub_runtime)
+            self.signal_runtime.borrow_mut().emit(
+                emit_value,
+                sub_runtime,
+            )
         }
 
         /// Return the value of the last instant
         fn get_pre_value(&self, current_instant: usize) -> V {
-            self.signal_runtime.borrow_mut().get_pre_value(current_instant)
+            self.signal_runtime.borrow_mut().get_pre_value(
+                current_instant,
+            )
         }
     }
 
     impl<'a, SV: 'a> EndOfInstantCallback<'a> for SignalRuntimeRef<SV>
-        where
-            SV: SignalValue
+    where
+        SV: SignalValue,
     {
         fn on_end_of_instant(&self, sub_runtime: &mut SubRuntime<'a>) {
-            self.signal_runtime.borrow_mut().on_end_of_instant(sub_runtime);
+            self.signal_runtime.borrow_mut().on_end_of_instant(
+                sub_runtime,
+            );
         }
     }
 }
@@ -534,56 +540,51 @@ mod content {
     use super::*;
 
     pub struct SignalRuntimeRef<SV> {
-        pub ( crate ) signal_runtime: Arc<Mutex<SignalRuntime<SV>>>,
+        pub(crate) signal_runtime: Arc<Mutex<SignalRuntime<SV>>>,
     }
 
     impl SignalRuntimeRef<PureSignalValue> {
         /// Create a shared pointer to a new pure signal runtime
         pub fn new_pure() -> Self {
-            SignalRuntimeRef {
-                signal_runtime: Arc::new(Mutex::new(SignalRuntime::new_pure()))
-            }
+            SignalRuntimeRef { signal_runtime: Arc::new(Mutex::new(SignalRuntime::new_pure())) }
         }
     }
 
-    impl<E, V> SignalRuntimeRef<MCSignalValue<E, V>>
+    impl<E: Send, V: Send> SignalRuntimeRef<MCSignalValue<E, V>>
     where
-        V: Clone
+        V: Clone,
     {
         /// Create a shared pointer to a new multi consumer signal runtime
         pub fn new_mc(default_value: V, gather: Box<FnMut(E, &mut V) + Send>) -> Self {
             SignalRuntimeRef {
-                signal_runtime: Arc::new(Mutex::new(SignalRuntime::new_mc(default_value, gather)))
+                signal_runtime: Arc::new(Mutex::new(SignalRuntime::new_mc(default_value, gather))),
             }
         }
     }
 
     impl<SV> SignalRuntimeRef<SV>
-        where
-            SV: SignalValue
+    where
+        SV: SignalValue,
     {
         /// Create a shared pointer to a new signal runtime, given its value manager
         pub fn new(signal_value: SV) -> Self {
             SignalRuntimeRef {
-                signal_runtime: Arc::new(Mutex::new(SignalRuntime::new(signal_value)))
+                signal_runtime: Arc::new(Mutex::new(SignalRuntime::new(signal_value))),
             }
         }
     }
 
 
-    impl<SV> Clone for SignalRuntimeRef<SV>
-    {
+    impl<SV> Clone for SignalRuntimeRef<SV> {
         fn clone(&self) -> Self {
-            SignalRuntimeRef {
-                signal_runtime: self.signal_runtime.clone(),
-            }
+            SignalRuntimeRef { signal_runtime: self.signal_runtime.clone() }
         }
     }
 
 
-    impl<'a, E: 'a, V: 'a, SV: 'a> PureSignal<'a> for SignalRuntimeRef<SV>
+    impl<'a, E: Val<'a>, V: Val<'a>, SV: Val<'a>> PureSignal<'a> for SignalRuntimeRef<SV>
     where
-        SV: SignalValue<E=E,V=V> + Send,
+        SV: SignalValue<E = E, V = V>,
     {
         /// Await the signal to be emitted, and then execute the node at the next instant,
         fn await(&self, sub_runtime: &mut SubRuntime<'a>, node: usize) {
@@ -592,7 +593,10 @@ mod content {
 
         /// Await the signal to be emitted, and then exexute the node at the current instant
         fn await_immediate(&self, sub_runtime: &mut SubRuntime<'a>, node: usize) {
-            self.signal_runtime.lock().unwrap().await_immediate(sub_runtime, node);
+            self.signal_runtime.lock().unwrap().await_immediate(
+                sub_runtime,
+                node,
+            );
         }
 
         /// If the signal is present at the current instant, execute node_true.
@@ -626,9 +630,9 @@ mod content {
         }
     }
 
-    impl<'a, E:'a, V: 'a, SV: 'a> Signal<'a> for SignalRuntimeRef<SV>
+    impl<'a, E: Val<'a>, V: Val<'a>, SV: Val<'a>> Signal<'a> for SignalRuntimeRef<SV>
     where
-        SV: SignalValue<E=E,V=V> + Send
+        SV: SignalValue<E=E,V=V>
     {
         type E = E;
         type V = V;
@@ -638,22 +642,22 @@ mod content {
             self.signal_runtime.lock().unwrap().emit(emit_value, sub_runtime)
         }
 
-        /// Return the value of the last instant
+    /// Return the value of the last instant
         fn get_pre_value(&self, current_instant: usize) -> V {
             self.signal_runtime.lock().unwrap().get_pre_value(current_instant)
         }
     }
 
     impl<'a, SV: Val<'a>> EndOfInstantCallback<'a> for SignalRuntimeRef<SV>
-        where
-            SV: SignalValue
+    where
+        SV: SignalValue,
     {
         fn on_end_of_instant(&self, sub_runtime: &mut SubRuntime<'a>) {
-            self.signal_runtime.lock().unwrap().on_end_of_instant(sub_runtime);
+            self.signal_runtime.lock().unwrap().on_end_of_instant(
+                sub_runtime,
+            );
         }
     }
 }
 
 pub use self::content::*;
-
-

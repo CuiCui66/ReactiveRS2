@@ -60,13 +60,54 @@ where
     }
 }
 
-pub fn fnmut2pro<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>>(f: F) -> ProcessIm<'a, In, Out, FnMutN<F>>
+pub fn fnmut2pro<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>>(f: F)
+                                                            -> ProcessIm<'a, In, Out, FnMutN<F>>
 where
     F: FnMut(In) -> Out,
 {
     ProcessIm(box f)
 }
 
+
+//  _____       ___
+// |  ___| __  / _ \ _ __   ___ ___
+// | |_ | '_ \| | | | '_ \ / __/ _ \
+// |  _|| | | | |_| | | | | (_|  __/
+// |_|  |_| |_|\___/|_| |_|\___\___|
+
+
+pub struct PFnOnce<F>(pub F);
+
+pub fn fnonce2pro<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>>(f: F)
+                                                            -> ProcessIm<'a, In, Out, NFnOnce<F>>
+    where
+    F: FnOnce(In) -> Out,
+{
+    ProcessIm(box PFnOnce(f))
+}
+
+impl<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>> IntProcess<'a, In> for PFnOnce<F>
+    where
+    F: FnOnce(In) -> Out,
+{
+    type Out = Out;
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
+        let num = *curNum;
+        *curNum += 1;
+        println!("{} [shape = box, label= \"FnOnce\"];", num);
+        (num, num)
+    }
+}
+
+impl<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>> IntProcessIm<'a, In> for PFnOnce<F>
+    where
+    F: FnOnce(In) -> Out,
+{
+    type NIO = NFnOnce<F>;
+    fn compileIm(self: Box<Self>, _: &mut Graph) -> Self::NIO {
+        NFnOnce(Some(self.0))
+    }
+}
 
 //      _
 //     | |_   _ _ __ ___  _ __
