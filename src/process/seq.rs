@@ -3,7 +3,7 @@ use super::*;
 
 pub struct Seq<P, Q>(pub(crate) P, pub(crate) Q);
 
-impl<'a, P, Q, In: 'a, Mid: 'a, Out: 'a> IntProcess<'a, In> for Seq<P,Q>
+impl<'a, P, Q, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>> IntProcess<'a, In> for Seq<P,Q>
     where
     P: Process<'a, In, Out = Mid>,
     Q: Process<'a, Mid, Out = Out>,
@@ -20,7 +20,7 @@ impl<'a, P, Q, In: 'a, Mid: 'a, Out: 'a> IntProcess<'a, In> for Seq<P,Q>
 // NI - NI
 implNI!{
     In,
-    impl<'a, In: 'a, Mid: 'a, Out: 'a, PNI, PNO, QNI, QNO>
+    impl<'a, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>, PNI, PNO, QNI, QNO>
         for Seq<ProcessNotIm<'a, In, Mid, PNI, PNO>, ProcessNotIm<'a, Mid, Out, QNI, QNO>>
         where
         PNI: Node<'a, In, Out = ()>,
@@ -46,7 +46,7 @@ implNI!{
 // Im - NI
 implNI!{
     In,
-    impl<'a, In: 'a, Mid: 'a, Out: 'a, PNIO, QNI, QNO>
+    impl<'a, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>, PNIO, QNI, QNO>
         for Seq<ProcessIm<'a, In, Mid, PNIO>, ProcessNotIm<'a, Mid, Out, QNI, QNO>>
         where
         PNIO: Node<'a, In, Out = Mid>,
@@ -70,7 +70,7 @@ implNI!{
 // NI - Im
 implNI!{
     In,
-    impl<'a, In: 'a, Mid: 'a, Out: 'a, PNI, PNO, QNIO>
+    impl<'a, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>, PNI, PNO, QNIO>
         for Seq<ProcessNotIm<'a, In, Mid, PNI, PNO>, ProcessIm<'a, Mid, Out, QNIO>>
         where
         PNI: Node<'a, In, Out = ()>,
@@ -93,7 +93,7 @@ implNI!{
 // Im - Im
 implIm!{
     In,
-    impl<'a, In: 'a, Mid: 'a, Out: 'a, PNIO, QNIO>
+    impl<'a, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>, PNIO, QNIO>
         for Seq<ProcessIm<'a, In, Mid, PNIO>, ProcessIm<'a, Mid, Out, QNIO>>
         where
         PNIO: Node<'a, In, Out = Mid>,

@@ -22,6 +22,7 @@
 use node::*;
 use engine::*;
 pub(crate) use tname::*;
+use super::*;
 
 /// Contains all basic struct of reactive processes, closure, Pause, ...
 mod base;
@@ -54,9 +55,9 @@ pub use self::signal::*;
 
 
 /// Common interface for processes and process implementations.
-pub trait IntProcess<'a, In: 'a>: 'a {
+pub trait IntProcess<'a, In: Val<'a>>: 'a {
     /// The type outputted by the process when In is given.
-    type Out: 'a;
+    type Out: Val<'a>;
 
     /// Prints dot code for this process on stdout.
     ///
@@ -69,7 +70,7 @@ pub trait IntProcess<'a, In: 'a>: 'a {
 
 
 /// Interface for immediate process implementations.
-pub trait IntProcessIm<'a, In: 'a>: IntProcess<'a, In> {
+pub trait IntProcessIm<'a, In: Val<'a>>: IntProcess<'a, In> {
     /// The type of node this implementation compiles to.
     type NIO: Node<'a, In, Out = Self::Out>;
 
@@ -83,7 +84,7 @@ pub trait IntProcessIm<'a, In: 'a>: IntProcess<'a, In> {
 
 
 /// Interface for non-immediate process implementations.
-pub trait IntProcessNotIm<'a, In: 'a>: IntProcess<'a, In> {
+pub trait IntProcessNotIm<'a, In: Val<'a>>: IntProcess<'a, In> {
     /// The input node of the CFG of this implementation
     type NI: Node<'a, In, Out = ()>;
     /// The output node of the CFG of this implementation
@@ -109,7 +110,7 @@ pub trait IntProcessNotIm<'a, In: 'a>: IntProcess<'a, In> {
 /// This is simply a virtualization of an immediate process implementation.
 pub struct ProcessIm<'a, In, Out, NIO>(pub(crate) Box<IntProcessIm<'a, In, Out = Out, NIO = NIO>>);
 
-impl<'a, In: 'a, Out: 'a, NIO> ProcessIm<'a, In, Out, NIO>
+impl<'a, In: Val<'a>, Out: Val<'a>, NIO> ProcessIm<'a, In, Out, NIO>
 where
     NIO: Node<'a, In, Out = Out>,
 {
@@ -129,7 +130,7 @@ pub struct ProcessNotIm<'a, In, Out, NI, NO>(
 );
 
 
-impl<'a, In: 'a, Out: 'a, NI, NO> ProcessNotIm<'a, In, Out, NI, NO>
+impl<'a, In: Val<'a>, Out: Val<'a>, NI, NO> ProcessNotIm<'a, In, Out, NI, NO>
 where
     NI: Node<'a, In, Out = ()>,
     NO: Node<'a, (), Out = Out>,
@@ -153,7 +154,7 @@ where
 ///
 /// This trait should only be useful for types that are not leaves of the computation tree like
 /// Seq, Choice, Loop, Par, Present, ...
-pub trait ToBoxedProcess<'a, In: 'a>: IntProcess<'a, In> + Sized {
+pub trait ToBoxedProcess<'a, In: Val<'a>>: IntProcess<'a, In> + Sized {
     type Boxed: Process<'a, In, Out = Self::Out>;
     fn tobox(self) -> Self::Boxed;
 }
@@ -170,7 +171,7 @@ pub trait ToBoxedProcess<'a, In: 'a>: IntProcess<'a, In> + Sized {
 ///
 /// An end-user should only care about this trait.
 /// This trait should only be implemented by ProcessIm and ProcessNotIm.
-pub trait Process<'a, In: 'a>: IntProcess<'a, In> + Sized {
+pub trait Process<'a, In: Val<'a>>: IntProcess<'a, In> + Sized {
     /// a.seq(b) execute a then b in correspond to pro!{a;b}
     ///
     /// The output value of a is given as input to b.
@@ -203,7 +204,7 @@ pub trait Process<'a, In: 'a>: IntProcess<'a, In> + Sized {
     /// If a returns True(x), a is run again with x.
     /// else, the whole construct returns the value in False.
     /// a.ploop() is equivalent to pro!{loop{a}}
-    fn ploop<Out: 'a>(self) -> <PLoop<Self> as ToBoxedProcess<'a, In>>::Boxed
+    fn ploop<Out: Val<'a>>(self) -> <PLoop<Self> as ToBoxedProcess<'a, In>>::Boxed
     where
         Self: Process<'a, In, Out = ChoiceData<In, Out>>,
         PLoop<Self>: ToBoxedProcess<'a, In>,
@@ -214,7 +215,7 @@ pub trait Process<'a, In: 'a>: IntProcess<'a, In> + Sized {
     /// a.join(b) execute a and b in parallel on different input (the two members of the
     /// input pair), and returns the pair of results when both are finished.
     /// a.join(b) is equivalent to pro!{a || b}
-    fn join<InQ: 'a, Q>(self, q: Q) -> <Par<Self, Q> as ToBoxedProcess<'a, (In, InQ)>>::Boxed
+    fn join<InQ: Val<'a>, Q>(self, q: Q) -> <Par<Self, Q> as ToBoxedProcess<'a, (In, InQ)>>::Boxed
     where
         Q: Process<'a, InQ>,
         Par<Self, Q>: ToBoxedProcess<'a, (In, InQ)>,
@@ -224,7 +225,7 @@ pub trait Process<'a, In: 'a>: IntProcess<'a, In> + Sized {
 }
 
 /// puts a lot of processes in parallel.
-pub fn big_join<'a, In: 'a, PNI, PNO>(
+pub fn big_join<'a, In: Val<'a>, PNI, PNO>(
     vp: Vec<ProcessNotIm<'a, In, (), PNI, PNO>>,
 ) -> ProcessNotIm<'a, In, (), NSeq<RcStore<In>, NBigPar>, Nothing>
 where
@@ -253,7 +254,7 @@ where
 }
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-impl<'a, In: 'a, Out: 'a, NIO> IntProcess<'a, In> for ProcessIm<'a, In, Out, NIO>
+impl<'a, In: Val<'a>, Out: Val<'a>, NIO> IntProcess<'a, In> for ProcessIm<'a, In, Out, NIO>
 where
     NIO: Node<'a, In, Out = Out>,
 {
@@ -263,7 +264,7 @@ where
     }
 }
 
-impl<'a, In: 'a, Out: 'a, NI, NO> IntProcess<'a, In> for ProcessNotIm<'a, In, Out, NI, NO>
+impl<'a, In: Val<'a>, Out: Val<'a>, NI, NO> IntProcess<'a, In> for ProcessNotIm<'a, In, Out, NI, NO>
 where
     NI: Node<'a, In, Out = ()>,
     NO: Node<'a, (), Out = Out>,
@@ -275,7 +276,7 @@ where
 }
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-impl<'a, In: 'a, Out: 'a, NIO> Process<'a, In> for ProcessIm<'a, In, Out, NIO>
+impl<'a, In: Val<'a>, Out: Val<'a>, NIO> Process<'a, In> for ProcessIm<'a, In, Out, NIO>
 where
     NIO: Node<'a, In, Out = Out>,
 {}
@@ -292,7 +293,7 @@ impl<'a, NIO> GraphFiller<'a> for ProcessIm<'a, (), (), NIO>
     }
 }
 
-impl<'a, In: 'a, Out: 'a, NI,NO> Process<'a, In> for ProcessNotIm<'a, In, Out, NI,NO>
+impl<'a, In: Val<'a>, Out: Val<'a>, NI,NO> Process<'a, In> for ProcessNotIm<'a, In, Out, NI,NO>
     where
     NI: Node<'a, In, Out = ()>,
     NO: Node<'a, (), Out = Out>,

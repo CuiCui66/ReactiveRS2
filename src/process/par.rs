@@ -4,7 +4,7 @@ use super::*;
 
 pub struct Par<P, Q>(pub(crate) P, pub(crate) Q);
 
-impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> IntProcess<'a, (InP, InQ)>
+impl<'a, P, Q, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>> IntProcess<'a, (InP, InQ)>
     for Par<P,Q>
     where
     P: Process<'a, InP, Out = OutP>,
@@ -30,7 +30,7 @@ impl<'a, P, Q, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a> IntProcess<'a, (InP, InQ)>
 // NI - NI
 implNI!{
     (InP,InQ),
-    impl<'a, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a, PNI, PNO, QNI, QNO>
+    impl<'a, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>, PNI, PNO, QNI, QNO>
         for Par<ProcessNotIm<'a, InP, OutP, PNI, PNO>, ProcessNotIm<'a, InQ, OutQ, QNI, QNO>>
         where
         PNI: Node<'a, InP, Out = ()>,
@@ -62,7 +62,7 @@ implNI!{
 // Im - NI
 implNI!{
     (InP,InQ),
-    impl<'a, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a, PNIO, QNI, QNO>
+    impl<'a, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>, PNIO, QNI, QNO>
         for Par<ProcessIm<'a, InP, OutP, PNIO>, ProcessNotIm<'a, InQ, OutQ, QNI, QNO>>
         where
         PNIO: Node<'a, InP, Out = OutP>,
@@ -94,7 +94,7 @@ implNI!{
 // NI - Im
 implNI!{
     (InP,InQ),
-    impl<'a, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a, PNI, PNO, QNIO>
+    impl<'a, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>, PNI, PNO, QNIO>
         for Par<ProcessNotIm<'a, InP, OutP, PNI, PNO>, ProcessIm<'a, InQ, OutQ, QNIO>>
         where
         PNI: Node<'a, InP, Out = ()>,
@@ -126,7 +126,7 @@ implNI!{
 // Im - Im
 implIm!{
     (InP,InQ),
-    impl<'a, InP: 'a, InQ: 'a, OutP: 'a, OutQ: 'a, PNIO, QNIO>
+    impl<'a, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>, PNIO, QNIO>
         for Par<ProcessIm<'a, InP, OutP, PNIO>, ProcessIm<'a, InQ, OutQ, QNIO>>
         where
         PNIO: Node<'a, InP, Out = OutP>,
@@ -159,7 +159,7 @@ implIm!{
 
 pub struct BigPar<P>(pub(crate) Vec<P>);
 
-impl<'a, P, In: 'a> IntProcess<'a, In> for BigPar<P>
+impl<'a, P, In: Val<'a>> IntProcess<'a, In> for BigPar<P>
 where
     P: Process<'a, In, Out = ()>,
     In: Copy,
@@ -173,7 +173,7 @@ where
     }
 }
 
-impl<'a, In: 'a, PNI, PNO> IntProcessNotIm<'a, In> for BigPar<ProcessNotIm<'a,In,(),PNI,PNO>>
+impl<'a, In: Val<'a>, PNI, PNO> IntProcessNotIm<'a, In> for BigPar<ProcessNotIm<'a,In,(),PNI,PNO>>
 where
     PNI: Node<'a, In, Out = ()>,
     PNO: Node<'a, (), Out = ()>,

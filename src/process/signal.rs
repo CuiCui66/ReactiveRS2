@@ -16,7 +16,7 @@ pub struct EmitD {}
 #[allow(non_upper_case_globals)]
 pub static EmitD: EmitD = EmitD {};
 
-impl<'a, In: 'a, SV: 'a> IntProcess<'a, ((SignalRuntimeRef<SV>, SV::E), In)> for EmitD
+impl<'a, In: Val<'a>, SV: Val<'a>> IntProcess<'a, ((SignalRuntimeRef<SV>, SV::E), In)> for EmitD
 where SV: SignalValue {
     type Out = In;
 
@@ -28,7 +28,7 @@ where SV: SignalValue {
     }
 }
 
-impl<'a, In: 'a, SV: 'a> IntProcessIm<'a, ((SignalRuntimeRef<SV>, SV::E), In)> for EmitD
+impl<'a, In: Val<'a>, SV: Val<'a>> IntProcessIm<'a, ((SignalRuntimeRef<SV>, SV::E), In)> for EmitD
 where
     SV: SignalValue
 {
@@ -38,7 +38,7 @@ where
     }
 }
 
-impl<'a, SV: 'a> IntProcess<'a, (SignalRuntimeRef<SV>, SV::E)> for EmitD
+impl<'a, SV: Val<'a>> IntProcess<'a, (SignalRuntimeRef<SV>, SV::E)> for EmitD
 where
     SV: SignalValue,
 {
@@ -52,7 +52,7 @@ where
     }
 }
 
-impl<'a, SV: 'a> IntProcessIm<'a, (SignalRuntimeRef<SV>, SV::E)> for EmitD
+impl<'a, SV: Val<'a>> IntProcessIm<'a, (SignalRuntimeRef<SV>, SV::E)> for EmitD
 where
     SV: SignalValue,
 {
@@ -63,7 +63,7 @@ where
 }
 
 
-impl<'a, In: 'a, SV: 'a> IntProcess<'a, (Vec<(SignalRuntimeRef<SV>, SV::E)>, In)> for EmitD
+impl<'a, In: Val<'a>, SV: Val<'a>> IntProcess<'a, (Vec<(SignalRuntimeRef<SV>, SV::E)>, In)> for EmitD
 where
     SV: SignalValue,
 {
@@ -77,7 +77,7 @@ where
     }
 }
 
-impl<'a, In: 'a, SV: 'a> IntProcessIm<'a, (Vec<(SignalRuntimeRef<SV>, SV::E)>, In)> for EmitD
+impl<'a, In: Val<'a>, SV: Val<'a>> IntProcessIm<'a, (Vec<(SignalRuntimeRef<SV>, SV::E)>, In)> for EmitD
 where
     SV: SignalValue,
 {
@@ -88,7 +88,7 @@ where
 }
 
 
-impl<'a, SV: 'a> IntProcess<'a, Vec<(SignalRuntimeRef<SV>, SV::E)>> for EmitD
+impl<'a, SV: Val<'a>> IntProcess<'a, Vec<(SignalRuntimeRef<SV>, SV::E)>> for EmitD
     where
         SV: SignalValue,
 {
@@ -102,7 +102,7 @@ impl<'a, SV: 'a> IntProcess<'a, Vec<(SignalRuntimeRef<SV>, SV::E)>> for EmitD
     }
 }
 
-impl<'a, SV: 'a> IntProcessIm<'a, Vec<(SignalRuntimeRef<SV>, SV::E)>> for EmitD
+impl<'a, SV: Val<'a>> IntProcessIm<'a, Vec<(SignalRuntimeRef<SV>, SV::E)>> for EmitD
 where
     SV: SignalValue,
 {
@@ -113,7 +113,7 @@ where
 }
 
 
-pub fn emit_d_in<'a, SV: 'a, In: 'a>()
+pub fn emit_d_in<'a, SV: Val<'a>, In: Val<'a>>()
     -> ProcessIm<'a, ((SignalRuntimeRef<SV>, SV::E), In), In, NEmitD>
 where
     SV: SignalValue
@@ -121,7 +121,7 @@ where
     ProcessIm(box EmitD {})
 }
 
-pub fn emit_d<'a, SV: 'a>()
+pub fn emit_d<'a, SV: Val<'a>>()
     -> ProcessIm<'a, (SignalRuntimeRef<SV>, SV::E), (), NEmitD>
 where
     SV: SignalValue
@@ -130,7 +130,7 @@ where
 }
 
 
-pub fn emit_d_vec_in<'a, SV: 'a, In: 'a>()
+pub fn emit_d_vec_in<'a, SV: Val<'a>, In: Val<'a>>()
     -> ProcessIm<'a, (Vec<(SignalRuntimeRef<SV>, SV::E)>, In), In, NEmitD>
 where
     SV: SignalValue
@@ -138,7 +138,7 @@ where
     ProcessIm(box EmitD {})
 }
 
-pub fn emit_d_vec<'a, SV: 'a>()
+pub fn emit_d_vec<'a, SV: Val<'a>>()
     -> ProcessIm<'a, Vec<(SignalRuntimeRef<SV>, SV::E)>, (), NEmitD>
 where
     SV: SignalValue
@@ -159,7 +159,7 @@ where
 #[derive(Clone)]
 pub struct EmitS<SV, E>(pub SignalRuntimeRef<SV>, pub PhantomData<E>);
 
-impl<'a, SV: 'a> IntProcess<'a, SV::E> for EmitS<SV, SV::E>
+impl<'a, SV: Val<'a>> IntProcess<'a, SV::E> for EmitS<SV, SV::E>
 where
     SV: SignalValue,
 {
@@ -173,7 +173,7 @@ where
     }
 }
 
-impl<'a, SV: 'a> IntProcessIm<'a, SV::E> for EmitS<SV, SV::E>
+impl<'a, SV: Val<'a>> IntProcessIm<'a, SV::E> for EmitS<SV, SV::E>
 where
     SV: SignalValue,
 {
@@ -185,7 +185,7 @@ where
     }
 }
 
-pub fn emit_s<'a, SV: 'a>(signal_runtime: SignalRuntimeRef<SV>)
+pub fn emit_s<'a, SV: Val<'a>>(signal_runtime: SignalRuntimeRef<SV>)
     -> ProcessIm<'a, SV::E, (), NEmitS<SV,SV::E>>
 where
     SV: SignalValue
@@ -200,7 +200,7 @@ where
 #[derive(Clone)]
 pub struct EmitSIn<SV, E>(pub SignalRuntimeRef<SV>, pub PhantomData<E>);
 
-impl<'a, In: 'a, SV: 'a> IntProcess<'a, (SV::E, In)> for EmitSIn<SV, SV::E>
+impl<'a, In: Val<'a>, SV: Val<'a>> IntProcess<'a, (SV::E, In)> for EmitSIn<SV, SV::E>
 where
     SV: SignalValue,
 {
@@ -214,7 +214,7 @@ where
     }
 }
 
-impl<'a, In: 'a, SV: 'a> IntProcessIm<'a, (SV::E, In)> for EmitSIn<SV, SV::E>
+impl<'a, In: Val<'a>, SV: Val<'a>> IntProcessIm<'a, (SV::E, In)> for EmitSIn<SV, SV::E>
 where
     SV: SignalValue,
 {
@@ -226,7 +226,7 @@ where
     }
 }
 
-pub fn emit_s_in<'a, In: 'a, SV: 'a>(signal_runtime: SignalRuntimeRef<SV>)
+pub fn emit_s_in<'a, In: Val<'a>, SV: Val<'a>>(signal_runtime: SignalRuntimeRef<SV>)
     -> ProcessIm<'a, (SV::E, In), In, NEmitS<SV,SV::E>>
 where
     SV: SignalValue
@@ -246,7 +246,7 @@ where
 #[derive(Clone)]
 pub struct EmitVecS<SV>(pub Vec<SignalRuntimeRef<SV>>);
 
-impl<'a, SV: 'a> IntProcess<'a, Vec<SV::E>> for EmitVecS<SV>
+impl<'a, SV: Val<'a>> IntProcess<'a, Vec<SV::E>> for EmitVecS<SV>
 where
     SV: SignalValue
 {
@@ -260,7 +260,7 @@ where
     }
 }
 
-impl<'a, SV: 'a> IntProcessIm<'a, Vec<SV::E>> for EmitVecS<SV>
+impl<'a, SV: Val<'a>> IntProcessIm<'a, Vec<SV::E>> for EmitVecS<SV>
 where
     SV: SignalValue
 {
@@ -271,7 +271,7 @@ where
     }
 }
 
-pub fn emit_vec_s<'a, SV: 'a>(signal_runtimes: Vec<SignalRuntimeRef<SV>>)
+pub fn emit_vec_s<'a, SV: Val<'a>>(signal_runtimes: Vec<SignalRuntimeRef<SV>>)
     -> ProcessIm<'a, Vec<SV::E>, (), NEmitVecS<SV>>
 where
     SV: SignalValue
@@ -281,7 +281,7 @@ where
 
 
 
-impl<'a, SV: 'a, In: 'a> IntProcess<'a, (Vec<SV::E>, In)> for EmitVecS<SV>
+impl<'a, SV: Val<'a>, In: Val<'a>> IntProcess<'a, (Vec<SV::E>, In)> for EmitVecS<SV>
 where
     SV: SignalValue
 {
@@ -295,7 +295,7 @@ where
     }
 }
 
-impl<'a, SV: 'a, In: 'a> IntProcessIm<'a, (Vec<SV::E>, In)> for EmitVecS<SV>
+impl<'a, SV: Val<'a>, In: Val<'a>> IntProcessIm<'a, (Vec<SV::E>, In)> for EmitVecS<SV>
 where
     SV: SignalValue
 {
@@ -307,7 +307,7 @@ where
 }
 
 
-pub fn emit_vec_s_in<'a, In: 'a, SV: 'a>(signal_runtimes: Vec<SignalRuntimeRef<SV>>)
+pub fn emit_vec_s_in<'a, In: Val<'a>, SV: Val<'a>>(signal_runtimes: Vec<SignalRuntimeRef<SV>>)
     -> ProcessIm<'a, (Vec<SV::E>,In), In, NEmitVecS<SV>>
 where
     SV: SignalValue
@@ -329,7 +329,7 @@ where
 #[derive(Clone)]
 pub struct EmitVS<SV, E>(pub SignalRuntimeRef<SV>, pub E);
 
-impl<'a, SV: 'a, In: 'a> IntProcess<'a, In> for EmitVS<SV, SV::E>
+impl<'a, SV: Val<'a>, In: Val<'a>> IntProcess<'a, In> for EmitVS<SV, SV::E>
 where
     SV: SignalValue,
     SV::E: Clone,
@@ -344,7 +344,7 @@ where
     }
 }
 
-impl<'a, SV: 'a, In: 'a> IntProcessIm<'a, In> for EmitVS<SV, SV::E>
+impl<'a, SV: Val<'a>, In: Val<'a>> IntProcessIm<'a, In> for EmitVS<SV, SV::E>
 where
     SV: SignalValue,
     SV::E: Clone
@@ -358,7 +358,7 @@ where
 }
 
 
-pub fn emit_vs<'a, In: 'a, SV: 'a>(signal_runtime: SignalRuntimeRef<SV>, value: SV::E)
+pub fn emit_vs<'a, In: Val<'a>, SV: Val<'a>>(signal_runtime: SignalRuntimeRef<SV>, value: SV::E)
     -> ProcessIm<'a, In, In, NEmitVS<SV, SV::E>>
 where
     SV: SignalValue,
@@ -381,7 +381,7 @@ where
 pub struct EmitVVecS<SV, E>(pub Vec<(SignalRuntimeRef<SV>,E)>);
 
 
-impl<'a, SV: 'a, In: 'a> IntProcess<'a, In> for EmitVVecS<SV, SV::E>
+impl<'a, SV: Val<'a>, In: Val<'a>> IntProcess<'a, In> for EmitVVecS<SV, SV::E>
 where
     SV: SignalValue,
     SV::E: Clone,
@@ -396,7 +396,7 @@ where
     }
 }
 
-impl<'a, SV: 'a, In: 'a> IntProcessIm<'a, In> for EmitVVecS<SV, SV::E>
+impl<'a, SV: Val<'a>, In: Val<'a>> IntProcessIm<'a, In> for EmitVVecS<SV, SV::E>
 where
     SV: SignalValue,
     SV::E: Clone
@@ -408,7 +408,7 @@ where
     }
 }
 
-pub fn emit_vec_vs<'a, In: 'a, SV: 'a>(signal_values: Vec<(SignalRuntimeRef<SV>, SV::E)>)
+pub fn emit_vec_vs<'a, In: Val<'a>, SV: Val<'a>>(signal_values: Vec<(SignalRuntimeRef<SV>, SV::E)>)
     -> ProcessIm<'a, In, In, NEmitVVecS<SV, SV::E>>
 where
     SV: SignalValue,
@@ -434,7 +434,7 @@ pub struct AwaitD {}
 #[allow(non_upper_case_globals)]
 pub static AwaitD: AwaitD = AwaitD {};
 
-impl<'a, SV: 'a> IntProcess<'a, SignalRuntimeRef<SV>> for AwaitD
+impl<'a, SV: Val<'a>> IntProcess<'a, SignalRuntimeRef<SV>> for AwaitD
 where
     SV: SignalValue,
 {
@@ -448,7 +448,7 @@ where
     }
 }
 
-impl<'a, SV: 'a> IntProcessNotIm<'a, SignalRuntimeRef<SV>> for AwaitD
+impl<'a, SV: Val<'a>> IntProcessNotIm<'a, SignalRuntimeRef<SV>> for AwaitD
 where
     SV: SignalValue,
 {
@@ -466,7 +466,7 @@ where
     }
 }
 
-pub fn await_d<'a, SV: 'a>()
+pub fn await_d<'a, SV: Val<'a>>()
     -> ProcessNotIm<'a, SignalRuntimeRef<SV>, SV::V, NSeq<NAwaitD, RcStore<SignalRuntimeRef<SV>>>, NSeq<RcLoad<SignalRuntimeRef<SV>>, NGetD>>
     where
         SV: SignalValue,
@@ -475,7 +475,7 @@ pub fn await_d<'a, SV: 'a>()
     ProcessNotIm(box AwaitD {})
 }
 
-impl<'a, SV: 'a, In: 'a> IntProcess<'a, (SignalRuntimeRef<SV>, In)> for AwaitD
+impl<'a, SV: Val<'a>, In: Val<'a>> IntProcess<'a, (SignalRuntimeRef<SV>, In)> for AwaitD
 where
     SV: SignalValue,
 {
@@ -489,7 +489,7 @@ where
     }
 }
 
-impl<'a, In: 'a, SV: 'a> IntProcessNotIm<'a, (SignalRuntimeRef<SV>, In)> for AwaitD
+impl<'a, In: Val<'a>, SV: Val<'a>> IntProcessNotIm<'a, (SignalRuntimeRef<SV>, In)> for AwaitD
 where
     SV: SignalValue,
 {
@@ -509,7 +509,7 @@ where
     }
 }
 
-pub fn await_d_in<'a, In: 'a, SV: 'a>()
+pub fn await_d_in<'a, In: Val<'a>, SV: Val<'a>>()
     -> ProcessNotIm<'a, (SignalRuntimeRef<SV>,In), (SV::V, In), NSeq<NPar<NAwaitD,NIdentity>,RcStore<(SignalRuntimeRef<SV>, In)>>, NSeq<RcLoad<(SignalRuntimeRef<SV>, In)>, NGetD>>
 where
     SV: SignalValue,
@@ -532,7 +532,7 @@ where
 pub struct AwaitS<SV>(pub SignalRuntimeRef<SV>);
 
 
-impl<'a, SV: 'a> IntProcess<'a, ()> for AwaitS<SV>
+impl<'a, SV: Val<'a>> IntProcess<'a, ()> for AwaitS<SV>
 where
     SV: SignalValue,
 {
@@ -546,7 +546,7 @@ where
     }
 }
 
-impl<'a, SV: 'a> IntProcessNotIm<'a, ()> for AwaitS<SV>
+impl<'a, SV: Val<'a>> IntProcessNotIm<'a, ()> for AwaitS<SV>
 where
     SV: SignalValue,
 {
@@ -561,7 +561,7 @@ where
     }
 }
 
-pub fn await_s<'a, SV: 'a>(signal_runtime: SignalRuntimeRef<SV>)
+pub fn await_s<'a, SV: Val<'a>>(signal_runtime: SignalRuntimeRef<SV>)
     -> ProcessNotIm<'a, (), SV::V, NAwaitS<SV>, NGetS<SV>>
 where
     SV: SignalValue,
@@ -576,7 +576,7 @@ where
 pub struct AwaitSIn<SV>(pub SignalRuntimeRef<SV>);
 
 
-impl<'a, In: 'a, SV: 'a> IntProcess<'a, In> for AwaitSIn<SV>
+impl<'a, In: Val<'a>, SV: Val<'a>> IntProcess<'a, In> for AwaitSIn<SV>
 where
     SV: SignalValue,
 {
@@ -590,7 +590,7 @@ where
     }
 }
 
-impl<'a, In: 'a, SV: 'a> IntProcessNotIm<'a, In> for AwaitSIn<SV>
+impl<'a, In: Val<'a>, SV: Val<'a>> IntProcessNotIm<'a, In> for AwaitSIn<SV>
 where
     SV: SignalValue,
 {
@@ -608,7 +608,7 @@ where
     }
 }
 
-pub fn await_s_in<'a, In: 'a, SV: 'a>(signal_runtime: SignalRuntimeRef<SV>)
+pub fn await_s_in<'a, In: Val<'a>, SV: Val<'a>>(signal_runtime: SignalRuntimeRef<SV>)
     -> ProcessNotIm<'a, In, (SV::V, In), NSeq<RcStore<In>,NAwaitS<SV>>, NSeq<GenP, NPar<NGetS<SV>, RcLoad<In>>>>
 where
     SV: SignalValue,
@@ -631,7 +631,7 @@ where
 #[derive(Clone, Copy)]
 pub struct AwaitImmediateD {}
 
-impl<'a, SV: 'a> IntProcess<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
+impl<'a, SV: Val<'a>> IntProcess<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
 where
     SV: SignalValue,
 {
@@ -645,7 +645,7 @@ where
     }
 }
 
-impl<'a, SV: 'a> IntProcessNotIm<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
+impl<'a, SV: Val<'a>> IntProcessNotIm<'a, SignalRuntimeRef<SV>> for AwaitImmediateD
 where
     SV: SignalValue,
 {
@@ -658,7 +658,7 @@ where
     }
 }
 
-pub fn await_immediate_d<'a, SV: 'a>()
+pub fn await_immediate_d<'a, SV: Val<'a>>()
     -> ProcessNotIm<'a, SignalRuntimeRef<SV>, (), NAwaitImmediateD, Nothing>
 where
     SV: SignalValue,
@@ -667,7 +667,7 @@ where
 }
 
 
-impl<'a, SV: 'a, In: 'a> IntProcess<'a, (SignalRuntimeRef<SV>, In)> for AwaitImmediateD
+impl<'a, SV: Val<'a>, In: Val<'a>> IntProcess<'a, (SignalRuntimeRef<SV>, In)> for AwaitImmediateD
 where
     SV: SignalValue,
 {
@@ -681,7 +681,7 @@ where
     }
 }
 
-impl<'a, In: 'a, SV: 'a> IntProcessNotIm<'a, (SignalRuntimeRef<SV>,In)> for AwaitImmediateD
+impl<'a, In: Val<'a>, SV: Val<'a>> IntProcessNotIm<'a, (SignalRuntimeRef<SV>,In)> for AwaitImmediateD
 where
     SV: SignalValue,
 {
@@ -701,7 +701,7 @@ where
     }
 }
 
-pub fn await_immediate_d_in<'a, In: 'a, SV: 'a>()
+pub fn await_immediate_d_in<'a, In: Val<'a>, SV: Val<'a>>()
     -> ProcessNotIm<'a, (SignalRuntimeRef<SV>, In), In, NSeq<NSeq<NPar<NIdentity,RcStore<In>>, Ignore2>,NAwaitImmediateD>, RcLoad<In>>
 where
     SV: SignalValue,
@@ -722,7 +722,7 @@ where
 #[derive(Clone)]
 pub struct AwaitImmediateS<SV>(pub SignalRuntimeRef<SV>);
 
-impl<'a, SV: 'a, In: 'a> IntProcess<'a, In> for AwaitImmediateS<SV>
+impl<'a, SV: Val<'a>, In: Val<'a>> IntProcess<'a, In> for AwaitImmediateS<SV>
 where
     SV: SignalValue,
 {
@@ -736,7 +736,7 @@ where
     }
 }
 
-impl<'a, In: 'a, SV: 'a> IntProcessNotIm<'a, In> for AwaitImmediateS<SV>
+impl<'a, In: Val<'a>, SV: Val<'a>> IntProcessNotIm<'a, In> for AwaitImmediateS<SV>
 where
     SV: SignalValue,
 {
@@ -754,7 +754,7 @@ where
     }
 }
 
-pub fn await_immediate_s<'a, In: 'a, SV: 'a>(signal_runtime: SignalRuntimeRef<SV>)
+pub fn await_immediate_s<'a, In: Val<'a>, SV: Val<'a>>(signal_runtime: SignalRuntimeRef<SV>)
     -> ProcessNotIm<'a, In, In, NSeq<RcStore<In>,NAwaitImmediateS<SV>>, RcLoad<In>>
 where
     SV: SignalValue,
@@ -777,7 +777,7 @@ pub struct PresentD<PT, PF> {
     pub(crate) pf: PF,
 }
 
-impl<'a, PT, PF, SV: 'a, Out: 'a> IntProcess<'a, SignalRuntimeRef<SV>> for PresentD<PT, PF>
+impl<'a, PT, PF, SV: Val<'a>, Out: Val<'a>> IntProcess<'a, SignalRuntimeRef<SV>> for PresentD<PT, PF>
 where
     PT: Process<'a, (), Out = Out>,
     PF: Process<'a, (), Out = Out>,
@@ -796,7 +796,7 @@ where
 // NI - NI
 implNI! {
     SignalRuntimeRef<SV>,
-    impl<'a, Out: 'a, SV: 'a, PTNI, PTNO, PFNI, PFNO>
+    impl<'a, Out: Val<'a>, SV: Val<'a>, PTNI, PTNO, PFNI, PFNO>
         for PresentD<ProcessNotIm<'a, (), Out, PTNI, PTNO>, ProcessNotIm<'a, (), Out, PFNI, PFNO>>
         where
         PTNI: Node<'a, (), Out = ()>,
@@ -838,7 +838,7 @@ implNI! {
 // Im - NI
 implNI! {
     SignalRuntimeRef<SV>,
-    impl<'a, Out: 'a, SV: 'a, PTNIO, PFNI, PFNO>
+    impl<'a, Out: Val<'a>, SV: Val<'a>, PTNIO, PFNI, PFNO>
         for PresentD<ProcessIm<'a, (), Out, PTNIO>, ProcessNotIm<'a, (), Out, PFNI, PFNO>>
         where
         PTNIO: Node<'a, (), Out = Out>,
@@ -877,7 +877,7 @@ implNI! {
 // NI - Im
 implNI! {
     SignalRuntimeRef<SV>,
-    impl<'a, Out: 'a, SV: 'a, PTNI, PTNO, PFNIO>
+    impl<'a, Out: Val<'a>, SV: Val<'a>, PTNI, PTNO, PFNIO>
         for PresentD<ProcessNotIm<'a, (), Out, PTNI, PTNO>, ProcessIm<'a, (), Out, PFNIO>>
         where
         PFNIO: Node<'a, (), Out = Out>,
@@ -918,7 +918,7 @@ implNI! {
 // Im - Im
 implNI! {
     SignalRuntimeRef<SV>,
-    impl<'a, Out: 'a, SV: 'a, PTNIO, PFNIO>
+    impl<'a, Out: Val<'a>, SV: Val<'a>, PTNIO, PFNIO>
         for PresentD<ProcessIm<'a, (), Out, PTNIO>, ProcessIm<'a, (), Out, PFNIO>>
         where
         PFNIO: Node<'a, (), Out = Out>,
@@ -969,7 +969,7 @@ pub struct PresentS<PT,PF,SV> {
     pub(crate) signal_runtime: SignalRuntimeRef<SV>,
 }
 
-impl<'a, PT, PF, SV: 'a, Out: 'a> IntProcess<'a, ()> for PresentS<PT, PF, SV>
+impl<'a, PT, PF, SV: Val<'a>, Out: Val<'a>> IntProcess<'a, ()> for PresentS<PT, PF, SV>
 where
     PT: Process<'a, (), Out = Out>,
     PF: Process<'a, (), Out = Out>,
@@ -988,7 +988,7 @@ where
 // NI - NI
 implNI! {
     (),
-    impl<'a, Out: 'a, SV: 'a, PTNI, PTNO, PFNI, PFNO>
+    impl<'a, Out: Val<'a>, SV: Val<'a>, PTNI, PTNO, PFNI, PFNO>
         for PresentS<ProcessNotIm<'a, (), Out, PTNI, PTNO>, ProcessNotIm<'a, (), Out, PFNI, PFNO>, SV>
         where
         PTNI: Node<'a, (), Out = ()>,
@@ -1031,7 +1031,7 @@ implNI! {
 // Im - NI
 implNI! {
     (),
-    impl<'a, Out: 'a, SV: 'a, PTNIO, PFNI, PFNO>
+    impl<'a, Out: Val<'a>, SV: Val<'a>, PTNIO, PFNI, PFNO>
         for PresentS<ProcessIm<'a, (), Out, PTNIO>, ProcessNotIm<'a, (), Out, PFNI, PFNO>, SV>
         where
         PTNIO: Node<'a, (), Out = Out>,
@@ -1072,7 +1072,7 @@ implNI! {
 // NI - Im
 implNI! {
     (),
-    impl<'a, Out: 'a, SV: 'a, PTNI, PTNO, PFNIO>
+    impl<'a, Out: Val<'a>, SV: Val<'a>, PTNI, PTNO, PFNIO>
         for PresentS<ProcessNotIm<'a, (), Out, PTNI, PTNO>, ProcessIm<'a, (), Out, PFNIO>, SV>
         where
         PFNIO: Node<'a, (), Out = Out>,
@@ -1114,7 +1114,7 @@ implNI! {
 // Im - Im
 implNI! {
     (),
-    impl<'a, Out: 'a, SV: 'a, PTNIO, PFNIO>
+    impl<'a, Out: Val<'a>, SV: Val<'a>, PTNIO, PFNIO>
         for PresentS<ProcessIm<'a, (), Out, PTNIO>, ProcessIm<'a, (), Out, PFNIO>, SV>
         where
         PFNIO: Node<'a, (), Out = Out>,

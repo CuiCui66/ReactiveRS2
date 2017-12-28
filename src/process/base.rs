@@ -38,7 +38,7 @@ pub fn nothing<'a>() -> ProcessIm<'a,(),(),Nothing>{
 // |  _|| | | | |  | | |_| | |_
 // |_|  |_| |_|_|  |_|\__,_|\__|
 
-impl<'a, F: 'a, In: 'a, Out: 'a> IntProcess<'a, In> for F
+impl<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>> IntProcess<'a, In> for F
 where
     F: FnMut(In) -> Out,
 {
@@ -51,7 +51,7 @@ where
     }
 }
 
-impl<'a, F: 'a, In: 'a, Out: 'a> IntProcessIm<'a, In> for F
+impl<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>> IntProcessIm<'a, In> for F
 where
     F: FnMut(In) -> Out,
 {
@@ -61,7 +61,7 @@ where
     }
 }
 
-pub fn fnmut2pro<'a, F: 'a, In: 'a, Out: 'a>(f: F) -> ProcessIm<'a, In, Out, FnMutN<F>>
+pub fn fnmut2pro<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>>(f: F) -> ProcessIm<'a, In, Out, FnMutN<F>>
 where
     F: FnMut(In) -> Out,
 {
@@ -80,7 +80,7 @@ where
 #[derive(Copy, Clone)]
 pub(crate) struct Jump {}
 
-impl<'a, In: 'a> IntProcess<'a, In> for Jump {
+impl<'a, In: Val<'a>> IntProcess<'a, In> for Jump {
     type Out = In;
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
@@ -91,7 +91,7 @@ impl<'a, In: 'a> IntProcess<'a, In> for Jump {
 }
 
 
-impl<'a, In: 'a> IntProcessNotIm<'a, In> for Jump {
+impl<'a, In: Val<'a>> IntProcessNotIm<'a, In> for Jump {
     type NI = NSeq<RcStore<In>, NJump>;
     type NO = RcLoad<In>;
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
@@ -102,7 +102,7 @@ impl<'a, In: 'a> IntProcessNotIm<'a, In> for Jump {
     }
 }
 
-pub fn jump<'a, In: 'a>() -> impl Process<'a, In> {
+pub fn jump<'a, In: Val<'a>>() -> impl Process<'a, In> {
     ProcessNotIm(box Jump {})
 }
 
@@ -115,7 +115,7 @@ pub fn jump<'a, In: 'a>() -> impl Process<'a, In> {
 #[derive(Copy, Clone)]
 pub(crate) struct Pause {}
 
-impl<'a, In: 'a> IntProcess<'a, In> for Pause {
+impl<'a, In: Val<'a>> IntProcess<'a, In> for Pause {
     type Out = In;
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
@@ -126,7 +126,7 @@ impl<'a, In: 'a> IntProcess<'a, In> for Pause {
 }
 
 
-impl<'a, In: 'a> IntProcessNotIm<'a, In> for Pause {
+impl<'a, In: Val<'a>> IntProcessNotIm<'a, In> for Pause {
     type NI = NSeq<RcStore<In>, NPause>;
     type NO = RcLoad<In>;
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
@@ -137,6 +137,6 @@ impl<'a, In: 'a> IntProcessNotIm<'a, In> for Pause {
     }
 }
 
-pub fn pause<'a, In: 'a>() -> ProcessNotIm<'a,In,In,NSeq<RcStore<In>, NPause>,RcLoad<In>> {
+pub fn pause<'a, In: Val<'a>>() -> ProcessNotIm<'a,In,In,NSeq<RcStore<In>, NPause>,RcLoad<In>> {
     ProcessNotIm(box Pause {})
 }

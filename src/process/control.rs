@@ -13,7 +13,7 @@ use super::*;
 pub struct PChoice<PT, PF> (pub(crate) PT, pub(crate) PF,);
 
 
-impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> IntProcess<'a, ChoiceData<InT, InF>>
+impl<'a, PT, PF, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>> IntProcess<'a, ChoiceData<InT, InF>>
     for PChoice<PT, PF>
     where
     PT: Process<'a, InT, Out = Out>,
@@ -39,7 +39,7 @@ impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> IntProcess<'a, ChoiceData<InT, InF>>
 // NI - NI
 implNI!{
     ChoiceData<InT,InF>,
-    impl<'a, InT: 'a, InF: 'a, Out: 'a, PTNI, PTNO, PFNI, PFNO>
+    impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, PTNI, PTNO, PFNI, PFNO>
         for PChoice<ProcessNotIm<'a, InT, Out, PTNI, PTNO>, ProcessNotIm<'a, InF, Out, PFNI, PFNO>>
         where
         PTNI: Node<'a, InT, Out = ()>,
@@ -70,7 +70,7 @@ implNI!{
 // NI - Im
 implNI!{
     ChoiceData<InT,InF>,
-    impl<'a, InT: 'a, InF: 'a, Out: 'a, PTNI, PTNO, PFNIO>
+    impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, PTNI, PTNO, PFNIO>
         for PChoice<ProcessNotIm<'a, InT, Out, PTNI, PTNO>, ProcessIm<'a, InF, Out, PFNIO>>
         where
         PTNI: Node<'a, InT, Out = ()>,
@@ -103,7 +103,7 @@ implNI!{
 // Im - NI
 implNI!{
     ChoiceData<InT,InF>,
-    impl<'a, InT: 'a, InF: 'a, Out: 'a, PTNIO, PFNI, PFNO>
+    impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, PTNIO, PFNI, PFNO>
         for PChoice<ProcessIm<'a, InT, Out, PTNIO>, ProcessNotIm<'a, InF, Out, PFNI, PFNO>>
         where
         PTNIO: Node<'a, InT, Out = Out>,
@@ -137,7 +137,7 @@ implNI!{
 // Im - Im
 implIm!{
     ChoiceData<InT,InF>,
-    impl<'a, InT: 'a, InF: 'a, Out: 'a, PTNIO, PFNIO>
+    impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, PTNIO, PFNIO>
         for PChoice<ProcessIm<'a, InT, Out, PTNIO>, ProcessIm<'a, InF, Out, PFNIO>>
         where
         PTNIO: Node<'a, InT, Out = Out>,
@@ -168,7 +168,7 @@ implIm!{
 
 pub struct PLoop<P> (pub(crate) P);
 
-impl<'a, P, In: 'a, Out: 'a> IntProcess<'a, In>
+impl<'a, P, In: Val<'a>, Out: Val<'a>> IntProcess<'a, In>
     for PLoop<P>
     where
     P: Process<'a, In, Out = ChoiceData<In,Out>>,
@@ -191,7 +191,7 @@ impl<'a, P, In: 'a, Out: 'a> IntProcess<'a, In>
 
 implNI!{
     In,
-    impl<'a, In: 'a, Out: 'a, PNI, PNO>
+    impl<'a, In: Val<'a>, Out: Val<'a>, PNI, PNO>
         for PLoop<ProcessNotIm<'a, In, ChoiceData<In,Out>, PNI, PNO>>
         where
         PNI: Node<'a, In, Out = ()>,
@@ -225,7 +225,7 @@ implNI!{
 
 implIm!{
     In,
-    impl<'a, In: 'a, Out: 'a, PNIO>
+    impl<'a, In: Val<'a>, Out: Val<'a>, PNIO>
         for PLoop<ProcessIm<'a,In,ChoiceData<In,Out>,PNIO>>
         where
         PNIO: Node<'a, In, Out = ChoiceData<In,Out>>,
