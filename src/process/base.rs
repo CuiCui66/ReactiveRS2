@@ -126,7 +126,7 @@ impl<'a, In: Val<'a>> IntProcess<'a, In> for Pause {
 
 
 impl<'a, In: Val<'a>> IntProcessNotIm<'a, In> for Pause {
-    type NI = NSeq<BStore<In>, NPause>;
+    type NI = NSeq<NStore<In>, NPause>;
     type NO = NLoad<In>;
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
         let rcin = RCell::new();
