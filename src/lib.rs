@@ -508,6 +508,135 @@ mod tests {
     }
 
     #[test]
+    fn await_immediate_d_test() {
+        let value = Rc::new(RefCell::new(0));
+        let signal = SignalRuntimeRef::new_mc(2, box |e: i32, v: &mut i32| { *v *= e;});
+        {
+            let mut rt = rt! {
+                |_| {
+                    signal.clone()
+                };
+                emit_vs(signal.clone(), 21);
+                await_immediate_d();
+                |_| {
+                    *value.borrow_mut() = 42
+                }
+            };
+
+            rt.instant();
+            assert_eq!(*value.borrow(), 42);
+        }
+    }
+
+    #[test]
+    fn non_await_immediate_d_test() {
+        let value = Rc::new(RefCell::new(0));
+        let signal = SignalRuntimeRef::new_mc(2, box |e: i32, v: &mut i32| { *v *= e;});
+        {
+            let mut rt = rt! {
+                |_| {
+                    signal.clone()
+                };
+                await_immediate_d();
+                |_| {
+                    *value.borrow_mut() = 42
+                }
+            };
+
+            rt.instant();
+            assert_eq!(*value.borrow(), 0);
+            rt.instant();
+            assert_eq!(*value.borrow(), 0);
+        }
+    }
+
+    #[test]
+    fn await_immediate_d_in_test() {
+        let value = Rc::new(RefCell::new(0));
+        let signal = SignalRuntimeRef::new_mc(2, box |e: i32, v: &mut i32| { *v *= e;});
+        {
+            let mut rt = rt! {
+                |_| {
+                    (signal.clone(), 7)
+                };
+                emit_vs(signal.clone(), 3);
+                await_immediate_d_in();
+                |val| {
+                    *value.borrow_mut() = 6 * val
+                }
+            };
+
+            rt.instant();
+            assert_eq!(*value.borrow(), 42);
+        }
+    }
+
+    #[test]
+    fn non_await_immediate_d_in_test() {
+        let value = Rc::new(RefCell::new(0));
+        let signal = SignalRuntimeRef::new_mc(2, box |e: i32, v: &mut i32| { *v *= e;});
+        {
+            let mut rt = rt! {
+                |_| {
+                    (signal.clone(), 7)
+                };
+                await_immediate_d_in();
+                |val| {
+                    *value.borrow_mut() = val
+                }
+            };
+
+            rt.instant();
+            assert_eq!(*value.borrow(), 0);
+            rt.instant();
+            assert_eq!(*value.borrow(), 0);
+        }
+    }
+
+    #[test]
+    fn await_immediate_s_test() {
+        let value = Rc::new(RefCell::new(0));
+        let signal = SignalRuntimeRef::new_mc(2, box |e: i32, v: &mut i32| { *v *= e;});
+        {
+            let mut rt = rt! {
+                |_| {
+                    7
+                };
+                emit_vs(signal.clone(), 3);
+                await_immediate_s(signal.clone());
+                |val| {
+                    *value.borrow_mut() = 6 * val
+                }
+            };
+
+            rt.instant();
+            assert_eq!(*value.borrow(), 42);
+        }
+    }
+
+    #[test]
+    fn non_await_immediate_s_test() {
+        let value = Rc::new(RefCell::new(0));
+        let signal = SignalRuntimeRef::new_mc(2, box |e: i32, v: &mut i32| { *v *= e;});
+        {
+            let mut rt = rt! {
+                |_| {
+                    7
+                };
+                await_immediate_s(signal.clone());
+                |val| {
+                    *value.borrow_mut() = val
+                }
+            };
+
+            rt.instant();
+            assert_eq!(*value.borrow(), 0);
+            rt.instant();
+            assert_eq!(*value.borrow(), 0);
+        }
+    }
+
+    #[test]
     fn par() {
         run!{
             |_| (0,0);
