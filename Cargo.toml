@@ -9,6 +9,10 @@ log = "0.3"
 env_logger = "0.3"
 time = "0.1.38"
 
+[features]
+par = [] # Parallel runtime if enabled
+funsafe = [] # Faster unsafe code, may UB
+
 # [[bin]]
 # name = "gol"
 # path = "src/gameoflife.rs"

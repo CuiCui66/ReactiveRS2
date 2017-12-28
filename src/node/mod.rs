@@ -1,6 +1,8 @@
 use std::marker::PhantomData;
+use std::collections::HashMap;
 
 use engine::*;
+use tname::tname;
 
 mod rcmanip;
 pub use self::rcmanip::*;
@@ -11,9 +13,13 @@ pub use self::par::*;
 mod signal;
 pub use self::signal::*;
 
+
 pub trait Node<'a, In: 'a>: 'a {
     type Out: 'a;
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, val: In) -> Self::Out;
+    fn printDot(&mut self, _: &mut CFGDrawer) {
+        print!("{}",tname::<Self>())
+    }
     fn nseq<N2>(self, n2: N2) -> NSeq<Self, N2>
     where
         N2: Node<'a, Self::Out> + Sized,
@@ -111,6 +117,9 @@ where
         let &mut FnMutN(ref mut f) = self;
         f(val)
     }
+    fn printDot(&mut self, _: &mut CFGDrawer) {
+        print!("FnMut : {} -\\> {}", tname::<In>(), tname::<Out>())
+    }
 }
 
 //  ____
@@ -135,6 +144,14 @@ where
         let valm = self.n1.call(sub_runtime, val);
         self.n2.call(sub_runtime, valm)
     }
+    fn printDot(&mut self, cfgd: &mut CFGDrawer) {
+        print!("{{{{");
+        self.n1.printDot(cfgd);
+        print!("}}|{{");
+        self.n2.printDot(cfgd);
+        print!("}}}}");
+    }
+
 }
 
 pub struct NSeqD<'a, In, Mid, Out> {
@@ -148,5 +165,74 @@ impl<'a, In: 'a, Mid: 'a, Out: 'a> Node<'a, In> for NSeqD<'a,In, Mid, Out>
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, val: In) -> Out {
         let valm = self.n1.call(sub_runtime, val);
         self.n2.call(sub_runtime, valm)
+    }
+}
+
+//   ____                 _
+//  / ___|_ __ __ _ _ __ | |__
+// | |  _| '__/ _` | '_ \| '_ \
+// | |_| | | | (_| | |_) | | | |
+//  \____|_|  \__,_| .__/|_| |_|
+//                 |_|
+
+pub struct CFGDrawer {
+    map: HashMap<usize, usize>,
+    current_ind: usize,
+    node: usize,
+    node_ind: usize,
+    arrow: Vec<(usize, usize)>,
+}
+
+impl CFGDrawer {
+    pub fn new() -> CFGDrawer {
+        CFGDrawer {
+            map: HashMap::new(),
+            current_ind: 0,
+            node: 0,
+            node_ind: 0,
+            arrow: vec![]
+        }
+    }
+    fn start_node(&mut self, node : usize){
+        self.arrow.clear();
+        self.node = node;
+    }
+    fn get_ind<T>(&mut self, ptr: *const T) -> usize {
+        let u = ptr as usize;
+        match self.map.get(&u) {
+            Some(ind) => {return *ind; }
+            None => {}
+        }
+        let ind = self.current_ind;
+        self.current_ind += 1;
+        self.map.insert(u,ind);
+        ind
+    }
+    fn get_node(&mut self) -> usize{
+        self.node
+    }
+    fn get_node_ind(&mut self) -> usize{
+        let ind = self.node_ind;
+        self.node_ind +=1;
+        ind
+    }
+    fn add_arrow(&mut self, arr: (usize, usize)){
+        self.arrow.push(arr)
+    }
+    fn get_arrow(&mut self) -> &[(usize, usize)]{
+        &self.arrow
+    }
+}
+
+
+pub fn printNode<'a,N : ?Sized>(ind: usize, n: &mut N, cfgd : &mut CFGDrawer)
+    where N : Node<'a,(),Out =()>
+{
+    print!("{} [shape=record,label=\"",ind);
+    cfgd.start_node(ind);
+    n.printDot(cfgd);
+    println!("\"]");
+    for &(s,i) in cfgd.get_arrow(){
+        println!("{}:f{} -> {}",ind,s,i);
     }
 }

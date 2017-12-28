@@ -22,6 +22,7 @@ pub mod node;
 pub mod process;
 pub mod signal;
 mod take;
+mod tname;
 
 #[cfg(test)]
 mod tests {

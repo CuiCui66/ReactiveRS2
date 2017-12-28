@@ -21,7 +21,7 @@
 
 use node::*;
 use engine::*;
-pub use std::intrinsics::type_name;
+pub(crate) use tname::*;
 
 /// Contains all basic struct of reactive processes, closure, Pause, ...
 mod base;
@@ -317,11 +317,6 @@ where
 // |  __/| |  | | | | | |_| |_| | | | (_| | |_) | | | |
 // |_|   |_|  |_|_| |_|\__|\____|_|  \__,_| .__/|_| |_|
 //                                        |_|
-
-
-fn tname<T>() -> &'static str {
-    unsafe { type_name::<T>() }
-}
 
 pub fn print_graph<'a, P>(p: &'a mut P)
 where
