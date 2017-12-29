@@ -3,7 +3,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::cell::*;
-use take::take;
+use utility::take;
 use super::*;
 
 

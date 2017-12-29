@@ -20,9 +20,9 @@
 
 
 use node::*;
-use engine::*;
 use signal::*;
-pub(crate) use tname::*;
+use graph::*;
+pub(crate) use utility::*;
 use super::*;
 
 /// Contains all basic struct of reactive processes, closure, Pause, ...
@@ -224,7 +224,7 @@ pub trait Process<'a, In: Val<'a>>: IntProcess<'a, In> + Sized {
         Par(self, q).tobox()
     }
 
-    fn present<PF: Val<'a>, S: Signal<'a>>(self, process_false: PF) -> <PresentD<Self, PF> as ToBoxedProcess<'a, S>>::Boxed
+    fn present<PF, S: Signal<'a>>(self, process_false: PF) -> <PresentD<Self, PF> as ToBoxedProcess<'a, S>>::Boxed
     where
         PF: Process<'a, ()>,
         Self: Process<'a, ()>,
@@ -302,7 +302,7 @@ impl<'a, NIO> GraphFiller<'a> for ProcessIm<'a, (), (), NIO>
     fn fill_graph(self, g: &mut Graph<'a>) ->usize
     {
         let pnio = self.compileIm(g);
-        g.add(box pnio)
+        g.add(box node!(pnio >> NEnd{}))
     }
 }
 
@@ -319,7 +319,7 @@ where
 {
     fn fill_graph(self, g: &mut Graph<'a>) -> usize {
         let (pni, pind, pno) = self.compile(g);
-        g.set(pind, box pno);
+        g.set(pind, box node!(pno >> NEnd{}));
         g.add(box pni)
     }
 }

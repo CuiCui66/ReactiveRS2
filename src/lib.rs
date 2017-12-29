@@ -14,14 +14,20 @@
 // extern crate env_logger;
 extern crate test;
 extern crate core;
+extern crate crossbeam_deque;
+extern crate crossbeam;
 
 
 #[macro_use]
 pub mod macros;
 
+#[macro_use]
+mod utility;
+
 
 //#[cfg(not(feature = "par"))]
 pub mod engine;
+pub mod graph;
 
 #[cfg(not(feature = "par"))]
 mod all{
@@ -59,8 +65,8 @@ pub mod process;
 //pub mod process_par;
 pub mod signal;
 //pub mod signal_par;
-mod take;
-mod tname;
+
+
 
 #[cfg(test)]
 mod tests {
@@ -170,7 +176,7 @@ mod tests {
     }
 
     #[test]
-    fn choice() {
+    fn choice_im() {
         let mut i = 0;
         run!{
             |_| { True(42) };
@@ -1042,3 +1048,4 @@ mod tests {
     }
 
 }
+

@@ -8,15 +8,16 @@ promacros = { path = "promacros"}
 log = "0.3"
 env_logger = "0.3"
 time = "0.1.38"
-cpuprofiler = "0.0.3"
+crossbeam-deque = "0.1.0"
+crossbeam = "0.3.0"
 
 [features]
 par = [] # Parallel runtime if enabled
 funsafe = [] # Faster unsafe code, may UB
 
-[[bin]]
-name = "gol"
-path = "src/gameoflife.rs"
+# [[bin]]
+# name = "gol"
+# path = "src/gameoflife.rs"
 
 # [[bin]]
 # name = "sb"

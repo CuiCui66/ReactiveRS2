@@ -1,8 +1,8 @@
-use std::rc::Rc;
-use std::cell::{RefCell, RefMut};
+// use std::rc::Rc;
+// use std::cell::{RefCell, RefMut};
 use std::mem;
-use take::take;
-use engine::{SubRuntime, Tasks, EndOfInstantCallback};
+use utility::take;
+use engine::{SubRuntime, EndOfInstantCallback};
 use super::*;
 
 //  ____  _                   _ ____              _   _
@@ -46,7 +46,7 @@ where
         SignalRuntime {
             last_set: 0,
             pre_last_set: 0,
-            last_update: 2,
+            last_update: 3,
             pending_await: vec![],
             pending_await_immediate: vec![],
             pending_present: vec![],

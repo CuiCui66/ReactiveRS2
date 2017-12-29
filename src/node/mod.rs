@@ -1,10 +1,9 @@
 use std::marker::PhantomData;
 
 use engine::*;
-use take::take;
+use utility::{take,tname};
 use std::collections::HashMap;
 use super::*;
-use tname::tname;
 
 mod mem_manip;
 pub use self::mem_manip::*;
@@ -195,6 +194,25 @@ where
         print!("}}}}");
     }
 }
+
+//  _____           _
+// | ____|_ __   __| |
+// |  _| | '_ \ / _` |
+// | |___| | | | (_| |
+// |_____|_| |_|\__,_|
+
+pub struct NEnd{}
+impl<'a> Node<'a, ()> for NEnd
+{
+    type Out = ();
+    fn call(&mut self, sub: &mut SubRuntime<'a>, _: ()) -> () {
+        sub.end();
+    }
+}
+
+
+
+
 
 //   ____                 _
 //  / ___|_ __ __ _ _ __ | |__
