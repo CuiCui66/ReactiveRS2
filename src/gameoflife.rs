@@ -132,8 +132,8 @@ fn main() {
                         |_:()| {
                             ()
                         };
-                        AwaitS(s.clone());
-                        move |((was_set,v),_): ((bool,usize),())| {
+                        await_s(s.clone());
+                        move |(was_set,v): (bool,usize)| {
                             if v == 3 || (v == 2 && was_set) {
                                 True(())
                             } else {
@@ -144,8 +144,8 @@ fn main() {
                             |_:()| {
                                 ()
                             };
-                            emit_value_vec(v);
-                            emit_value(board_signal.clone(), (i as usize,j as usize));
+                            emit_vec_vs(v);
+                            emit_vs(board_signal.clone(), (i as usize,j as usize));
                             move |_:()| {
                                 if false {
                                     False(())
@@ -189,7 +189,7 @@ fn main() {
 
         let rt2 = pro!(
             |_:()| { () };
-            emit_value_vec(v)
+            emit_vec_vs(v)
         );
 
 
@@ -197,12 +197,10 @@ fn main() {
 
         let n = 100_000;
         let start = SteadyTime::now();
-        PROFILER.lock().unwrap().start("./profile").unwrap();
         for _ in 0..n {
             rt.instant();
         }
-        PROFILER.lock().unwrap().stop().unwrap();
-        println!("{}", n as f32 / ((SteadyTime::now() - start).num_nanoseconds().unwrap() as f32 / 1_000_000_000.))
+        println!("{}", (n as f32) / ((SteadyTime::now() - start).num_nanoseconds().unwrap() as f32 / 1_000_000_000.))
     }
 
     let values = board_values.borrow();

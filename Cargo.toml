@@ -14,9 +14,9 @@ cpuprofiler = "0.0.3"
 par = [] # Parallel runtime if enabled
 funsafe = [] # Faster unsafe code, may UB
 
-# [[bin]]
-# name = "gol"
-# path = "src/gameoflife.rs"
+[[bin]]
+name = "gol"
+path = "src/gameoflife.rs"
 
 # [[bin]]
 # name = "sb"
