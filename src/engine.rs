@@ -68,7 +68,7 @@ mod runtime {
         pub fn get_current_instant(&mut self) -> usize {
             self.current_instant
         }
-        pub fn end(&mut self){}
+        pub fn end(&mut self) {}
     }
 
 
@@ -178,7 +178,7 @@ mod runtime {
 #[cfg(feature = "par")]
 mod runtime {
     use super::*;
-    use crossbeam_deque::{Deque, Stealer};
+    use crossbeam_deque::{Deque, Stealer, Steal};
     use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::AtomicBool;
     use std::sync::Mutex;
@@ -241,10 +241,7 @@ mod runtime {
 
 
     impl<'a> SubRuntime<'a> {
-        fn new(
-            mut ids: Vec<InstantData>,
-            aend: Arc<AtomicBool>
-        ) -> Self {
+        fn new(mut ids: Vec<InstantData>, aend: Arc<AtomicBool>) -> Self {
             assert_eq!(ids.len(), 3);
             // start instant must be 3
             let previous = ids.pop().unwrap();
@@ -272,9 +269,9 @@ mod runtime {
         pub fn get_current_instant(&mut self) -> usize {
             self.current_instant
         }
-        pub fn end(&mut self){
+        pub fn end(&mut self) {
             //println!("END\n");
-            self.aend.store(true,Relaxed);
+            self.aend.store(true, Relaxed);
         }
     }
 
@@ -286,33 +283,41 @@ mod runtime {
             nodes: Arc<Vec<Mutex<Box<Node<'a, (), Out = ()>>>>>,
         ) -> Self {
             ThreadRuntime {
-                sub: SubRuntime::new(ids,end),
+                sub: SubRuntime::new(ids, end),
                 nodes,
             }
 
         }
 
         fn step(&mut self) {
-            self.sub.previous.nbf.store(0, SeqCst);
-            swap3(&mut self.sub.previous, &mut self.sub.current, &mut self.sub.next);
+            self.sub.previous.nbf.store(0, Relaxed);
+            swap3(
+                &mut self.sub.previous,
+                &mut self.sub.current,
+                &mut self.sub.next,
+            );
             self.sub.current_instant += 1;
         }
-        fn run_node(&mut self,num: usize){
-            self.nodes[num].lock().unwrap().call(&mut self.sub,());
+        fn run_node(&mut self, num: usize) {
+            self.nodes[num].lock().unwrap().call(&mut self.sub, ());
         }
         fn instant(&mut self) {
-            'instant: loop{
-                while let Some(nb) = self.sub.current.ws.deque.pop(){
+            'instant: loop {
+                while let Some(nb) = self.sub.current.ws.deque.pop() {
                     self.run_node(nb);
                 }
-                self.sub.current.nbf.fetch_add(1,SeqCst);
-                // println!("just prev:{}, cur:{}, next:{}",
-                //          self.sub.previous.nbf.load(SeqCst),
-                //          self.sub.current.nbf.load(SeqCst),
-                //          self.sub.next.nbf.load(SeqCst),
-                // );
-                while(self.sub.current.nbf.load(SeqCst) < nb_th){
-                    // steal
+                self.sub.current.nbf.fetch_add(1, SeqCst);
+                while (self.sub.current.nbf.load(SeqCst) < nb_th) {
+                    for i in 0..nb_th - 1 {
+                        if (!self.sub.current.ws.stealers[i].is_empty()) {
+                            self.sub.current.nbf.fetch_sub(1, SeqCst);
+                            if let Steal::Data(nb) = self.sub.current.ws.stealers[i].steal() {
+                                self.run_node(nb);
+                                continue 'instant;
+                            }
+                            self.sub.current.nbf.fetch_add(1, SeqCst);
+                        }
+                    }
                 }
                 break 'instant;
             } // end 'instant
@@ -324,15 +329,10 @@ mod runtime {
 
         }
         fn execute(&mut self) {
-            while !self.sub.aend.load(SeqCst) {
-                // println!("instant prev:{}, cur:{}, next:{}",
-                //          self.sub.previous.nbf.load(SeqCst),
-                //          self.sub.current.nbf.load(SeqCst),
-                //          self.sub.next.nbf.load(SeqCst),
-                // );
+            while !self.sub.aend.load(Relaxed) {
                 self.instant();
             }
-            self.sub.current.nbf.fetch_add(1,SeqCst);
+            self.sub.current.nbf.fetch_add(1, Relaxed);
         }
     }
 
@@ -356,12 +356,9 @@ mod runtime {
     impl<'a> Runtime<'a> {
         /// Executes the whole reactive process until it ends.
         pub fn execute(&mut self) {
-            crossbeam::scope(|scope|{
-                for tr in self.thread_runtimes.iter_mut(){
-                    scope.spawn(move || tr.execute());
-                }
-            }
-            );
+            crossbeam::scope(|scope| for tr in self.thread_runtimes.iter_mut() {
+                scope.spawn(move || tr.execute());
+            });
             //assert!(self.end.load(SeqCst));
 
         }
@@ -370,12 +367,9 @@ mod runtime {
         ///
         /// Returns whether the process should continue.
         pub fn instant(&mut self) -> bool {
-            crossbeam::scope(|scope|{
-                for tr in self.thread_runtimes.iter_mut(){
-                    scope.spawn(move || tr.instant());
-                }
-            }
-            );
+            crossbeam::scope(|scope| for tr in self.thread_runtimes.iter_mut() {
+                scope.spawn(move || tr.instant());
+            });
             self.end.load(SeqCst)
         }
 
@@ -483,13 +477,15 @@ mod runtime {
 
             let subs: Vec<ThreadRuntime<'a>> = instdatas
                 .into_iter()
-                .map(|ids| ThreadRuntime::new(ids, end.clone(),arc_nodes.clone()))
+                .map(|ids| {
+                    ThreadRuntime::new(ids, end.clone(), arc_nodes.clone())
+                })
                 .collect();
 
             Runtime {
                 end,
                 thread_runtimes: subs,
-                nodes:arc_nodes
+                nodes: arc_nodes,
             }
 
 
@@ -499,6 +495,3 @@ mod runtime {
 }
 
 pub use self::runtime::*;
-
-
-
