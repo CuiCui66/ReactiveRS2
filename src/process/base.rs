@@ -150,7 +150,7 @@ impl<'a, In: Val<'a>> IntProcessNotIm<'a, In> for Jump {
     }
 }
 
-pub fn jump<'a, In: Val<'a>>() -> ProcessNotIm<'a,In,In,NSeq<NStore<In>, NJump>,NLoad<In>> {
+pub fn jump<'a, In: Val<'a>>() -> ProcessNotIm<'a,In,In,NotOnce,NSeq<NStore<In>, NJump>,NLoad<In>> {
     ProcessNotIm(box Jump {})
 }
 
