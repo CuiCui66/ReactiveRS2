@@ -21,6 +21,7 @@
 
 use node::*;
 use engine::*;
+use signal::*;
 pub(crate) use tname::*;
 use super::*;
 
@@ -221,6 +222,18 @@ pub trait Process<'a, In: Val<'a>>: IntProcess<'a, In> + Sized {
         Par<Self, Q>: ToBoxedProcess<'a, (In, InQ)>,
     {
         Par(self, q).tobox()
+    }
+
+    fn present<PF: Val<'a>, S: Signal<'a>>(self, process_false: PF) -> <PresentD<Self, PF> as ToBoxedProcess<'a, S>>::Boxed
+    where
+        PF: Process<'a, ()>,
+        Self: Process<'a, ()>,
+        PresentD<Self, PF>: ToBoxedProcess<'a, S>,
+    {
+        (PresentD {
+            pt: self,
+            pf: process_false,
+        }).tobox()
     }
 }
 

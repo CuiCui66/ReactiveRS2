@@ -740,7 +740,6 @@ mod tests {
         }
     }
 
-    /*
     #[test]
     fn present_true() {
         let value = GCell::new(0);
@@ -762,7 +761,7 @@ mod tests {
             rt.instant();
             assert_eq!(value.get(), 42);
         }
-    }*/
+    }
 
     #[test]
     fn await_immediate_s_test() {
@@ -864,7 +863,7 @@ mod tests {
         }
     }
 
-    /*
+
     #[test]
     fn present_false() {
         let value = GCell::new(0);
@@ -887,7 +886,7 @@ mod tests {
             rt.instant();
             assert_eq!(value.get(), 21);
         }
-    }*/
+    }
 
     #[test]
     fn par_im() {
