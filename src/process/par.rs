@@ -204,6 +204,6 @@ where
             g.set(pind, box node!(pno >> big_merge(rcbjp.clone())));
             dests.push(g.add(box node!(load_copy(rcin.clone()) >> pni)));
         }
-        (node!(store(rcin) >> NBigPar { dests }), end_point, Nothing)
+        (node!(store(rcin) >> NBigPar { dests }), end_point, Nothing {})
     }
 }

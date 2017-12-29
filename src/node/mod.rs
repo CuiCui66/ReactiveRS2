@@ -50,9 +50,6 @@ pub trait Node<'a, In: Val<'a>>: Val<'a> {
 #[derive(Clone, Copy)]
 pub struct Nothing {}
 
-#[allow(non_upper_case_globals)]
-pub static Nothing: Nothing = Nothing {};
-
 impl<'a> Node<'a, ()> for Nothing {
     type Out = ();
     fn call(&mut self, _: &mut SubRuntime<'a>, _val: ()) -> Self::Out {}
@@ -60,10 +57,8 @@ impl<'a> Node<'a, ()> for Nothing {
 
 
 
+#[derive(Clone, Copy)]
 pub struct NIdentity {}
-
-#[allow(non_upper_case_globals)]
-pub static NIdentity: NIdentity = NIdentity {};
 
 impl<'a, In: Val<'a>> Node<'a, In> for NIdentity {
     type Out = In;

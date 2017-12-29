@@ -4,7 +4,6 @@
 
 #[macro_use] extern crate ReactiveRS2;
 extern crate time;
-extern crate cpuprofiler;
 
 use ReactiveRS2::process::*;
 use ReactiveRS2::signal::*;
@@ -12,8 +11,8 @@ use ReactiveRS2::engine::*;
 use ReactiveRS2::node::ChoiceData::*;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 use time::SteadyTime;
-use cpuprofiler::PROFILER;
 
 /// The type of the cell signal
 type CellSignal = SignalRuntimeRef<MCSignalValue<bool,(bool,usize)>>;
@@ -26,14 +25,14 @@ type BoardSignal = SignalRuntimeRef<BoardData>;
 /// The elements in the vectors represent the last instant where the cell was set
 #[derive(Clone)]
 struct BoardData {
-    data: Rc<RefCell<(usize, Vec<Vec<usize>>)>>,
+    data: Arc<Mutex<(usize, Vec<Vec<usize>>)>>,
 }
 
 impl BoardData {
     /// Create a new board with given width and height
-    fn new(width: usize, height: usize) -> (BoardData, Rc<RefCell<(usize,Vec<Vec<usize>>)>>) {
+    fn new(width: usize, height: usize) -> (BoardData, Arc<Mutex<(usize,Vec<Vec<usize>>)>>) {
         let board_data = BoardData {
-            data: Rc::new(RefCell::new((1,vec![vec![0;width];height]))),
+            data: Arc::new(Mutex::new((1,vec![vec![0;width];height]))),
         };
         let board_values = board_data.data.clone();
         (board_data, board_values)
@@ -43,18 +42,18 @@ impl BoardData {
 
 impl SignalValue for BoardData {
     type E = (usize,usize);
-    type V = Rc<RefCell<(usize,Vec<Vec<usize>>)>>;
+    type V = Arc<Mutex<(usize,Vec<Vec<usize>>)>>;
 
     fn get_pre_value(&self) -> Self::V {
        self.data.clone()
     }
 
     fn reset_value(&mut self) {
-        self.data.borrow_mut().0 += 1;
+        self.data.lock().unwrap().0 += 1;
     }
 
     fn gather(&mut self, (i,j): (usize, usize)) {
-        let mut data = self.data.borrow_mut();
+        let mut data = self.data.lock().unwrap();
         data.1[i][j] = data.0;
     }
 }
@@ -203,7 +202,7 @@ fn main() {
         println!("{}", (n as f32) / ((SteadyTime::now() - start).num_nanoseconds().unwrap() as f32 / 1_000_000_000.))
     }
 
-    let values = board_values.borrow();
+    let values = board_values.lock().unwrap();
     for i in 0..height {
         for j in 0..width {
             if values.1[i][j] == values.0 {

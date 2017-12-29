@@ -607,9 +607,6 @@ where
 #[derive(Clone, Copy)]
 pub struct AwaitD {}
 
-#[allow(non_upper_case_globals)]
-pub static AwaitD: AwaitD = AwaitD {};
-
 impl<'a, S: Val<'a>> IntProcess<'a, S> for AwaitD
 where
     S: Signal<'a>,
@@ -783,7 +780,7 @@ where
         let rc2 = rc.clone();
 
         let ni = node!(store(rc) >> NAwaitS(self.0.clone(), out_id));
-        let no = node!( GenP >> (NGetS(self.0) || load(rc2)));
+        let no = node!( GenP{} >> (NGetS(self.0) || load(rc2)));
         (ni, out_id, no)
     }
 }
@@ -876,7 +873,7 @@ where
         let rc2 = rc.clone();
 
         let ni_first = <NIdentity as Node<'a,S>>::njoin::<In, NStore<In>>(NIdentity {}, store(rc));
-        let ni_second = <NPar<NIdentity,NStore<In>> as Node<'a, (S, In)>>::nseq(ni_first, Ignore2);
+        let ni_second = <NPar<NIdentity,NStore<In>> as Node<'a, (S, In)>>::nseq(ni_first, Ignore2 {});
         let ni = <NSeq<NPar<NIdentity,NStore<In>>,Ignore2> as Node<'a, (S, In)>>::nseq(ni_second, NAwaitImmediateD(out_id));
         let no = load(rc2);
         (ni, out_id, no)

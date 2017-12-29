@@ -17,9 +17,6 @@ use super::*;
 #[derive(Clone, Copy)]
 pub struct Ignore {}
 
-#[allow(non_upper_case_globals)]
-pub static Ignore: Ignore = Ignore {};
-
 impl<'a, In: Val<'a>> Node<'a, In> for Ignore {
     type Out = ();
     fn call(&mut self, _: &mut SubRuntime<'a>, _: In) -> Self::Out {}
@@ -30,9 +27,6 @@ impl<'a, In: Val<'a>> Node<'a, In> for Ignore {
 
 #[derive(Clone, Copy)]
 pub struct GenP {}
-
-#[allow(non_upper_case_globals)]
-pub static GenP: GenP = GenP {};
 
 impl<'a> Node<'a, ()> for GenP {
     type Out = ((), ());
@@ -47,9 +41,6 @@ impl<'a> Node<'a, ()> for GenP {
 #[derive(Clone, Copy)]
 pub struct Ignore1 {}
 
-#[allow(non_upper_case_globals)]
-pub static Ignore1: Ignore1 = Ignore1 {};
-
 impl<'a, In1: Val<'a>, In2: Val<'a>> Node<'a, (In1, In2)> for Ignore1 {
     type Out = In2;
     fn call(&mut self, _: &mut SubRuntime<'a>, (_, val): (In1, In2)) -> Self::Out {
@@ -62,9 +53,6 @@ impl<'a, In1: Val<'a>, In2: Val<'a>> Node<'a, (In1, In2)> for Ignore1 {
 
 #[derive(Clone, Copy)]
 pub struct Ignore2 {}
-
-#[allow(non_upper_case_globals)]
-pub static Ignore2: Ignore2 = Ignore2 {};
 
 impl<'a, In1: Val<'a>, In2: Val<'a>> Node<'a, (In1, In2)> for Ignore2 {
     type Out = In1;

@@ -32,21 +32,21 @@ macro_rules! run {
 #[macro_export]
 macro_rules! nodei {
     ($($x:tt)+ ) => {{
-        node!(($($x)*) >> Ignore)
+        node!(($($x)*) >> Ignore {})
     }};
 }
 
 #[macro_export]
 macro_rules! nodep {
     ($($x:tt)+ ) => {{
-        node!(GenP >> ($($x)*))
+        node!(GenP {} >> ($($x)*))
     }};
 }
 
 #[macro_export]
 macro_rules! nodepi {
     ($($x:tt)+ ) => {{
-        node!(GenP >> ($($x)*) >> Ignore)
+        node!(GenP{} >> ($($x)*) >> Ignore{})
     }};
 }
 
