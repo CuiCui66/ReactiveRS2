@@ -25,6 +25,8 @@ use graph::*;
 pub(crate) use utility::*;
 use super::*;
 
+use std::marker::PhantomData;
+
 /// Contains all basic struct of reactive processes, closure, Pause, ...
 mod base;
 #[doc(hidden)] // for private doc remove for public doc
@@ -52,6 +54,42 @@ pub use self::signal::*;
 
 
 
+pub trait Once : Copy + 'static {}
+
+pub trait GiveOnce {
+    type Once: Once;
+}
+
+pub struct And<O1,O2>
+where
+    O1: Once,
+    O2: Once,
+{
+    o1: PhantomData<O1>,
+    o2: PhantomData<O2>,
+}
+
+// default impl, is needded by rust
+default impl<O1,O2> GiveOnce for And<O1,O2>
+where
+O1: Once,
+O2: Once,
+{
+    type Once = IsOnce;
+}
+
+impl GiveOnce for And<NotOnce, NotOnce> {
+    type Once = NotOnce;
+}
+
+
+#[derive(Clone,Copy)]
+pub struct IsOnce;
+impl Once for IsOnce {}
+
+#[derive(Clone,Copy)]
+pub struct NotOnce;
+impl Once for NotOnce {}
 
 
 
@@ -59,6 +97,11 @@ pub use self::signal::*;
 pub trait IntProcess<'a, In: Val<'a>>: 'a {
     /// The type outputted by the process when In is given.
     type Out: Val<'a>;
+
+    /// The type checking if the process can be called multiple times.
+    /// This type is IsOnce if it can be called only one time,
+    /// and NotOnce if it can be called multiple times.
+    type MarkOnce: Once;
 
     /// Prints dot code for this process on stdout.
     ///
@@ -109,9 +152,9 @@ pub trait IntProcessNotIm<'a, In: Val<'a>>: IntProcess<'a, In> {
 /// An immediate process.
 ///
 /// This is simply a virtualization of an immediate process implementation.
-pub struct ProcessIm<'a, In, Out, NIO>(pub(crate) Box<IntProcessIm<'a, In, Out = Out, NIO = NIO>>);
+pub struct ProcessIm<'a, In, Out, MarkOnce, NIO>(pub(crate) Box<IntProcessIm<'a, In, Out = Out, MarkOnce = MarkOnce, NIO = NIO>>);
 
-impl<'a, In: Val<'a>, Out: Val<'a>, NIO> ProcessIm<'a, In, Out, NIO>
+impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NIO> ProcessIm<'a, In, Out, MarkOnce, NIO>
 where
     NIO: Node<'a, In, Out = Out>,
 {
@@ -126,12 +169,12 @@ where
 ///
 /// This is simply a virtualization of an non-immediate process implementation.
 #[cfg_attr(rustfmt, rustfmt_skip)]
-pub struct ProcessNotIm<'a, In, Out, NI, NO>(
-    pub(crate) Box<IntProcessNotIm<'a, In, Out = Out, NI = NI, NO = NO>>
+pub struct ProcessNotIm<'a, In, Out, MarkOnce, NI, NO>(
+    pub(crate) Box<IntProcessNotIm<'a, In, Out = Out, MarkOnce = MarkOnce, NI = NI, NO = NO>>
 );
 
 
-impl<'a, In: Val<'a>, Out: Val<'a>, NI, NO> ProcessNotIm<'a, In, Out, NI, NO>
+impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NI, NO> ProcessNotIm<'a, In, Out, MarkOnce, NI, NO>
 where
     NI: Node<'a, In, Out = ()>,
     NO: Node<'a, (), Out = Out>,
@@ -238,13 +281,14 @@ pub trait Process<'a, In: Val<'a>>: IntProcess<'a, In> + Sized {
 }
 
 /// puts a lot of processes in parallel.
-pub fn big_join<'a, In: Val<'a>, PNI, PNO>(
-    vp: Vec<ProcessNotIm<'a, In, (), PNI, PNO>>,
-) -> ProcessNotIm<'a, In, (), NSeq<NStore<In>, NBigPar>, Nothing>
+pub fn big_join<'a, In: Val<'a>, MarkOnce, PNI, PNO>(
+    vp: Vec<ProcessNotIm<'a, In, (), MarkOnce, PNI, PNO>>,
+) -> ProcessNotIm<'a, In, (), MarkOnce, NSeq<NStore<In>, NBigPar>, Nothing>
 where
     PNI: Node<'a, In, Out = ()>,
     PNO: Node<'a, (), Out = ()>,
     In: Copy,
+    MarkOnce: Once,
 {
     let mut res = vec![];
     for p in vp {
@@ -267,36 +311,44 @@ where
 }
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-impl<'a, In: Val<'a>, Out: Val<'a>, NIO> IntProcess<'a, In> for ProcessIm<'a, In, Out, NIO>
+impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NIO> IntProcess<'a, In> for ProcessIm<'a, In, Out, MarkOnce, NIO>
 where
     NIO: Node<'a, In, Out = Out>,
+    MarkOnce: Once,
 {
     type Out = Out;
+    type MarkOnce = MarkOnce;
+
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         self.0.printDot(curNum)
     }
 }
 
-impl<'a, In: Val<'a>, Out: Val<'a>, NI, NO> IntProcess<'a, In> for ProcessNotIm<'a, In, Out, NI, NO>
+impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NI, NO> IntProcess<'a, In> for ProcessNotIm<'a, In, Out, MarkOnce, NI, NO>
 where
     NI: Node<'a, In, Out = ()>,
     NO: Node<'a, (), Out = Out>,
+    MarkOnce: Once,
 {
     type Out = Out;
+    type MarkOnce = MarkOnce;
+
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         self.0.printDot(curNum)
     }
 }
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-impl<'a, In: Val<'a>, Out: Val<'a>, NIO> Process<'a, In> for ProcessIm<'a, In, Out, NIO>
+impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NIO> Process<'a, In> for ProcessIm<'a, In, Out, MarkOnce, NIO>
 where
     NIO: Node<'a, In, Out = Out>,
+    MarkOnce: Once,
 {}
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-impl<'a, NIO> GraphFiller<'a> for ProcessIm<'a, (), (), NIO>
+impl<'a, MarkOnce, NIO> GraphFiller<'a> for ProcessIm<'a, (), (), MarkOnce, NIO>
     where
+    MarkOnce: Once,
     NIO: Node<'a, (), Out = ()>,
 {
     fn fill_graph(self, g: &mut Graph<'a>) ->usize
@@ -306,16 +358,18 @@ impl<'a, NIO> GraphFiller<'a> for ProcessIm<'a, (), (), NIO>
     }
 }
 
-impl<'a, In: Val<'a>, Out: Val<'a>, NI,NO> Process<'a, In> for ProcessNotIm<'a, In, Out, NI,NO>
+impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NI,NO> Process<'a, In> for ProcessNotIm<'a, In, Out, MarkOnce, NI,NO>
     where
+    MarkOnce: Once,
     NI: Node<'a, In, Out = ()>,
     NO: Node<'a, (), Out = Out>,
 {}
 
-impl<'a, NI, NO> GraphFiller<'a> for ProcessNotIm<'a, (), (), NI, NO>
+impl<'a, MarkOnce, NI, NO> GraphFiller<'a> for ProcessNotIm<'a, (), (), MarkOnce, NI, NO>
 where
     NI: Node<'a, (), Out = ()>,
     NO: Node<'a, (), Out = ()>,
+    MarkOnce: Once,
 {
     fn fill_graph(self, g: &mut Graph<'a>) -> usize {
         let (pni, pind, pno) = self.compile(g);

@@ -19,6 +19,7 @@ where
     S: Signal<'a>
 {
     type Out = S::V;
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
@@ -39,7 +40,7 @@ where
     }
 }
 
-pub fn pre_d<'a, S>() -> ProcessIm<'a, S, S::V, NGetD>
+pub fn pre_d<'a, S>() -> ProcessIm<'a, S, S::V, NotOnce, NGetD>
 where
     S: Signal<'a>
 {
@@ -51,6 +52,7 @@ where
     S: Signal<'a>
 {
     type Out = (S::V, In);
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
@@ -72,7 +74,7 @@ where
 }
 
 
-pub fn pre_d_in<'a, S, In: Val<'a>>() -> ProcessIm<'a, (S, In), (S::V, In), NGetD>
+pub fn pre_d_in<'a, S, In: Val<'a>>() -> ProcessIm<'a, (S, In), (S::V, In), NotOnce, NGetD>
 where
     S: Signal<'a>
 {
@@ -99,6 +101,7 @@ where
     S: Signal<'a>
 {
     type Out = S::V;
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
@@ -119,7 +122,7 @@ where
     }
 }
 
-pub fn pre_s<'a, S>(signal: S) -> ProcessIm<'a, (), S::V, NGetS<S>>
+pub fn pre_s<'a, S>(signal: S) -> ProcessIm<'a, (), S::V, NotOnce, NGetS<S>>
 where
     S: Signal<'a>
 {
@@ -137,6 +140,7 @@ where
     S: Signal<'a>
 {
     type Out = (S::V, In);
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
@@ -157,7 +161,7 @@ where
     }
 }
 
-pub fn pre_s_in<'a, S, In: Val<'a>>(signal: S) -> ProcessIm<'a, In, (S::V, In), NGetSIn<S>>
+pub fn pre_s_in<'a, S, In: Val<'a>>(signal: S) -> ProcessIm<'a, In, (S::V, In), NotOnce, NGetSIn<S>>
 where
     S: Signal<'a>
 {
@@ -181,6 +185,7 @@ pub static EmitD: EmitD = EmitD {};
 impl<'a, In: Val<'a>, S: Val<'a>> IntProcess<'a, ((S, S::E), In)> for EmitD
 where S: Signal<'a> {
     type Out = In;
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
@@ -205,6 +210,7 @@ where
     S: Signal<'a>,
 {
     type Out = ();
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
@@ -230,6 +236,7 @@ where
     S: Signal<'a>,
 {
     type Out = In;
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
@@ -255,6 +262,7 @@ where
     S: Signal<'a>,
 {
     type Out = ();
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
@@ -276,7 +284,7 @@ where
 
 
 pub fn emit_d_in<'a, S: Val<'a>, In: Val<'a>>()
-    -> ProcessIm<'a, ((S, S::E), In), In, NEmitD>
+    -> ProcessIm<'a, ((S, S::E), In), In, NotOnce, NEmitD>
 where
     S: Signal<'a>
 {
@@ -284,7 +292,7 @@ where
 }
 
 pub fn emit_d<'a, S: Val<'a>>()
-    -> ProcessIm<'a, (S, S::E), (), NEmitD>
+    -> ProcessIm<'a, (S, S::E), (), NotOnce, NEmitD>
 where
     S: Signal<'a>
 {
@@ -293,7 +301,7 @@ where
 
 
 pub fn emit_d_vec_in<'a, S: Val<'a>, In: Val<'a>>()
-    -> ProcessIm<'a, (Vec<(S, S::E)>, In), In, NEmitD>
+    -> ProcessIm<'a, (Vec<(S, S::E)>, In), In, NotOnce, NEmitD>
 where
     S: Signal<'a>
 {
@@ -301,7 +309,7 @@ where
 }
 
 pub fn emit_d_vec<'a, S: Val<'a>>()
-    -> ProcessIm<'a, Vec<(S, S::E)>, (), NEmitD>
+    -> ProcessIm<'a, Vec<(S, S::E)>, (), NotOnce, NEmitD>
 where
     S: Signal<'a>
 {
@@ -326,6 +334,7 @@ where
     S: Signal<'a>,
 {
     type Out = ();
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -348,7 +357,7 @@ where
 }
 
 pub fn emit_s<'a, S: Val<'a>>(signal_runtime: S)
-    -> ProcessIm<'a, S::E, (), NEmitS<S,S::E>>
+    -> ProcessIm<'a, S::E, (), NotOnce, NEmitS<S,S::E>>
 where
     S: Signal<'a>
 {
@@ -367,6 +376,7 @@ where
     S: Signal<'a>,
 {
     type Out = In;
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -389,7 +399,7 @@ where
 }
 
 pub fn emit_s_in<'a, In: Val<'a>, S: Val<'a>>(signal_runtime: S)
-    -> ProcessIm<'a, (S::E, In), In, NEmitS<S,S::E>>
+    -> ProcessIm<'a, (S::E, In), In, NotOnce, NEmitS<S,S::E>>
 where
     S: Signal<'a>
 {
@@ -413,6 +423,7 @@ where
     S: Signal<'a>
 {
     type Out = ();
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -434,7 +445,7 @@ where
 }
 
 pub fn emit_vec_s<'a, S: Val<'a>>(signal_runtimes: Vec<S>)
-    -> ProcessIm<'a, Vec<S::E>, (), NEmitVecS<S>>
+    -> ProcessIm<'a, Vec<S::E>, (), NotOnce, NEmitVecS<S>>
 where
     S: Signal<'a>
 {
@@ -448,6 +459,7 @@ where
     S: Signal<'a>
 {
     type Out = In;
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -470,7 +482,7 @@ where
 
 
 pub fn emit_vec_s_in<'a, In: Val<'a>, S: Val<'a>>(signal_runtimes: Vec<S>)
-    -> ProcessIm<'a, (Vec<S::E>,In), In, NEmitVecS<S>>
+    -> ProcessIm<'a, (Vec<S::E>,In), In, NotOnce, NEmitVecS<S>>
 where
     S: Signal<'a>
 {
@@ -497,6 +509,7 @@ where
     S::E: Clone,
 {
     type Out = In;
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -521,7 +534,7 @@ where
 
 
 pub fn emit_vs<'a, In: Val<'a>, S: Val<'a>>(signal_runtime: S, value: S::E)
-    -> ProcessIm<'a, In, In, NEmitVS<S, S::E>>
+    -> ProcessIm<'a, In, In, NotOnce, NEmitVS<S, S::E>>
 where
     S: Signal<'a>,
     S::E: Clone,
@@ -549,6 +562,7 @@ where
     S::E: Clone,
 {
     type Out = In;
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -571,7 +585,7 @@ where
 }
 
 pub fn emit_vec_vs<'a, In: Val<'a>, S: Val<'a>>(signal_values: Vec<(S, S::E)>)
-    -> ProcessIm<'a, In, In, NEmitVVecS<S, S::E>>
+    -> ProcessIm<'a, In, In, NotOnce, NEmitVVecS<S, S::E>>
 where
     S: Signal<'a>,
     S::E: Clone,
@@ -601,6 +615,7 @@ where
     S: Signal<'a>,
 {
     type Out = S::V;
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -629,10 +644,10 @@ where
 }
 
 pub fn await_d<'a, S: Val<'a>>()
-    -> ProcessNotIm<'a, S, S::V, NSeq<NAwaitD, NStore<S>>, NSeq<NLoad<S>, NGetD>>
-    where
-        S: Signal<'a>,
-        S::E: Clone,
+    -> ProcessNotIm<'a, S, S::V, NotOnce, NSeq<NAwaitD, NStore<S>>, NSeq<NLoad<S>, NGetD>>
+where
+    S: Signal<'a>,
+    S::E: Clone,
 {
     ProcessNotIm(box AwaitD {})
 }
@@ -642,6 +657,7 @@ where
     S: Signal<'a>,
 {
     type Out = (S::V, In);
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -672,7 +688,7 @@ where
 }
 
 pub fn await_d_in<'a, In: Val<'a>, S: Val<'a>>()
-    -> ProcessNotIm<'a, (S,In), (S::V, In), NSeq<NPar<NAwaitD,NIdentity>,NStore<(S, In)>>, NSeq<NLoad<(S, In)>, NGetD>>
+    -> ProcessNotIm<'a, (S,In), (S::V, In), NotOnce, NSeq<NPar<NAwaitD,NIdentity>,NStore<(S, In)>>, NSeq<NLoad<(S, In)>, NGetD>>
 where
     S: Signal<'a>,
     S::E: Clone,
@@ -699,6 +715,7 @@ where
     S: Signal<'a>,
 {
     type Out = S::V;
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -724,7 +741,7 @@ where
 }
 
 pub fn await_s<'a, S: Val<'a>>(signal_runtime: S)
-    -> ProcessNotIm<'a, (), S::V, NAwaitS<S>, NGetS<S>>
+    -> ProcessNotIm<'a, (), S::V, NotOnce, NAwaitS<S>, NGetS<S>>
 where
     S: Signal<'a> + Clone,
     S::E: Clone,
@@ -743,6 +760,7 @@ where
     S: Signal<'a>,
 {
     type Out = (S::V, In);
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -771,7 +789,7 @@ where
 }
 
 pub fn await_s_in<'a, In: Val<'a>, S: Val<'a>>(signal_runtime: S)
-    -> ProcessNotIm<'a, In, (S::V, In), NSeq<NStore<In>,NAwaitS<S>>, NSeq<GenP, NPar<NGetS<S>, NLoad<In>>>>
+    -> ProcessNotIm<'a, In, (S::V, In), NotOnce, NSeq<NStore<In>,NAwaitS<S>>, NSeq<GenP, NPar<NGetS<S>, NLoad<In>>>>
 where
     S: Signal<'a> + Clone,
     S::E: Clone,
@@ -798,6 +816,7 @@ where
     S: Signal<'a>,
 {
     type Out = ();
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -821,7 +840,7 @@ where
 }
 
 pub fn await_immediate_d<'a, S: Val<'a>>()
-    -> ProcessNotIm<'a, S, (), NAwaitImmediateD, Nothing>
+    -> ProcessNotIm<'a, S, (), NotOnce, NAwaitImmediateD, Nothing>
 where
     S: Signal<'a>,
 {
@@ -834,6 +853,7 @@ where
     S: Signal<'a>,
 {
     type Out = In;
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -864,7 +884,7 @@ where
 }
 
 pub fn await_immediate_d_in<'a, In: Val<'a>, S: Val<'a>>()
-    -> ProcessNotIm<'a, (S, In), In, NSeq<NSeq<NPar<NIdentity,NStore<In>>, Ignore2>,NAwaitImmediateD>, NLoad<In>>
+    -> ProcessNotIm<'a, (S, In), In, NotOnce, NSeq<NSeq<NPar<NIdentity,NStore<In>>, Ignore2>,NAwaitImmediateD>, NLoad<In>>
 where
     S: Signal<'a>,
 {
@@ -889,6 +909,7 @@ where
     S: Signal<'a>,
 {
     type Out = In;
+    type MarkOnce = NotOnce;
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -917,7 +938,7 @@ where
 }
 
 pub fn await_immediate_s<'a, In: Val<'a>, S: Val<'a>>(signal_runtime: S)
-    -> ProcessNotIm<'a, In, In, NSeq<NStore<In>,NAwaitImmediateS<S>>, NLoad<In>>
+    -> ProcessNotIm<'a, In, In, NotOnce, NSeq<NStore<In>,NAwaitImmediateS<S>>, NLoad<In>>
 where
     S: Signal<'a> + Clone,
 {
@@ -946,6 +967,7 @@ where
     S: Signal<'a>,
 {
     type Out = Out;
+    type MarkOnce = <And<PT::MarkOnce,PF::MarkOnce> as GiveOnce>::Once;
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -958,9 +980,11 @@ where
 // NI - NI
 implNI! {
     S,
-    impl<'a, Out: Val<'a>, S: Val<'a>, PTNI, PTNO, PFNI, PFNO>
-        for PresentD<ProcessNotIm<'a, (), Out, PTNI, PTNO>, ProcessNotIm<'a, (), Out, PFNI, PFNO>>
+    impl<'a, Out: Val<'a>, S: Val<'a>, MarkOnceT, MarkOnceF, PTNI, PTNO, PFNI, PFNO>
+        for PresentD<ProcessNotIm<'a, (), Out, MarkOnceT, PTNI, PTNO>, ProcessNotIm<'a, (), Out, MarkOnceF, PFNI, PFNO>>
         where
+        MarkOnceT: Once,
+        MarkOnceF: Once,
         PTNI: Node<'a, (), Out = ()>,
         PTNO: Node<'a, (), Out = Out>,
         PFNI: Node<'a, (), Out = ()>,
@@ -1000,9 +1024,11 @@ implNI! {
 // Im - NI
 implNI! {
     S,
-    impl<'a, Out: Val<'a>, S: Val<'a>, PTNIO, PFNI, PFNO>
-        for PresentD<ProcessIm<'a, (), Out, PTNIO>, ProcessNotIm<'a, (), Out, PFNI, PFNO>>
+    impl<'a, Out: Val<'a>, S: Val<'a>, MarkOnceT, MarkOnceF, PTNIO, PFNI, PFNO>
+        for PresentD<ProcessIm<'a, (), Out, MarkOnceT, PTNIO>, ProcessNotIm<'a, (), Out, MarkOnceF, PFNI, PFNO>>
         where
+        MarkOnceT: Once,
+        MarkOnceF: Once,
         PTNIO: Node<'a, (), Out = Out>,
         PFNI: Node<'a, (), Out = ()>,
         PFNO: Node<'a, (), Out = Out>,
@@ -1039,9 +1065,11 @@ implNI! {
 // NI - Im
 implNI! {
     S,
-    impl<'a, Out: Val<'a>, S: Val<'a>, PTNI, PTNO, PFNIO>
-        for PresentD<ProcessNotIm<'a, (), Out, PTNI, PTNO>, ProcessIm<'a, (), Out, PFNIO>>
+    impl<'a, Out: Val<'a>, S: Val<'a>, MarkOnceT, MarkOnceF, PTNI, PTNO, PFNIO>
+        for PresentD<ProcessNotIm<'a, (), Out, MarkOnceT, PTNI, PTNO>, ProcessIm<'a, (), Out, MarkOnceF, PFNIO>>
         where
+        MarkOnceT: Once,
+        MarkOnceF: Once,
         PFNIO: Node<'a, (), Out = Out>,
         PTNI: Node<'a, (), Out = ()>,
         PTNO: Node<'a, (), Out = Out>,
@@ -1080,9 +1108,11 @@ implNI! {
 // Im - Im
 implNI! {
     S,
-    impl<'a, Out: Val<'a>, S: Val<'a>, PTNIO, PFNIO>
-        for PresentD<ProcessIm<'a, (), Out, PTNIO>, ProcessIm<'a, (), Out, PFNIO>>
+    impl<'a, Out: Val<'a>, S: Val<'a>, MarkOnceT, MarkOnceF, PTNIO, PFNIO>
+        for PresentD<ProcessIm<'a, (), Out, MarkOnceT, PTNIO>, ProcessIm<'a, (), Out, MarkOnceF, PFNIO>>
         where
+        MarkOnceT: Once,
+        MarkOnceF: Once,
         PFNIO: Node<'a, (), Out = Out>,
         PTNIO: Node<'a, (), Out = Out>,
         S: Signal<'a>,
@@ -1138,6 +1168,7 @@ where
     S: Signal<'a>,
 {
     type Out = Out;
+    type MarkOnce = <And<PT::MarkOnce, PT::MarkOnce> as GiveOnce>::Once;
 
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let num = *curNum;
@@ -1150,9 +1181,11 @@ where
 // NI - NI
 implNI! {
     (),
-    impl<'a, Out: Val<'a>, S: Val<'a>, PTNI, PTNO, PFNI, PFNO>
-        for PresentS<ProcessNotIm<'a, (), Out, PTNI, PTNO>, ProcessNotIm<'a, (), Out, PFNI, PFNO>, S>
+    impl<'a, Out: Val<'a>, S: Val<'a>, MarkOnceT, MarkOnceF, PTNI, PTNO, PFNI, PFNO>
+        for PresentS<ProcessNotIm<'a, (), Out, MarkOnceT, PTNI, PTNO>, ProcessNotIm<'a, (), Out, MarkOnceF, PFNI, PFNO>, S>
         where
+        MarkOnceT: Once,
+        MarkOnceF: Once,
         PTNI: Node<'a, (), Out = ()>,
         PTNO: Node<'a, (), Out = Out>,
         PFNI: Node<'a, (), Out = ()>,
@@ -1193,9 +1226,11 @@ implNI! {
 // Im - NI
 implNI! {
     (),
-    impl<'a, Out: Val<'a>, S: Val<'a>, PTNIO, PFNI, PFNO>
-        for PresentS<ProcessIm<'a, (), Out, PTNIO>, ProcessNotIm<'a, (), Out, PFNI, PFNO>, S>
+    impl<'a, Out: Val<'a>, S: Val<'a>, MarkOnceT, MarkOnceF, PTNIO, PFNI, PFNO>
+        for PresentS<ProcessIm<'a, (), Out, MarkOnceT, PTNIO>, ProcessNotIm<'a, (), Out, MarkOnceF, PFNI, PFNO>, S>
         where
+        MarkOnceT: Once,
+        MarkOnceF: Once,
         PTNIO: Node<'a, (), Out = Out>,
         PFNI: Node<'a, (), Out = ()>,
         PFNO: Node<'a, (), Out = Out>,
@@ -1234,9 +1269,11 @@ implNI! {
 // NI - Im
 implNI! {
     (),
-    impl<'a, Out: Val<'a>, S: Val<'a>, PTNI, PTNO, PFNIO>
-        for PresentS<ProcessNotIm<'a, (), Out, PTNI, PTNO>, ProcessIm<'a, (), Out, PFNIO>, S>
+    impl<'a, Out: Val<'a>, S: Val<'a>, MarkOnceT, MarkOnceF, PTNI, PTNO, PFNIO>
+        for PresentS<ProcessNotIm<'a, (), Out, MarkOnceT, PTNI, PTNO>, ProcessIm<'a, (), Out, MarkOnceF, PFNIO>, S>
         where
+        MarkOnceT: Once,
+        MarkOnceF: Once,
         PFNIO: Node<'a, (), Out = Out>,
         PTNI: Node<'a, (), Out = ()>,
         PTNO: Node<'a, (), Out = Out>,
@@ -1276,9 +1313,11 @@ implNI! {
 // Im - Im
 implNI! {
     (),
-    impl<'a, Out: Val<'a>, S: Val<'a>, PTNIO, PFNIO>
-        for PresentS<ProcessIm<'a, (), Out, PTNIO>, ProcessIm<'a, (), Out, PFNIO>, S>
+    impl<'a, Out: Val<'a>, S: Val<'a>, MarkOnceT, MarkOnceF, PTNIO, PFNIO>
+        for PresentS<ProcessIm<'a, (), Out, MarkOnceT, PTNIO>, ProcessIm<'a, (), Out, MarkOnceF, PFNIO>, S>
         where
+        MarkOnceT: Once,
+        MarkOnceF: Once,
         PFNIO: Node<'a, (), Out = Out>,
         PTNIO: Node<'a, (), Out = Out>,
         S: Signal<'a>,

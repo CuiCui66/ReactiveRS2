@@ -9,6 +9,8 @@ impl<'a, P, Q, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>> IntProcess<'a, In> for S
     Q: Process<'a, Mid, Out = Out>,
 {
     type Out = Out;
+    type MarkOnce = <And<P::MarkOnce, Q::MarkOnce> as GiveOnce>::Once;
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let (beg,midup) = self.0.printDot(curNum);
         let (middown,end) = self.1.printDot(curNum);
@@ -20,9 +22,11 @@ impl<'a, P, Q, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>> IntProcess<'a, In> for S
 // NI - NI
 implNI!{
     In,
-    impl<'a, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>, PNI, PNO, QNI, QNO>
-        for Seq<ProcessNotIm<'a, In, Mid, PNI, PNO>, ProcessNotIm<'a, Mid, Out, QNI, QNO>>
+    impl<'a, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>, MarkOnceP, MarkOnceQ, PNI, PNO, QNI, QNO>
+        for Seq<ProcessNotIm<'a, In, Mid, MarkOnceP, PNI, PNO>, ProcessNotIm<'a, Mid, Out, MarkOnceQ, QNI, QNO>>
         where
+        MarkOnceP: Once,
+        MarkOnceQ: Once,
         PNI: Node<'a, In, Out = ()>,
         PNO: Node<'a, (), Out = Mid>,
         QNI: Node<'a, Mid, Out = ()>,
@@ -46,9 +50,11 @@ implNI!{
 // Im - NI
 implNI!{
     In,
-    impl<'a, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>, PNIO, QNI, QNO>
-        for Seq<ProcessIm<'a, In, Mid, PNIO>, ProcessNotIm<'a, Mid, Out, QNI, QNO>>
+    impl<'a, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>, MarkOnceP, MarkOnceQ, PNIO, QNI, QNO>
+        for Seq<ProcessIm<'a, In, Mid, MarkOnceP, PNIO>, ProcessNotIm<'a, Mid, Out, MarkOnceQ, QNI, QNO>>
         where
+        MarkOnceP: Once,
+        MarkOnceQ: Once,
         PNIO: Node<'a, In, Out = Mid>,
         QNI: Node<'a, Mid, Out = ()>,
         QNO: Node<'a, (), Out = Out>,
@@ -70,9 +76,11 @@ implNI!{
 // NI - Im
 implNI!{
     In,
-    impl<'a, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>, PNI, PNO, QNIO>
-        for Seq<ProcessNotIm<'a, In, Mid, PNI, PNO>, ProcessIm<'a, Mid, Out, QNIO>>
+    impl<'a, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>, MarkOnceP, MarkOnceQ, PNI, PNO, QNIO>
+        for Seq<ProcessNotIm<'a, In, Mid, MarkOnceP, PNI, PNO>, ProcessIm<'a, Mid, Out, MarkOnceQ, QNIO>>
         where
+        MarkOnceP: Once,
+        MarkOnceQ: Once,
         PNI: Node<'a, In, Out = ()>,
         PNO: Node<'a, (), Out = Mid>,
         QNIO: Node<'a, Mid, Out = Out>,
@@ -93,9 +101,11 @@ implNI!{
 // Im - Im
 implIm!{
     In,
-    impl<'a, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>, PNIO, QNIO>
-        for Seq<ProcessIm<'a, In, Mid, PNIO>, ProcessIm<'a, Mid, Out, QNIO>>
+    impl<'a, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>, MarkOnceP, MarkOnceQ, PNIO, QNIO>
+        for Seq<ProcessIm<'a, In, Mid, MarkOnceP, PNIO>, ProcessIm<'a, Mid, Out, MarkOnceQ, QNIO>>
         where
+        MarkOnceP: Once,
+        MarkOnceQ: Once,
         PNIO: Node<'a, In, Out = Mid>,
         QNIO: Node<'a, Mid, Out = Out>,
     trait IntProcessIm<'a, In>

@@ -57,6 +57,7 @@ macro_rules! boxed_ni {
             'a,
         $in,
         <Self as IntProcess<'a, $in>>::Out,
+        <Self as IntProcess<'a, $in>>::MarkOnce,
         <Self as IntProcessNotIm<'a, $in>>::NI,
         <Self as IntProcessNotIm<'a, $in>>::NO,
         >;
@@ -79,6 +80,7 @@ macro_rules! boxed_i {
             'a,
         $in,
         <Self as IntProcess<'a, $in>>::Out,
+        <Self as IntProcess<'a, $in>>::MarkOnce,
         <Self as IntProcessIm<'a, $in>>::NIO,
         >;
     );

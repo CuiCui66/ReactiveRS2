@@ -11,6 +11,8 @@ impl<'a, P, Q, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>> IntProc
     Q: Process<'a, InQ, Out = OutQ>,
 {
     type Out = (OutP,OutQ);
+    type MarkOnce = <And<P::MarkOnce, Q::MarkOnce> as GiveOnce>::Once;
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let (begp,endp) = self.0.printDot(curNum);
         let (begq,endq) = self.1.printDot(curNum);
@@ -30,9 +32,11 @@ impl<'a, P, Q, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>> IntProc
 // NI - NI
 implNI!{
     (InP,InQ),
-    impl<'a, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>, PNI, PNO, QNI, QNO>
-        for Par<ProcessNotIm<'a, InP, OutP, PNI, PNO>, ProcessNotIm<'a, InQ, OutQ, QNI, QNO>>
+    impl<'a, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>, MarkOnceP, MarkOnceQ, PNI, PNO, QNI, QNO>
+        for Par<ProcessNotIm<'a, InP, OutP, MarkOnceP, PNI, PNO>, ProcessNotIm<'a, InQ, OutQ, MarkOnceQ, QNI, QNO>>
         where
+        MarkOnceP: Once,
+        MarkOnceQ: Once,
         PNI: Node<'a, InP, Out = ()>,
         PNO: Node<'a, (), Out = OutP>,
         QNI: Node<'a, InQ, Out = ()>,
@@ -62,9 +66,11 @@ implNI!{
 // Im - NI
 implNI!{
     (InP,InQ),
-    impl<'a, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>, PNIO, QNI, QNO>
-        for Par<ProcessIm<'a, InP, OutP, PNIO>, ProcessNotIm<'a, InQ, OutQ, QNI, QNO>>
+    impl<'a, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>, MarkOnceP, MarkOnceQ, PNIO, QNI, QNO>
+        for Par<ProcessIm<'a, InP, OutP, MarkOnceP, PNIO>, ProcessNotIm<'a, InQ, OutQ, MarkOnceQ, QNI, QNO>>
         where
+        MarkOnceP: Once,
+        MarkOnceQ: Once,
         PNIO: Node<'a, InP, Out = OutP>,
         QNI: Node<'a, InQ, Out = ()>,
         QNO: Node<'a, (), Out = OutQ>,
@@ -94,9 +100,11 @@ implNI!{
 // NI - Im
 implNI!{
     (InP,InQ),
-    impl<'a, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>, PNI, PNO, QNIO>
-        for Par<ProcessNotIm<'a, InP, OutP, PNI, PNO>, ProcessIm<'a, InQ, OutQ, QNIO>>
+    impl<'a, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>, MarkOnceP, MarkOnceQ, PNI, PNO, QNIO>
+        for Par<ProcessNotIm<'a, InP, OutP, MarkOnceP, PNI, PNO>, ProcessIm<'a, InQ, OutQ, MarkOnceQ, QNIO>>
         where
+        MarkOnceP: Once,
+        MarkOnceQ: Once,
         PNI: Node<'a, InP, Out = ()>,
         PNO: Node<'a, (), Out = OutP>,
         QNIO: Node<'a, InQ, Out = OutQ>,
@@ -126,9 +134,11 @@ implNI!{
 // Im - Im
 implIm!{
     (InP,InQ),
-    impl<'a, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>, PNIO, QNIO>
-        for Par<ProcessIm<'a, InP, OutP, PNIO>, ProcessIm<'a, InQ, OutQ, QNIO>>
+    impl<'a, InP: Val<'a>, InQ: Val<'a>, OutP: Val<'a>, OutQ: Val<'a>, MarkOnceP, MarkOnceQ, PNIO, QNIO>
+        for Par<ProcessIm<'a, InP, OutP, MarkOnceP, PNIO>, ProcessIm<'a, InQ, OutQ, MarkOnceQ, QNIO>>
         where
+        MarkOnceP: Once,
+        MarkOnceQ: Once,
         PNIO: Node<'a, InP, Out = OutP>,
         QNIO: Node<'a, InQ, Out = OutQ>,
 
@@ -165,6 +175,8 @@ where
     In: Copy,
 {
     type Out = ();
+    type MarkOnce = P::MarkOnce;
+
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
         *curNum += 1;
@@ -173,8 +185,9 @@ where
     }
 }
 
-impl<'a, In: Val<'a>, PNI, PNO> IntProcessNotIm<'a, In> for BigPar<ProcessNotIm<'a,In,(),PNI,PNO>>
+impl<'a, In: Val<'a>, MarkOnce, PNI, PNO> IntProcessNotIm<'a, In> for BigPar<ProcessNotIm<'a,In,(), MarkOnce, PNI,PNO>>
 where
+    MarkOnce: Once,
     PNI: Node<'a, In, Out = ()>,
     PNO: Node<'a, (), Out = ()>,
     In: Copy,

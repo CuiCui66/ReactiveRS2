@@ -11,6 +11,8 @@ use super::*;
 pub struct PNothing {}
 impl<'a> IntProcess<'a, ()> for PNothing {
     type Out = ();
+    type MarkOnce = NotOnce;
+
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
         *curNum += 1;
@@ -27,7 +29,7 @@ impl<'a> IntProcessIm<'a, ()> for PNothing {
     }
 }
 
-pub fn nothing<'a>() -> ProcessIm<'a,(),(),Nothing>{
+pub fn nothing<'a>() -> ProcessIm<'a,(),(),NotOnce, Nothing>{
     ProcessIm(box PNothing {})
 }
 
@@ -42,6 +44,8 @@ where
     F: FnMut(In) -> Out,
 {
     type Out = Out;
+    type MarkOnce = NotOnce;
+
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
         *curNum += 1;
@@ -61,7 +65,7 @@ where
 }
 
 pub fn fnmut2pro<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>>(f: F)
-                                                            -> ProcessIm<'a, In, Out, FnMutN<F>>
+    -> ProcessIm<'a, In, Out, NotOnce, FnMutN<F>>
 where
     F: FnMut(In) -> Out,
 {
@@ -79,8 +83,8 @@ where
 pub struct PFnOnce<F>(pub F);
 
 pub fn fnonce2pro<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>>(f: F)
-                                                            -> ProcessIm<'a, In, Out, NFnOnce<F>>
-    where
+    -> ProcessIm<'a, In, Out, IsOnce, NFnOnce<F>>
+where
     F: FnOnce(In) -> Out,
 {
     ProcessIm(box PFnOnce(f))
@@ -91,6 +95,8 @@ impl<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>> IntProcess<'a, In> for PFnOnce<F
     F: FnOnce(In) -> Out,
 {
     type Out = Out;
+    type MarkOnce = IsOnce;
+
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
         *curNum += 1;
@@ -122,6 +128,8 @@ pub(crate) struct Jump {}
 
 impl<'a, In: Val<'a>> IntProcess<'a, In> for Jump {
     type Out = In;
+    type MarkOnce = NotOnce;
+
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
         *curNum += 1;
@@ -157,6 +165,8 @@ pub(crate) struct Pause {}
 
 impl<'a, In: Val<'a>> IntProcess<'a, In> for Pause {
     type Out = In;
+    type MarkOnce = NotOnce;
+
     fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
         let num = *curNum;
         *curNum += 1;
@@ -177,6 +187,6 @@ impl<'a, In: Val<'a>> IntProcessNotIm<'a, In> for Pause {
     }
 }
 
-pub fn pause<'a, In: Val<'a>>() -> ProcessNotIm<'a,In,In,NSeq<NStore<In>, NPause>,NLoad<In>> {
+pub fn pause<'a, In: Val<'a>>() -> ProcessNotIm<'a,In,In,NotOnce,NSeq<NStore<In>, NPause>,NLoad<In>> {
     ProcessNotIm(box Pause {})
 }

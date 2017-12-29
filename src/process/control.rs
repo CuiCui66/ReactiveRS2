@@ -20,6 +20,8 @@ impl<'a, PT, PF, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>> IntProcess<'a, Choice
     PF: Process<'a, InF, Out = Out>,
 {
     type Out = Out;
+    type MarkOnce = <And<PT::MarkOnce, PF::MarkOnce> as GiveOnce>::Once;
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let (begt,endt) = self.0.printDot(curNum);
         let (begf,endf) = self.1.printDot(curNum);
@@ -39,9 +41,11 @@ impl<'a, PT, PF, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>> IntProcess<'a, Choice
 // NI - NI
 implNI!{
     ChoiceData<InT,InF>,
-    impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, PTNI, PTNO, PFNI, PFNO>
-        for PChoice<ProcessNotIm<'a, InT, Out, PTNI, PTNO>, ProcessNotIm<'a, InF, Out, PFNI, PFNO>>
+    impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, PTNI, PTNO, PFNI, PFNO, MarkOnceT, MarkOnceF>
+        for PChoice<ProcessNotIm<'a, InT, Out, MarkOnceT, PTNI, PTNO>, ProcessNotIm<'a, InF, Out, MarkOnceF, PFNI, PFNO>>
         where
+        MarkOnceT: Once,
+        MarkOnceF: Once,
         PTNI: Node<'a, InT, Out = ()>,
         PTNO: Node<'a, (), Out = Out>,
         PFNI: Node<'a, InF, Out = ()>,
@@ -70,9 +74,11 @@ implNI!{
 // NI - Im
 implNI!{
     ChoiceData<InT,InF>,
-    impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, PTNI, PTNO, PFNIO>
-        for PChoice<ProcessNotIm<'a, InT, Out, PTNI, PTNO>, ProcessIm<'a, InF, Out, PFNIO>>
+    impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, MarkOnceT, MarkOnceF, PTNI, PTNO, PFNIO>
+        for PChoice<ProcessNotIm<'a, InT, Out, MarkOnceT, PTNI, PTNO>, ProcessIm<'a, InF, Out, MarkOnceF, PFNIO>>
         where
+        MarkOnceT: Once,
+        MarkOnceF: Once,
         PTNI: Node<'a, InT, Out = ()>,
         PTNO: Node<'a, (), Out = Out>,
         PFNIO: Node<'a, InF, Out = Out>,
@@ -103,9 +109,11 @@ implNI!{
 // Im - NI
 implNI!{
     ChoiceData<InT,InF>,
-    impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, PTNIO, PFNI, PFNO>
-        for PChoice<ProcessIm<'a, InT, Out, PTNIO>, ProcessNotIm<'a, InF, Out, PFNI, PFNO>>
+    impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, MarkOnceT, MarkOnceF, PTNIO, PFNI, PFNO>
+        for PChoice<ProcessIm<'a, InT, Out, MarkOnceT, PTNIO>, ProcessNotIm<'a, InF, Out, MarkOnceF, PFNI, PFNO>>
         where
+        MarkOnceT: Once,
+        MarkOnceF: Once,
         PTNIO: Node<'a, InT, Out = Out>,
         PFNI: Node<'a, InF, Out = ()>,
         PFNO: Node<'a, (), Out = Out>,
@@ -137,9 +145,11 @@ implNI!{
 // Im - Im
 implIm!{
     ChoiceData<InT,InF>,
-    impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, PTNIO, PFNIO>
-        for PChoice<ProcessIm<'a, InT, Out, PTNIO>, ProcessIm<'a, InF, Out, PFNIO>>
+    impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, MarkOnceT, MarkOnceF, PTNIO, PFNIO>
+        for PChoice<ProcessIm<'a, InT, Out, MarkOnceT, PTNIO>, ProcessIm<'a, InF, Out, MarkOnceF, PFNIO>>
         where
+        MarkOnceT: Once,
+        MarkOnceF: Once,
         PTNIO: Node<'a, InT, Out = Out>,
         PFNIO: Node<'a, InF, Out = Out>,
 
@@ -174,6 +184,8 @@ impl<'a, P, In: Val<'a>, Out: Val<'a>> IntProcess<'a, In>
     P: Process<'a, In, Out = ChoiceData<In,Out>>,
 {
     type Out = Out;
+    type MarkOnce = NotOnce;
+
     fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
         let (beg,end) = self.0.printDot(curNum);
         let numbeg = *curNum;
@@ -191,9 +203,10 @@ impl<'a, P, In: Val<'a>, Out: Val<'a>> IntProcess<'a, In>
 
 implNI!{
     In,
-    impl<'a, In: Val<'a>, Out: Val<'a>, PNI, PNO>
-        for PLoop<ProcessNotIm<'a, In, ChoiceData<In,Out>, PNI, PNO>>
+    impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, PNI, PNO>
+        for PLoop<ProcessNotIm<'a, In, ChoiceData<In,Out>, MarkOnce, PNI, PNO>>
         where
+        MarkOnce: Once,
         PNI: Node<'a, In, Out = ()>,
         PNO: Node<'a, (), Out = ChoiceData<In,Out>>,
     trait IntProcessNotIm<'a, In> {
@@ -225,9 +238,10 @@ implNI!{
 
 implIm!{
     In,
-    impl<'a, In: Val<'a>, Out: Val<'a>, PNIO>
-        for PLoop<ProcessIm<'a,In,ChoiceData<In,Out>,PNIO>>
+    impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, PNIO>
+        for PLoop<ProcessIm<'a,In,ChoiceData<In,Out>, MarkOnce, PNIO>>
         where
+        MarkOnce: Once,
         PNIO: Node<'a, In, Out = ChoiceData<In,Out>>,
     trait IntProcessIm<'a, In> {
         type NIO = LoopIm<PNIO>;
