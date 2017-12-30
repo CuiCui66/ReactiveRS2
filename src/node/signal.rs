@@ -9,10 +9,10 @@ use super::*;
 // | |___| | | | | | | |_| |_| |
 // |_____|_| |_| |_|_|\__|____/
 
-/// Node emitting a signal,
-/// where the signal and the emission value is given as input of the node
+/// Node emitting a signal.
+/// The signal and the emission value is given as input of the node.
 /// Also, a vector of (signal,value) can be given.
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct NEmitD {}
 
 
@@ -85,7 +85,8 @@ where
 // |_____|_| |_| |_|_|\__|____/
 
 
-/// Node emitting a signal, where the signal is fixed,
+/// Node emitting a signal.
+/// The signal is known at the node creation,
 /// and the emission value is given as input of the node.
 #[derive(Clone)]
 pub struct NEmitS<S, E>(pub S, pub PhantomData<E>);
@@ -122,7 +123,8 @@ where
 // |_____|_| |_| |_|_|\__| \_/ \___|\___|____/
 
 
-/// Node emitting multiple signals, where the signals are fixed,
+/// Node emitting multiple signals.
+/// The signals are known at the creation at the node,
 /// and the emission values are given as input of the node.
 #[derive(Clone)]
 pub struct NEmitVecS<S>(pub Vec<S>);
@@ -143,7 +145,6 @@ where
         for (sr, emit_value) in self.0.iter().zip(emit_values.into_iter()) {
             sr.emit(emit_value, sub_runtime);
         }
-        ()
     }
 }
 
@@ -173,8 +174,8 @@ where
 // |_____|_| |_| |_|_|\__| \_/  |____/
 
 
-/// Node emitting a signal,
-/// where the signal and the emission value is fixed.
+/// Node emitting a signal.
+/// The signal and the emission value is known at the creation of the node.
 #[derive(Clone)]
 pub struct NEmitVS<S, E>(pub S, pub E);
 
@@ -198,8 +199,8 @@ where
 // | |___| | | | | | | |_ \ V /    \ V /  __/ (__ ___) |
 // |_____|_| |_| |_|_|\__| \_/      \_/ \___|\___|____/
 
-/// Node emitting multiple signals,
-/// where the signals and the values are fixed.
+/// Node emitting multiple signals.
+/// The signals and the values are known at the creation of the node.
 #[derive(Clone)]
 pub struct NEmitVVecS<S, E>(pub Vec<(S, E)>);
 
@@ -226,8 +227,8 @@ where
 //  \____|\___|\__|____/
 
 
-/// Node getting the last value of a signal,
-/// where the signal is given as input of the node.
+/// Node getting the value of the signal at the last instant.
+/// The signal is given as the node input.
 #[derive(Clone, Copy)]
 pub struct NGetD {}
 
@@ -261,8 +262,8 @@ where
 //  \____|\___|\__|____/
 
 
-/// Node getting the last value of a signal,
-/// where the signal is fixed.
+/// Node getting the value of the signal at the last instant.
+/// The signal is known at the node creation.
 #[derive(Clone)]
 pub struct NGetS<S>(pub S);
 
@@ -298,8 +299,9 @@ where
 //  / ___ \ V  V / (_| | | |_| |_| |
 // /_/   \_\_/\_/ \__,_|_|\__|____/
 
-/// Node awaiting a signal to be emitted, and jumping to the next node at the next instant,
-/// where the signal is given as the node input.
+/// Node awaiting a signal to be emitted,
+/// and jumping to the next node at the instant following the emission.
+/// The signal is given as the node input.
 #[derive(Clone, Copy)]
 pub struct NAwaitD(pub usize);
 
@@ -322,8 +324,9 @@ where
 //  / ___ \ V  V / (_| | | |_ ___) |
 // /_/   \_\_/\_/ \__,_|_|\__|____/
 
-/// Node awaiting a signal to be emitted, and jumping to the next node at the next instant,
-/// where the signal is fixed by the node.
+/// Node awaiting a signal to be emitted,
+/// and jumping to the next node at the next instant following the emission.
+/// The signal is fixed by the node.
 #[derive(Clone)]
 pub struct NAwaitS<S>(pub S, pub usize);
 
@@ -345,8 +348,9 @@ where
 //  / ___ \ V  V / (_| | | |_ | || | | | | | | | | | |  __/ (_| | | (_| | ||  __/ |_| |
 // /_/   \_\_/\_/ \__,_|_|\__|___|_| |_| |_|_| |_| |_|\___|\__,_|_|\__,_|\__\___|____/
 
-/// Node awaiting a signal to be emitted, and jumping to the next node at the current instant,
-/// where the signal is given as the node input
+/// Node awaiting a signal to be emitted,
+/// and jumping to the next node at the same instant than the emission.
+/// The signal is given as the node input.
 #[derive(Clone, Copy)]
 pub struct NAwaitImmediateD(pub usize);
 
@@ -367,8 +371,9 @@ where
 //  / ___ \ V  V / (_| | | |_ | || | | | | | | | | | |  __/ (_| | | (_| | ||  __/___) |
 // /_/   \_\_/\_/ \__,_|_|\__|___|_| |_| |_|_| |_| |_|\___|\__,_|_|\__,_|\__\___|____/
 
-/// Node awaiting a signal to be emitted, and jumping to the next node at the current instant,
-/// where the signal is fixed
+/// Node awaiting a signal to be emitted,
+/// and jumping to the next node at the same instant than the emission.
+/// The signal is known at the node creation.
 #[derive(Clone)]
 pub struct NAwaitImmediateS<S>(pub S, pub usize);
 
@@ -392,8 +397,8 @@ where
 
 
 /// Node jumping to node_true if the signal is emitted in the current instant,
-/// and jumping to node_false at the next instant otherwise,
-/// where the signal is given as the node input
+/// and jumping to node_false at the next instant otherwise.
+/// The signal is given as the node input
 #[derive(Clone, Copy)]
 pub struct NPresentD {
     pub node_true: usize,
@@ -419,8 +424,8 @@ where
 // |_|   |_|  \___||___/\___|_| |_|\__|____/
 
 /// Node jumping to node_true if the signal is emitted in the current instant,
-/// and jumping to node_false at the next instant otherwise,
-/// where the signal is fixed
+/// and jumping to node_false at the next instant otherwise.
+/// The signal is known at the node creation.
 #[derive(Clone)]
 pub struct NPresentS<S> {
     pub node_true: usize,
