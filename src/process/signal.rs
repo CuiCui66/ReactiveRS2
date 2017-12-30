@@ -193,11 +193,12 @@ where
 /// Process implementation representing the emission of a signal,
 /// where the signal S and the value V are given as the process input.
 ///
-/// Possible signatures are
-/// * ((S,V),In) -> In
-/// * (S,V) -> ()
-/// * (Vec<(S,V)>,In) -> In
-/// * Vec<(S,V)> -> ()
+/// Possible signatures are:
+///
+///   - `((S,V),In) -> In`
+///   - `(S,V) -> ()`
+///   - `(Vec<(S,V)>,In) -> In`
+///   - `Vec<(S,V)> -> ()`
 
 #[derive(Copy, Clone)]
 pub struct EmitD {}

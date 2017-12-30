@@ -91,7 +91,8 @@ pub struct PFnMut<F>(pub F);
 /// Builds a boxed `PFnMut` from a instance of `FnMut`
 pub fn fnmut2pro<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>>(
     f: F,
-) -> ProcessIm<'a, In, Out, NotOnce, FnMutN<F>>
+) ->
+    ProcessIm<'a, In, Out, NotOnce, NFnMut<F>>
     where
     F: FnMut(In) -> Out,
 {
@@ -117,9 +118,9 @@ impl<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>> IntProcessIm<'a, In> for PFnMut<
 where
     F: FnMut(In) -> Out,
 {
-    type NIO = FnMutN<F>;
+    type NIO = NFnMut<F>;
     fn compileIm(self: Box<Self>, _: &mut Graph) -> Self::NIO {
-        FnMutN(self.0)
+        NFnMut(self.0)
     }
 }
 

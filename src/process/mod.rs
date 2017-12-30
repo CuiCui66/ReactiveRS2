@@ -124,9 +124,10 @@ pub trait IntProcess<'a, In: Val<'a>>: 'a {
     /// The type outputted by the process when In is given.
     type Out: Val<'a>;
 
-    /// The type checking if the process can be called multiple times.
-    /// This type is IsOnce if it can be called only one time,
-    /// and NotOnce if it can be called multiple times.
+    /// Type-check mark for the process being able to be called multiple times
+    ///
+    /// * If `MarkOnce` is `IsOnce`, then the process can only be called once
+    /// * If `MarkOnce` is `NotOnce`, then the process can be called multiple times
     type MarkOnce: Once;
 
     /// Prints dot code for this process on stdout.

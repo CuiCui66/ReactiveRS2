@@ -124,7 +124,7 @@ mod runtime {
             println!("digraph {{");
             let mut cfgd = CFGDrawer::new();
             for (i, node) in self.nodes.iter_mut().enumerate() {
-                printNode(i, node.deref_mut(), &mut cfgd);
+                cfgd.printNode(i, node.deref_mut());
             }
             println!("}}");
         }
