@@ -1,4 +1,49 @@
+//! This module and the `promacros` crate try to give syntactic sugar to processes and nodes.
+//!
+//! # pro!
+//!
+//! Inside a pro! macro, there are process direct value:
+//!
+//! * `E` where `E` begins by `|` or `move`: E must have a type implementing `FnMut`:
+//!   The macro returns `fnmut2pro(E)`
+//! * `once E` : `E` must have a type implementing `FnOnce`:
+//!   The macro returns `fnonce2pro(E)`
+//! * `val E` :`E` must have a type implementing `FnOnce`:
+//!   The macro returns `fnonce2pro(E)`
+//! * E in any other case : `E` must be a rust expression whose type implements `Process` :
+//!   The macro returns `E`.
+//!
+//! All of these expressions must not contain any `;` or `||` directly i.e not encapsulate in `()` or
+//! `[]` or `{}`.
+//! from the basic expression we build the grammar with :
+//!
+//! * `P ; Q`: transformed to `P.seq(Q)`
+//! * `P || Q`: transformed to `P.join(Q)`
+//! * `choice {P}{Q}`: transformed to `P.choice(Q)`
+//! * `present {P}{Q}`: transformed to `P.present(Q)`
+//! * `loop {P}`: transformed to `P.ploop()`
+//!
+//! A `;` with nothing behind add a PNothing and thus force the output type to be ();
+//!
+//! # node!
+//!
+//! The node! macro allow only expressions to be directly a node, the constructions are:
+//!
+//! * `P >> Q`: transformed to `P.nseq(Q)`
+//! * `P || Q`: transformed to `P.njoin(Q)`
+//! * `choice {P}{Q}`: transformed to `P.alter(Q)`
+//!
+//! # mimpl!
+//!
+//! In order to implement multiple traits of the form:
+//! `impl<T> A for B where C {D}` and
+//! `impl<T> A2 for B where C {D2}`, one can write
+//!
+//! `mimpl!{impl<T> for B where C trait A {D} trait A2 {D2}}`
+//!
+//!
 
+/// Creates a runtime from a process description in terms of pro! macro syntax
 #[macro_export]
 macro_rules! rt {
     ($($x:tt)+) => {{
@@ -6,13 +51,7 @@ macro_rules! rt {
     }};
 }
 
-// #[macro_export]
-// macro_rules! rtp {
-//     ($($x:tt)+) => {{
-//         RuntimePar::new(mp_par(prop!($($x)*)))
-//     }};
-// }
-
+/// Creates a runtime from a process description in terms of pro! macro syntax and run it
 #[macro_export]
 macro_rules! run {
     ($($x:tt)+) => {{
@@ -21,14 +60,7 @@ macro_rules! run {
     }};
 }
 
-// #[macro_export]
-// macro_rules! runp {
-//     ($($x:tt)+) => {{
-//         let mut r = RuntimePar::new(mp_par(prop!($($x)*)));
-//         r.execute();
-//     }};
-// }
-
+/// `nodei!(x)` is equivalent to `node!((x) >> Ignore{})`
 #[macro_export]
 macro_rules! nodei {
     ($($x:tt)+ ) => {{
@@ -36,6 +68,7 @@ macro_rules! nodei {
     }};
 }
 
+/// `nodep!(x)` is equivalent to `node!(GenP{} >> x)`
 #[macro_export]
 macro_rules! nodep {
     ($($x:tt)+ ) => {{
@@ -43,6 +76,7 @@ macro_rules! nodep {
     }};
 }
 
+/// `nodepi!(x)` is equivalent to `node!(GenP{} >> x >> Ignore {})`
 #[macro_export]
 macro_rules! nodepi {
     ($($x:tt)+ ) => {{
@@ -50,6 +84,7 @@ macro_rules! nodepi {
     }};
 }
 
+/// Genrated Boxed associated type implementation for ToBoxedProcess for non-immediate processes
 #[macro_export]
 macro_rules! boxed_ni {
     ($in:ty) => (
@@ -64,6 +99,7 @@ macro_rules! boxed_ni {
     );
 }
 
+/// Genrated tobox implementation for ToBoxedProcess for non-immediate processes
 #[macro_export]
 macro_rules! tobox_ni {
     () => (
@@ -73,6 +109,7 @@ macro_rules! tobox_ni {
     );
 }
 
+/// Genrated Boxed associated type implementation for ToBoxedProcess for immediate processes
 #[macro_export]
 macro_rules! boxed_i {
     ($in:ty) => (
@@ -86,6 +123,7 @@ macro_rules! boxed_i {
     );
 }
 
+/// Genrated tobox implementation for ToBoxedProcess for immediate processes
 #[macro_export]
 macro_rules! tobox_i {
     () => (
@@ -95,6 +133,7 @@ macro_rules! tobox_i {
     );
 }
 
+/// take an mimpl syntax impl item and add an implementation of ToBoxedProcess for immediate
 #[macro_export]
 macro_rules! implIm {
     ($in:ty,$($x:tt)+) => (
@@ -109,6 +148,7 @@ macro_rules! implIm {
     );
 }
 
+/// take an mimpl syntax impl item and add an implementation of ToBoxedProcess for non-immediate
 #[macro_export]
 macro_rules! implNI {
     ($in:ty,$($x:tt)+) => (

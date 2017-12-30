@@ -304,7 +304,7 @@ fn parse_node(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
                 if d == DelimToken::Paren || d == DelimToken::Brace {
                     return parse_node(cx, sp, &extract_ts(ts.clone().into()));
                 } else {
-                    cx.span_err(sp, "Process delimited by brackets ?");
+                    cx.span_err(sp, "Node delimited by brackets ?");
                     return DummyResult::raw_expr(sp);
                 }
             }
