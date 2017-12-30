@@ -15,7 +15,7 @@ use std::sync::{Arc, Mutex};
 use time::SteadyTime;
 
 /// The type of the cell signal
-type CellSignal = SignalRuntimeRef<MCSignalValue<bool,(bool,usize)>>;
+type CellSignal = SignalRuntimeRef<MCSignalValue<usize,usize>>;
 
 /// The type of the board signal
 type BoardSignal = SignalRuntimeRef<BoardData>;
@@ -23,7 +23,6 @@ type BoardSignal = SignalRuntimeRef<BoardData>;
 /// The board data
 /// The first element represent the current instant number
 /// The elements in the vectors represent the last instant where the cell was set
-#[derive(Clone)]
 struct BoardData {
     data: Arc<Mutex<(usize, Vec<Vec<usize>>)>>,
 }
@@ -71,14 +70,10 @@ impl Board {
         let mut signals = vec![vec![]];
         for i in 0..height {
             for _ in 0..width {
-                let gather = box |is_self: bool, &mut (ref mut was_set, ref mut nb_neighbors): &mut (bool, usize)| {
-                    if is_self {
-                        *was_set = true;
-                    } else {
-                        *nb_neighbors += 1;
-                    }
+                let gather = box |emit_value: usize, value: &mut usize| {
+                    *value += emit_value;
                 };
-                signals[i].push(CellSignal::new_mc((false, 0), gather));
+                signals[i].push(CellSignal::new_mc(0, gather));
             }
             signals.push(vec![]);
         }
@@ -92,8 +87,8 @@ impl Board {
 
 
 fn main() {
-    let width = 20;
-    let height = 10;
+    let width = 1000;
+    let height = 1000;
     let board = Board::new(width,height);
     let (board_data, board_values) = BoardData::new(width, height);
     let board_signal = BoardSignal::new(board_data);
@@ -116,15 +111,15 @@ fn main() {
                 let s8 = board.signals[((i+1)%height) as usize][((j+1)%width) as usize].clone();
 
                 let v =
-                    vec![(s.clone(),true),
-                         (s1.clone(),false),
-                         (s2.clone(),false),
-                         (s3.clone(),false),
-                         (s4.clone(),false),
-                         (s5.clone(),false),
-                         (s6.clone(),false),
-                         (s7.clone(),false),
-                         (s8.clone(),false)];
+                    vec![(s.clone(),1),
+                         (s1.clone(),2),
+                         (s2.clone(),2),
+                         (s3.clone(),2),
+                         (s4.clone(),2),
+                         (s5.clone(),2),
+                         (s6.clone(),2),
+                         (s7.clone(),2),
+                         (s8.clone(),2)];
 
                 let process = pro!(
                     loop {
@@ -132,8 +127,8 @@ fn main() {
                             ()
                         };
                         await_s(s.clone());
-                        move |(was_set,v): (bool,usize)| {
-                            if v == 3 || (v == 2 && was_set) {
+                        move |v: usize| {
+                            if v == 5 || v == 6 || v == 7  {
                                 True(())
                             } else {
                                 False(())
@@ -169,34 +164,17 @@ fn main() {
 
 
         let rt1 = pro!(big_join(processes));
-
-
-        let signal1 = board.signals[2][1].clone();
-        let signal2 = board.signals[2][2].clone();
-        let signal3 = board.signals[2][3].clone();
-        let signal4 = board.signals[7][1].clone();
-        let signal5 = board.signals[7][2].clone();
-        let signal6 = board.signals[7][3].clone();
-        let signal7 = board.signals[2][16].clone();
-        let signal8 = board.signals[2][17].clone();
-        let signal9 = board.signals[2][18].clone();
-        let signal10 = board.signals[7][16].clone();
-        let signal11 = board.signals[7][17].clone();
-        let signal12 = board.signals[7][18].clone();
-
-        let v = vec![
-            (signal1.clone(),false),(signal1.clone(),false),(signal1.clone(),false),
-            (signal2.clone(),false),(signal2.clone(),false),(signal2.clone(),false),
-            (signal3.clone(),false),(signal3.clone(),false),(signal3.clone(),false),
-            (signal4.clone(),false),(signal4.clone(),false),(signal4.clone(),false),
-            (signal5.clone(),false),(signal5.clone(),false),(signal5.clone(),false),
-            (signal6.clone(),false),(signal6.clone(),false),(signal6.clone(),false),
-            (signal7.clone(),false),(signal7.clone(),false),(signal7.clone(),false),
-            (signal8.clone(),false),(signal8.clone(),false),(signal8.clone(),false),
-            (signal9.clone(),false),(signal9.clone(),false),(signal9.clone(),false),
-            (signal10.clone(),false),(signal10.clone(),false),(signal10.clone(),false),
-            (signal11.clone(),false),(signal11.clone(),false),(signal11.clone(),false),
-            (signal12.clone(),false),(signal12.clone(),false),(signal12.clone(),false)];
+        let mut v = vec![];
+        for i in 0..200 {
+            for j in 0..200 {
+                let signal1 = board.signals[2 + 5*i][1 + 5*j].clone();
+                let signal2 = board.signals[2 + 5*i][2 + 5*j].clone();
+                let signal3 = board.signals[2 + 5*i][3 + 5*j].clone();
+                v.push((signal1, 6));
+                v.push((signal2, 6));
+                v.push((signal3, 6));
+            }
+        }
 
         let rt2 = pro!(
             |_:()| { () };
@@ -206,12 +184,14 @@ fn main() {
 
         let mut rt = rt!(rt2; rt1);
 
-        let n = 100_000;
+        let n = 10;
         let start = SteadyTime::now();
         rt.instantn(n);
         println!("{}", (n as f32) / ((SteadyTime::now() - start).num_nanoseconds().unwrap() as f32 / 1_000_000_000.))
     }
 
+    // print the values
+    /*
     let values = board_values.lock().unwrap();
     for i in 0..height {
         for j in 0..width {
@@ -223,4 +203,5 @@ fn main() {
         }
         print!("\n");
     }
+    */
 }
