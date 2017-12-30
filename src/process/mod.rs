@@ -1,8 +1,12 @@
 //! This module defines the global mechanism of processes.
 //!
 //! A process represents any reactive calculation that takes an input value
-//! and outputs a value. `()` is used to represent a no-value.
+//! and outputs a value. `()` is used to represent a no-value. A process can be seen as
+//! a control flow graph (see `print_graph`) whose edge has types and value of those types
+//! moving through those edges.
+//!
 //! A process, when entering a Runtime, will be compiled to control-flow graph (CFG) of Nodes.
+//! This graph is of a different kind and explained in `node`.
 //! A process may represent a computation that spans on several instant or just a
 //! single instant : If the process is compiled to a single Node, we say that it is
 //! immediate (it will take only a single instant to compute, and this is known at compile time).
@@ -15,6 +19,9 @@
 //! To be in concordance with trait names, by "process" we will denote the box (ProcessIm)
 //! or (ProcessNotIm), and we will use "process implementation" to denote the concrete type
 //! behind the virtual interface.
+//!
+//! The available constructs may be seen quickly in the method of the `Process` trait and with more
+//! in the `macro` crate
 
 
 
@@ -39,6 +46,7 @@ pub use self::control::*;
 
 /// Contains sequencing structure i.e `;`
 mod seq;
+#[doc(hidden)]
 use self::seq::*;
 
 
@@ -52,15 +60,39 @@ mod signal;
 #[doc(hidden)]
 pub use self::signal::*;
 
+//   ___
+//  / _ \ _ __   ___ ___
+// | | | | '_ \ / __/ _ \
+// | |_| | | | | (_|  __/
+//  \___/|_| |_|\___\___|
 
+/// `Once` is a marker trait for a process being runnable multiple times or not
+///
+/// Normally a type verifying `Once` can have only two values: `IsOnce` and `NotOnce`
+/// whose meanings are trivial
+pub trait Once: Copy + 'static {}
 
-pub trait Once : Copy + 'static {}
-
+/// This trait is implemented by any meta-function whose return value is a type
+/// implementing Once
 pub trait GiveOnce {
     type Once: Once;
 }
 
-pub struct And<O1,O2>
+
+/// Marker for a process that can only be executed once.
+///
+/// In practice, the only way for that to happen is that there is a `FnOnce` somewhere
+#[derive(Clone, Copy)]
+pub struct IsOnce;
+impl Once for IsOnce {}
+/// Marker for a process that can only be executed once.
+#[derive(Clone, Copy)]
+pub struct NotOnce;
+impl Once for NotOnce {}
+
+
+/// Meta-function taking two type implementing Once and giving a result via `GiveOnce`
+pub struct And<O1, O2>
 where
     O1: Once,
     O2: Once,
@@ -69,28 +101,26 @@ where
     o2: PhantomData<O2>,
 }
 
-// default impl, is needded by rust
-default impl<O1,O2> GiveOnce for And<O1,O2>
+/// In the general case of composition of to process the result is `IsOnce`
+default impl<O1, O2> GiveOnce for And<O1, O2>
 where
-O1: Once,
-O2: Once,
+    O1: Once,
+    O2: Once,
 {
     type Once = IsOnce;
 }
 
+/// Except if both process are `NotOnce`
 impl GiveOnce for And<NotOnce, NotOnce> {
     type Once = NotOnce;
 }
 
 
-#[derive(Clone,Copy)]
-pub struct IsOnce;
-impl Once for IsOnce {}
-
-#[derive(Clone,Copy)]
-pub struct NotOnce;
-impl Once for NotOnce {}
-
+//  ___       _   ____
+// |_ _|_ __ | |_|  _ \ _ __ ___   ___ ___  ___ ___
+//  | || '_ \| __| |_) | '__/ _ \ / __/ _ \/ __/ __|
+//  | || | | | |_|  __/| | | (_) | (_|  __/\__ \__ \
+// |___|_| |_|\__|_|   |_|  \___/ \___\___||___/___/
 
 
 /// Common interface for processes and process implementations.
@@ -98,9 +128,10 @@ pub trait IntProcess<'a, In: Val<'a>>: 'a {
     /// The type outputted by the process when In is given.
     type Out: Val<'a>;
 
-    /// The type checking if the process can be called multiple times.
-    /// This type is IsOnce if it can be called only one time,
-    /// and NotOnce if it can be called multiple times.
+    /// Type-check mark for the process being able to be called multiple times
+    ///
+    /// * If `MarkOnce` is `IsOnce`, then the process can only be called once
+    /// * If `MarkOnce` is `NotOnce`, then the process can be called multiple times
     type MarkOnce: Once;
 
     /// Prints dot code for this process on stdout.
@@ -149,10 +180,21 @@ pub trait IntProcessNotIm<'a, In: Val<'a>>: IntProcess<'a, In> {
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO);
 }
 
+//  ____            _
+// | __ )  _____  _(_)_ __   __ _
+// |  _ \ / _ \ \/ / | '_ \ / _` |
+// | |_) | (_) >  <| | | | | (_| |
+// |____/ \___/_/\_\_|_| |_|\__, |
+//                          |___/
+
 /// An immediate process.
 ///
 /// This is simply a virtualization of an immediate process implementation.
-pub struct ProcessIm<'a, In, Out, MarkOnce, NIO>(pub(crate) Box<IntProcessIm<'a, In, Out = Out, MarkOnce = MarkOnce, NIO = NIO>>);
+#[cfg_attr(rustfmt, rustfmt_skip)]
+pub struct ProcessIm<'a, In, Out, MarkOnce, NIO>(
+    pub(crate) Box<IntProcessIm<'a, In, Out = Out, MarkOnce = MarkOnce, NIO = NIO>>
+);
+
 
 impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NIO> ProcessIm<'a, In, Out, MarkOnce, NIO>
 where
@@ -179,18 +221,11 @@ where
     NI: Node<'a, In, Out = ()>,
     NO: Node<'a, (), Out = Out>,
 {
-    /// Compiles a non-immediate process
+/// Compiles a non-immediate process
     pub(crate) fn compile(self, g: &mut Graph<'a>) -> (NI, usize, NO) {
         self.0.compile(g)
     }
 }
-
-//     _         _          ____            _
-//    / \  _   _| |_ ___   | __ )  _____  _(_)_ __   __ _
-//   / _ \| | | | __/ _ \  |  _ \ / _ \ \/ / | '_ \ / _` |
-//  / ___ \ |_| | || (_) | | |_) | (_) >  <| | | | | (_| |
-// /_/   \_\__,_|\__\___/  |____/ \___/_/\_\_|_| |_|\__, |
-//                                                  |___/
 
 /// I cannot use the fact that a type T implemented IntProcessIm or IntProcessNotIm
 /// to dispatch a function on it. so I need a third trait to say whether an implementation
@@ -233,7 +268,7 @@ pub trait Process<'a, In: Val<'a>>: IntProcess<'a, In> + Sized {
     /// If we input False(x), b will run with input x.
     /// a and b must return the same type that will be return by the choice construct.
     /// a.choice(b) is equivalent to pro!{choice{a}{b}}
-    fn choice<PF, InF : Val<'a>>(
+    fn choice<PF, InF: Val<'a>>(
         self,
         p: PF,
     ) -> <PChoice<Self, PF> as ToBoxedProcess<'a, ChoiceData<In, InF>>>::Boxed
@@ -267,20 +302,25 @@ pub trait Process<'a, In: Val<'a>>: IntProcess<'a, In> + Sized {
         Par(self, q).tobox()
     }
 
-    fn present<PF, S: Signal<'a>>(self, process_false: PF) -> <PresentD<Self, PF> as ToBoxedProcess<'a, S>>::Boxed
+    /// a.present(b) build a present (`PresentD`) construct with a and b.
+    /// this is equivalent to pro!{present{a}{b}}
+    fn present<PF, S: Signal<'a>>(
+        self,
+        process_false: PF,
+    ) -> <PresentD<Self, PF> as ToBoxedProcess<'a, S>>::Boxed
     where
         PF: Process<'a, ()>,
         Self: Process<'a, ()>,
         PresentD<Self, PF>: ToBoxedProcess<'a, S>,
     {
         (PresentD {
-            pt: self,
-            pf: process_false,
-        }).tobox()
+             pt: self,
+             pf: process_false,
+         }).tobox()
     }
 }
 
-/// puts a lot of processes in parallel.
+/// Puts a lot of processes in parallel, they can take a copy `In` value and must return ().
 pub fn big_join<'a, In: Val<'a>, MarkOnce, PNI, PNO>(
     vp: Vec<ProcessNotIm<'a, In, (), MarkOnce, PNI, PNO>>,
 ) -> ProcessNotIm<'a, In, (), MarkOnce, NSeq<NStore<In>, NBigPar>, Nothing>
@@ -297,21 +337,34 @@ where
     ProcessNotIm(box BigPar(res))
 }
 
-pub trait GraphFiller<'a> {
-    fn fill_graph(self, g: &mut Graph<'a>) -> usize;
+
+/// this trait is implemented by something that be compiled into a full
+/// Control Flow Graph.
+pub trait GraphFiller<'a> : 'a {
+    /// Compile Self to a `Graph` and return the index of starting `Node`
+    fn compile_to_graph(self) -> (Graph<'a>, usize);
 }
 
-impl<'a, T> GraphFiller<'a> for T
+default impl<'a, T> GraphFiller<'a> for T
 where
     T: Process<'a, (), Out = ()>,
 {
-    default fn fill_graph(self, _: &mut Graph<'a>) -> usize {
+    fn compile_to_graph(self) -> (Graph<'a>, usize){
+        // only ProcessIm and ProcessNotIm implement Process
         unreachable!()
     }
 }
 
+//  ___ __  __ ____  _       ____              ___
+// |_ _|  \/  |  _ \| |     |  _ \ _ __ ___   |_ _|_ __ ___
+//  | || |\/| | |_) | |     | |_) | '__/ _ \   | || '_ ` _ \
+//  | || |  | |  __/| |___  |  __/| | | (_) |  | || | | | | |
+// |___|_|  |_|_|   |_____| |_|   |_|  \___/  |___|_| |_| |_|
+
+
 #[cfg_attr(rustfmt, rustfmt_skip)]
-impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NIO> IntProcess<'a, In> for ProcessIm<'a, In, Out, MarkOnce, NIO>
+impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NIO> IntProcess<'a, In>
+    for ProcessIm<'a, In, Out, MarkOnce, NIO>
 where
     NIO: Node<'a, In, Out = Out>,
     MarkOnce: Once,
@@ -324,22 +377,10 @@ where
     }
 }
 
-impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NI, NO> IntProcess<'a, In> for ProcessNotIm<'a, In, Out, MarkOnce, NI, NO>
-where
-    NI: Node<'a, In, Out = ()>,
-    NO: Node<'a, (), Out = Out>,
-    MarkOnce: Once,
-{
-    type Out = Out;
-    type MarkOnce = MarkOnce;
-
-    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
-        self.0.printDot(curNum)
-    }
-}
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NIO> Process<'a, In> for ProcessIm<'a, In, Out, MarkOnce, NIO>
+impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NIO> Process<'a, In>
+    for ProcessIm<'a, In, Out, MarkOnce, NIO>
 where
     NIO: Node<'a, In, Out = Out>,
     MarkOnce: Once,
@@ -351,19 +392,45 @@ impl<'a, MarkOnce, NIO> GraphFiller<'a> for ProcessIm<'a, (), (), MarkOnce, NIO>
     MarkOnce: Once,
     NIO: Node<'a, (), Out = ()>,
 {
-    fn fill_graph(self, g: &mut Graph<'a>) ->usize
-    {
-        let pnio = self.compileIm(g);
-        g.add(box node!(pnio >> NEnd{}))
+    fn compile_to_graph(self) -> (Graph<'a>, usize){
+        let mut g = Graph::new();
+        let pnio = self.compileIm(&mut g);
+        let start = g.add(box node!(pnio >> NEnd{}));
+        (g,start)
     }
 }
 
-impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NI,NO> Process<'a, In> for ProcessNotIm<'a, In, Out, MarkOnce, NI,NO>
+
+//  ___ __  __ ____  _       ____              _   _ ___
+// |_ _|  \/  |  _ \| |     |  _ \ _ __ ___   | \ | |_ _|
+//  | || |\/| | |_) | |     | |_) | '__/ _ \  |  \| || |
+//  | || |  | |  __/| |___  |  __/| | | (_) | | |\  || |
+// |___|_|  |_|_|   |_____| |_|   |_|  \___/  |_| \_|___|
+
+impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NI, NO> IntProcess<'a, In>
+    for ProcessNotIm<'a, In, Out, MarkOnce, NI, NO>
     where
+    NI: Node<'a, In, Out = ()>,
+    NO: Node<'a, (), Out = Out>,
+    MarkOnce: Once,
+{
+    type Out = Out;
+    type MarkOnce = MarkOnce;
+
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
+        self.0.printDot(curNum)
+    }
+}
+
+
+impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NI, NO> Process<'a, In>
+    for ProcessNotIm<'a, In, Out, MarkOnce, NI, NO>
+where
     MarkOnce: Once,
     NI: Node<'a, In, Out = ()>,
     NO: Node<'a, (), Out = Out>,
-{}
+{
+}
 
 impl<'a, MarkOnce, NI, NO> GraphFiller<'a> for ProcessNotIm<'a, (), (), MarkOnce, NI, NO>
 where
@@ -371,10 +438,12 @@ where
     NO: Node<'a, (), Out = ()>,
     MarkOnce: Once,
 {
-    fn fill_graph(self, g: &mut Graph<'a>) -> usize {
-        let (pni, pind, pno) = self.compile(g);
+    fn compile_to_graph(self) -> (Graph<'a>, usize){
+        let mut g = Graph::new();
+        let (pni, pind, pno) = self.compile(&mut g);
         g.set(pind, box node!(pno >> NEnd{}));
-        g.add(box pni)
+        let start = g.add(box pni);
+        (g,start)
     }
 }
 
@@ -386,6 +455,7 @@ where
 // |_|   |_|  |_|_| |_|\__|\____|_|  \__,_| .__/|_| |_|
 //                                        |_|
 
+/// Print a dot code of a nice graph representing the control flow at the process level.
 pub fn print_graph<'a, P>(p: &'a mut P)
 where
     P: Process<'a, (), Out = ()>,

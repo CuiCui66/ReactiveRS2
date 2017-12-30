@@ -8,12 +8,18 @@ use super::*;
 // | |_| | |_| | | | | | | |_) |
 //  \___/ \__,_|_| |_| |_| .__/
 //                       |_|
+
+/// Node that schedule a main node for the current instant
+///
+/// Signature : `() -> ()`
 pub struct NJump {
+    /// id of the main node this node points to.
     dest: usize,
 }
 
-pub fn njump(pos: usize) -> NJump {
-    NJump { dest: pos }
+/// Build a node that jumps to dest when called
+pub fn njump(dest: usize) -> NJump {
+    NJump { dest}
 }
 
 impl<'a> Node<'a, ()> for NJump {
@@ -35,10 +41,15 @@ impl<'a> Node<'a, ()> for NJump {
 // |  __/ (_| | |_| \__ \  __/
 // |_|   \__,_|\__,_|___/\___|
 
+/// Node that schedule a main node for the next instant
+///
+/// Signature : `() -> ()`
 pub struct NPause {
+    /// id of the main node this node points to.
     dest: usize,
 }
 
+/// Build a node that schedule `dest` on the next instant
 pub fn npause(pos: usize) -> NPause {
     NPause { dest: pos }
 }
@@ -62,6 +73,7 @@ impl<'a> Node<'a, ()> for NPause {
 // | |___| | | | (_) | | (_|  __/
 //  \____|_| |_|\___/|_|\___\___|
 
+/// Enum of any branching structure to do a choice between two branches
 #[derive(Clone, Copy)]
 pub enum ChoiceData<T, F> {
     True(T),
@@ -69,7 +81,9 @@ pub enum ChoiceData<T, F> {
 }
 use self::ChoiceData::*;
 
-
+/// Node that chooses between nt or nf depending on input
+///
+/// Signature : `ChoiceData<T,F> -> O` when `nt : T -> O` and `nf: F -> O`
 pub struct NChoice<NT, NF> {
     pub nt: NT,
     pub nf: NF,
@@ -108,6 +122,9 @@ impl<'a,NT,NF, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>> Node<'a, ChoiceData<InT
 // |_____\___/ \___/| .__/___|_| |_| |_|
 //                  |_|
 
+/// Node that loops another node
+///
+/// Signature : `I -> O` when `N : I -> ChoiceData<I,O>`
 pub struct LoopIm<N>(pub N);
 
 impl<'a, N, In: Val<'a>, Out: Val<'a>> Node<'a, In> for LoopIm<N>

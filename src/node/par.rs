@@ -14,6 +14,9 @@ use super::*;
 // |___\__, |_| |_|\___/|_|  \___|
 //     |___/
 
+/// Node that ignore it input value
+///
+/// Signature : `T -> ()`
 #[derive(Clone, Copy)]
 pub struct Ignore {}
 
@@ -25,6 +28,9 @@ impl<'a, In: Val<'a>> Node<'a, In> for Ignore {
 
 
 
+/// Node that create a pair of unit
+///
+/// Signature : `() -> ((),())`
 #[derive(Clone, Copy)]
 pub struct GenP {}
 
@@ -38,6 +44,9 @@ impl<'a> Node<'a, ()> for GenP {
 
 
 
+/// Node that ignore the first argument of a pair
+///
+/// Signature : `(T,U) -> U`
 #[derive(Clone, Copy)]
 pub struct Ignore1 {}
 
@@ -51,6 +60,9 @@ impl<'a, In1: Val<'a>, In2: Val<'a>> Node<'a, (In1, In2)> for Ignore1 {
 
 
 
+/// Node that ignore the second argument of a pair
+///
+/// Signature : `(T,U) -> T`
 #[derive(Clone, Copy)]
 pub struct Ignore2 {}
 
@@ -61,15 +73,16 @@ impl<'a, In1: Val<'a>, In2: Val<'a>> Node<'a, (In1, In2)> for Ignore2 {
     }
 }
 
-
-
-
 //  ____
 // |  _ \ __ _ _ __
 // | |_) / _` | '__|
 // |  __/ (_| | |
 // |_|   \__,_|_|
 
+/// Node that take a pair, run n1 on the first argument, n2 on the second
+/// and returns the pair of the results
+///
+/// Signature : `(T1,T2) -> U1,U2` where `n1 : T1 -> U1` and `n2: T2 -> U2`
 pub struct NPar<N1, N2> {
     pub n1: N1,
     pub n2: N2,
@@ -95,7 +108,8 @@ where
 }
 
 
-
+/// A structure for saving the value of the two branch of a `process::Par` while waiting for
+/// completion
 pub struct JoinPoint<T1, T2> {
     o1: Option<T1>,
     o2: Option<T2>,
@@ -124,6 +138,7 @@ impl<T1,T2> JoinPoint<T1,T2> {
 #[cfg(not(feature = "par"))]
 mod content {
     use super::*;
+    /// struct sharing and pointing to a `JoinPoint`
     pub struct Rcjp<T1, T2>(Rc<RefCell<JoinPoint<T1, T2>>>);
 
     impl<T1,T2> Clone for Rcjp<T1,T2>{
@@ -152,7 +167,7 @@ mod content {
 
 }
 
-#[cfg(all(feature = "par", not(feature = "funsafe")))]
+#[cfg(feature = "par")]
 mod content {
     use std::sync::Arc;
     use std::sync::Mutex;
@@ -185,39 +200,6 @@ mod content {
     }
 
 
-}
-
-#[cfg(all(feature = "par", feature = "funsafe"))]
-mod content {
-    use std::sync::Arc;
-    use std::sync::Mutex;
-    use super::*;
-
-    pub struct Rcjp<T1, T2>(Arc<Mutex<JoinPoint<T1, T2>>>);
-
-    impl<T1: Send,T2: Send> Clone for Rcjp<T1,T2>{
-        fn clone(&self) -> Self{
-            Rcjp(self.0.clone())
-        }
-    }
-
-    impl<T1: Send, T2: Send> Rcjp<T1, T2> {
-        pub fn new() -> Self {
-            Rcjp(Arc::new(Mutex::new(JoinPoint::default())))
-        }
-        pub fn set1(&self, t: T1) -> bool {
-            self.0.lock().unwrap().set1(t)
-        }
-        pub fn set2(&self, t: T2) -> bool {
-            self.0.lock().unwrap().set2(t)
-        }
-        pub fn get(&self) -> (T1, T2) {
-            take(&mut *self.0.lock().unwrap()).get()
-        }
-        pub fn get_ind(&self, cfgd: &mut CFGDrawer) -> usize {
-            cfgd.get_ind(Arc::into_raw(self.0.clone()))
-        }
-    }
 }
 
 pub use self::content::*;
@@ -226,6 +208,10 @@ pub use self::content::*;
 
 
 
+/// Node that will set the first value of an Rcjp and then jump to dest if the
+/// second is already set. See `process::Par`
+///
+/// Signature : `T1 -> ()`
 pub struct NSetVar1<T1, T2> {
     rc: Rcjp<T1, T2>,
     dest: usize,
@@ -257,6 +243,10 @@ impl<'a, T1: Val<'a>, T2: Val<'a>> Node<'a, T1> for NSetVar1<T1, T2> {
 
 
 
+/// Node that will set the second value of an Rcjp and then jump to dest if the
+/// first is already set. See `process::Par`
+///
+/// Signature : `T2 -> ()`
 pub struct NSetVar2<T1, T2> {
     rc: Rcjp<T1, T2>,
     dest: usize,
@@ -287,6 +277,9 @@ impl<'a, T1: Val<'a>, T2: Val<'a>> Node<'a, T2> for NSetVar2<T1, T2> {
 
 
 
+/// Node that, when called, extract the two value set in Rcjp and returns them as a pair
+///
+/// Signature : `() -> (T1,T2)`
 
 pub struct NMerge<T1, T2> {
     rc: Rcjp<T1,T2>,
@@ -319,6 +312,9 @@ impl<'a, T1: Val<'a>, T2: Val<'a>> Node<'a, ()> for NMerge<T1, T2> {
 //          |___/
 
 
+/// Node that, when called, dump all the ids it owns, in the scheduler for current instant.
+///
+/// Signature : `() -> (T1,T2)`
 pub struct NBigPar {
     pub(crate) dests: Vec<usize>,
 }
@@ -335,6 +331,7 @@ impl<'a> Node<'a, ()> for NBigPar {
 #[cfg(not(feature = "par"))]
 mod content2 {
     use super::*;
+    /// Struct to wait `total` thread and then jump to `dest`
     pub struct BigJoinPoint {
         nb: Cell<usize>,
         total: usize,
@@ -360,6 +357,7 @@ mod content2 {
         }
     }
 
+    /// Struct owning and sharing a BigJoinPoint
     #[derive(Clone)]
     pub struct Rcbjp(Rc<BigJoinPoint>);
 
@@ -418,6 +416,8 @@ mod content2 {
 }
 pub use self::content2::*;
 
+/// Node that Increments the value of a Rcbjp and jump to the dest node it is the last
+/// one to get to join point.
 pub struct NBigMerge {
     rc: Rcbjp,
 }

@@ -60,6 +60,14 @@ fn parse_expr_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
                     let e = parse_expr(cx,sp,args);
                     return cx.expr_call_ident(sp,cx.ident_of("fnmut2pro"),vec![e])
                 }
+                &Token::Ident(id) if id.name.as_str() == "once" => {
+                    let e = parse_expr(cx,sp,&args[1..]);
+                    return cx.expr_call_ident(sp,cx.ident_of("fnonce2pro"),vec![e])
+                }
+                &Token::Ident(id) if id.name.as_str() == "val" => {
+                    let e = parse_expr(cx,sp,&args[1..]);
+                    return cx.expr_call_ident(sp,cx.ident_of("value"),vec![e])
+                }
                 _ => {}
             }
         }
@@ -296,7 +304,7 @@ fn parse_node(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
                 if d == DelimToken::Paren || d == DelimToken::Brace {
                     return parse_node(cx, sp, &extract_ts(ts.clone().into()));
                 } else {
-                    cx.span_err(sp, "Process delimited by brackets ?");
+                    cx.span_err(sp, "Node delimited by brackets ?");
                     return DummyResult::raw_expr(sp);
                 }
             }

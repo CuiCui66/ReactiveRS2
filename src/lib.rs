@@ -1,14 +1,12 @@
 #![allow(non_snake_case)]
 #![feature(specialization)]
-#![feature(log_syntax)]
-#![feature(box_syntax, box_patterns)]
+#![feature(box_syntax)]
 #![feature(plugin)]
 #![feature(test)]
 #![plugin(promacros)]
 #![feature(core_intrinsics)]
-#![feature(arbitrary_self_types)]
-#![feature(conservative_impl_trait)]
-#![feature(associated_type_defaults)]
+//#![feature(conservative_impl_trait)]
+//#![feature(associated_type_defaults)]
 #![feature(asm)]
 
 // #[macro_use] extern crate log;
@@ -993,9 +991,9 @@ mod tests {
         let mut value = -3;
         {
             run!(
-                fnonce2pro(|_:()| {
+                once |_:()| {
                     42
-                });
+                };
                 |v:i32| {
                     value = v;
                 }
