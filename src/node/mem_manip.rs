@@ -7,6 +7,7 @@ mod content {
     use std::cell::Cell;
     use super::*;
 
+    /// Structure for passing value along the edges of a Process CFG.
     pub struct RCell<T>(Rc<Cell<Option<T>>>);
 
     impl<T> Clone for RCell<T>{
@@ -31,6 +32,7 @@ mod content {
         {
             self.0.get().unwrap()
         }
+        /// Get pointer index of the internal pointer from `cfgd`.
         pub fn get_ind(&self, cfgd: &mut CFGDrawer) -> usize {
             cfgd.get_ind(Rc::into_raw(self.0.clone()))
         }
@@ -79,6 +81,10 @@ mod content {
     use std::sync::Arc;
     use std::cell::UnsafeCell;
     use super::*;
+
+    // The process construct guarantees that an arrow in the process CFG
+    // cannot be passed at the same time in two threads
+    // (one of this passage is necessarily sequenced before the other).
     struct CustCell<T>(pub(self) UnsafeCell<Option<T>>);
     unsafe impl<T:Send> Sync for CustCell<T>{}
 
@@ -122,8 +128,13 @@ pub use self::content::*;
 // |____/ \__\___/|_|  \___|
 
 
+/// Node that store a value of type `T` in a `RCell` fixed during
+/// process compilation.
+///
+/// Signature : `T -> ()`
 pub struct NStore<T : OptSend>(RCell<T>);
 
+/// Builds a `NStore`
 pub fn store<T : OptSend>(rc: RCell<T>) -> NStore<T> {
     NStore(rc)
 }
@@ -146,8 +157,13 @@ impl<'a, T: Val<'a>> Node<'a, T> for NStore<T> {
 // | |__| (_) | (_| | (_| |
 // |_____\___/ \__,_|\__,_|
 
+/// Node that load a value of type `T` from a `RCell` fixed during
+/// process compilation.
+///
+/// Signature : `() -> T`
 pub struct NLoad<T : OptSend>(RCell<T>);
 
+/// Builds a `NLoad`
 pub fn load<T: OptSend>(rc: RCell<T>) -> NLoad<T> {
     NLoad(rc)
 }
@@ -171,8 +187,13 @@ impl<'a, T: Val<'a>> Node<'a, ()> for NLoad<T> {
 // |_____\___/ \__,_|\__,_|\____\___/| .__/ \__, |
 //                                   |_|    |___/
 
+/// Node that copy a value of type `T` from a `RCell` fixed during
+/// process compilation.
+///
+/// Signature : `() -> T`
 pub struct NLoadCopy<T : OptSend>(RCell<T>);
 
+/// Builds a `NLoadCopy`
 pub fn load_copy<T>(rc: RCell<T>) -> NLoadCopy<T>
 where
     T: Copy + OptSend,

@@ -1,8 +1,12 @@
 //! This module defines the global mechanism of processes.
 //!
 //! A process represents any reactive calculation that takes an input value
-//! and outputs a value. `()` is used to represent a no-value.
+//! and outputs a value. `()` is used to represent a no-value. A process can be seen as
+//! a control flow graph (see `print_graph`) whose edge has types and value of those types
+//! moving through those edges.
+//!
 //! A process, when entering a Runtime, will be compiled to control-flow graph (CFG) of Nodes.
+//! This graph is of a different kind and explained in `node`.
 //! A process may represent a computation that spans on several instant or just a
 //! single instant : If the process is compiled to a single Node, we say that it is
 //! immediate (it will take only a single instant to compute, and this is known at compile time).
@@ -16,7 +20,7 @@
 //! or (ProcessNotIm), and we will use "process implementation" to denote the concrete type
 //! behind the virtual interface.
 //!
-//! The available construct may be seen quickly in the method of the `Process` trait and with more
+//! The available constructs may be seen quickly in the method of the `Process` trait and with more
 //! in the `macro` crate
 
 
