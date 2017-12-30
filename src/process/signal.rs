@@ -1,3 +1,9 @@
+//! This module is about processes that interact with signals.
+//! If a process implementation ends with a D, it means that it takes
+//! the signal it operates on at runtime as an input value.
+//! If a process implementation ends with a S, it means that it takes
+//! the signal it operates on, during its construction at compile time
+
 use super::*;
 use signal::*;
 use std::marker::PhantomData;
@@ -9,8 +15,10 @@ use std::marker::PhantomData;
 // |  __/| | |  __/ |_| |
 // |_|   |_|  \___|____/
 
-/// Process returning the last value of the signal,
+/// Process implementation returning the last value V of the input signal S,
 /// where the signal is given as the process input.
+///
+/// Possible signatures are S -> V and (S,In) -> (V,In)
 #[derive(Copy, Clone)]
 pub struct PreD {}
 
@@ -40,6 +48,7 @@ where
     }
 }
 
+/// Builds boxed `PreD` for signature S -> V
 pub fn pre_d<'a, S>() -> ProcessIm<'a, S, S::V, NotOnce, NGetD>
 where
     S: Signal<'a>
@@ -73,7 +82,7 @@ where
     }
 }
 
-
+/// Builds boxed `PreD` for signature (S,In) -> (V,In)
 pub fn pre_d_in<'a, S, In: Val<'a>>() -> ProcessIm<'a, (S, In), (S::V, In), NotOnce, NGetD>
 where
     S: Signal<'a>
@@ -88,14 +97,15 @@ where
 // |_|   |_|  \___|____/
 
 
-/// Process returning the last value of the signal,
-/// where the signal is given as the process input.
+/// Process implementation returning the last value V of a signal,
+/// where the signal is given at construction.
+///
+/// Signature is () -> V.
+///
+/// See `PreSIn` to have a side value
 #[derive(Copy, Clone)]
 pub struct PreS<S>(pub S);
 
-
-/// Process returning the last value of the signal,
-/// where the signal is fixed
 impl<'a, S> IntProcess<'a, ()> for PreS<S>
 where
     S: Signal<'a>
@@ -122,6 +132,7 @@ where
     }
 }
 
+/// Builds boxed `PreS`
 pub fn pre_s<'a, S>(signal: S) -> ProcessIm<'a, (), S::V, NotOnce, NGetS<S>>
 where
     S: Signal<'a>
@@ -129,12 +140,16 @@ where
     ProcessIm(box PreS(signal))
 }
 
+/// Process implementation returning the last value V of a signal,
+/// where the signal is given at construction.
+///
+/// Signature is In -> (V,In).
+///
+/// See `PreS` to not have a side value.
 #[derive(Copy, Clone)]
 pub struct PreSIn<S>(pub S);
 
 
-/// Process returning the last value of the signal,
-/// where the signal is fixed
 impl<'a, S: Val<'a>, In: Val<'a>> IntProcess<'a, In> for PreSIn<S>
 where
     S: Signal<'a>
@@ -161,6 +176,7 @@ where
     }
 }
 
+/// Builds boxed `PreSIn`
 pub fn pre_s_in<'a, S, In: Val<'a>>(signal: S) -> ProcessIm<'a, In, (S::V, In), NotOnce, NGetSIn<S>>
 where
     S: Signal<'a>
@@ -174,8 +190,15 @@ where
 // | |___| | | | | | | |_| |_| |
 // |_____|_| |_| |_|_|\__|____/
 
-/// Process representing the emission of a signal,
-/// where the signal and the value is given as the process input.
+/// Process implementation representing the emission of a signal,
+/// where the signal S and the value V are given as the process input.
+///
+/// Possible signatures are
+/// * ((S,V),In) -> In
+/// * (S,V) -> ()
+/// * (Vec<(S,V)>,In) -> In
+/// * Vec<(S,V)> -> ()
+
 #[derive(Copy, Clone)]
 pub struct EmitD {}
 
@@ -283,6 +306,7 @@ where
 }
 
 
+/// Builds boxed `EmitD` for signature ((S,V),In) -> In
 pub fn emit_d_in<'a, S: Val<'a>, In: Val<'a>>()
     -> ProcessIm<'a, ((S, S::E), In), In, NotOnce, NEmitD>
 where
@@ -291,6 +315,7 @@ where
     ProcessIm(box EmitD {})
 }
 
+/// Builds boxed `EmitD` for signature (S,V) -> ()
 pub fn emit_d<'a, S: Val<'a>>()
     -> ProcessIm<'a, (S, S::E), (), NotOnce, NEmitD>
 where
@@ -299,7 +324,7 @@ where
     ProcessIm(box EmitD {})
 }
 
-
+/// Builds boxed `EmitD` for signature (Vec<(S,V)>,In) -> In
 pub fn emit_d_vec_in<'a, S: Val<'a>, In: Val<'a>>()
     -> ProcessIm<'a, (Vec<(S, S::E)>, In), In, NotOnce, NEmitD>
 where
@@ -308,6 +333,7 @@ where
     ProcessIm(box EmitD {})
 }
 
+/// Builds boxed `EmitD` for signature Vec<(S,V)> -> ()
 pub fn emit_d_vec<'a, S: Val<'a>>()
     -> ProcessIm<'a, Vec<(S, S::E)>, (), NotOnce, NEmitD>
 where

@@ -1,6 +1,4 @@
 use node::*;
-// use node::rcmanip::*;
-// use node::control::*;
 use super::*;
 
 //   ____ _           _
@@ -9,32 +7,43 @@ use super::*;
 // | |___| | | | (_) | | (_|  __/
 //  \____|_| |_|\___/|_|\___\___|
 
-
-pub struct PChoice<PT, PF> (pub(crate) PT, pub(crate) PF,);
+/// A basic branching struct that takes a `ChoiceData` and call PT or PF depending of
+/// its value.
+pub struct PChoice<PT, PF>(pub(crate) PT, pub(crate) PF);
 
 
 impl<'a, PT, PF, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>> IntProcess<'a, ChoiceData<InT, InF>>
     for PChoice<PT, PF>
-    where
+where
     PT: Process<'a, InT, Out = Out>,
     PF: Process<'a, InF, Out = Out>,
 {
     type Out = Out;
     type MarkOnce = <And<PT::MarkOnce, PF::MarkOnce> as GiveOnce>::Once;
 
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begt,endt) = self.0.printDot(curNum);
-        let (begf,endf) = self.1.printDot(curNum);
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
+        let (begt, endt) = self.0.printDot(curNum);
+        let (begf, endf) = self.1.printDot(curNum);
         let numbeg = *curNum;
-        let numend = numbeg +1;
+        let numend = numbeg + 1;
         *curNum += 2;
-        println!("{} [shape=diamond, label=\"if\"]",numbeg);
-        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
-        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
-        println!("{} [size = 0.1]",numend);
-        println!("{} -> {}:w",endt,numend);
-        println!("{} -> {}:e",endf,numend);
-        (numbeg,numend)
+        println!("{} [shape=diamond, label=\"if\"]", numbeg);
+        println!(
+            "{}:w -> {} [label = \"True:{}\"];",
+            numbeg,
+            begt,
+            tname::<InT>()
+        );
+        println!(
+            "{}:e -> {} [label = \"False:{}\"];",
+            numbeg,
+            begf,
+            tname::<InF>()
+        );
+        println!("{} [size = 0.1]", numend);
+        println!("{} -> {}:w", endt, numend);
+        println!("{} -> {}:e", endf, numend);
+        (numbeg, numend)
     }
 }
 
@@ -42,7 +51,8 @@ impl<'a, PT, PF, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>> IntProcess<'a, Choice
 implNI!{
     ChoiceData<InT,InF>,
     impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, PTNI, PTNO, PFNI, PFNO, MarkOnceT, MarkOnceF>
-        for PChoice<ProcessNotIm<'a, InT, Out, MarkOnceT, PTNI, PTNO>, ProcessNotIm<'a, InF, Out, MarkOnceF, PFNI, PFNO>>
+        for PChoice<ProcessNotIm<'a, InT, Out, MarkOnceT, PTNI, PTNO>,
+                    ProcessNotIm<'a, InF, Out, MarkOnceF, PFNI, PFNO>>
         where
         MarkOnceT: Once,
         MarkOnceF: Once,
@@ -75,7 +85,8 @@ implNI!{
 implNI!{
     ChoiceData<InT,InF>,
     impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, MarkOnceT, MarkOnceF, PTNI, PTNO, PFNIO>
-        for PChoice<ProcessNotIm<'a, InT, Out, MarkOnceT, PTNI, PTNO>, ProcessIm<'a, InF, Out, MarkOnceF, PFNIO>>
+        for PChoice<ProcessNotIm<'a, InT, Out, MarkOnceT, PTNI, PTNO>,
+                    ProcessIm<'a, InF, Out, MarkOnceF, PFNIO>>
         where
         MarkOnceT: Once,
         MarkOnceF: Once,
@@ -110,7 +121,8 @@ implNI!{
 implNI!{
     ChoiceData<InT,InF>,
     impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, MarkOnceT, MarkOnceF, PTNIO, PFNI, PFNO>
-        for PChoice<ProcessIm<'a, InT, Out, MarkOnceT, PTNIO>, ProcessNotIm<'a, InF, Out, MarkOnceF, PFNI, PFNO>>
+        for PChoice<ProcessIm<'a, InT, Out, MarkOnceT, PTNIO>,
+                    ProcessNotIm<'a, InF, Out, MarkOnceF, PFNI, PFNO>>
         where
         MarkOnceT: Once,
         MarkOnceF: Once,
@@ -146,7 +158,8 @@ implNI!{
 implIm!{
     ChoiceData<InT,InF>,
     impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, MarkOnceT, MarkOnceF, PTNIO, PFNIO>
-        for PChoice<ProcessIm<'a, InT, Out, MarkOnceT, PTNIO>, ProcessIm<'a, InF, Out, MarkOnceF, PFNIO>>
+        for PChoice<ProcessIm<'a, InT, Out, MarkOnceT, PTNIO>,
+                    ProcessIm<'a, InF, Out, MarkOnceF, PFNIO>>
         where
         MarkOnceT: Once,
         MarkOnceF: Once,
@@ -176,27 +189,45 @@ implIm!{
 // |_____\___/ \___/| .__/
 //                  |_|
 
-pub struct PLoop<P> (pub(crate) P);
+/// A basic looping construct that run a process `NotOnce` returning a `ChoiceData`
+/// And relauch it while it return the `True` constructor.
+pub struct PLoop<P>(pub(crate) P);
 
-impl<'a, P, In: Val<'a>, Out: Val<'a>> IntProcess<'a, In>
-    for PLoop<P>
-    where
-    P: Process<'a, In, Out = ChoiceData<In,Out>>,
+impl<'a, P, In: Val<'a>, Out: Val<'a>> IntProcess<'a, In> for PLoop<P>
+where
+    P: Process<
+        'a,
+        In,
+        Out = ChoiceData<
+            In,
+            Out,
+        >,
+    >,
 {
     type Out = Out;
     type MarkOnce = NotOnce;
 
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (beg,end) = self.0.printDot(curNum);
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
+        let (beg, end) = self.0.printDot(curNum);
         let numbeg = *curNum;
-        let numend = numbeg +1;
+        let numend = numbeg + 1;
         *curNum += 2;
-        println!("{} [label = \"loop\"]",numbeg);
-        println!("{}:s -> {} [label = \"{}\"]",numbeg,beg,tname::<In>());
-        println!("{} [shape=diamond]",numend);
-        println!("{} -> {}:n [label = \"{}\"]",end,numend,tname::<ChoiceData<In,Out>>());
-        println!("{}:w -> {}:w [label = \"Continue: {}\"];",numend,numbeg,tname::<In>());
-        (numbeg,numend)
+        println!("{} [label = \"loop\"]", numbeg);
+        println!("{}:s -> {} [label = \"{}\"]", numbeg, beg, tname::<In>());
+        println!("{} [shape=diamond]", numend);
+        println!(
+            "{} -> {}:n [label = \"{}\"]",
+            end,
+            numend,
+            tname::<ChoiceData<In, Out>>()
+        );
+        println!(
+            "{}:w -> {}:w [label = \"Continue: {}\"];",
+            numend,
+            numbeg,
+            tname::<In>()
+        );
+        (numbeg, numend)
     }
 }
 

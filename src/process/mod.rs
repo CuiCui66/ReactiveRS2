@@ -75,13 +75,13 @@ pub trait GiveOnce {
 }
 
 
-/// Marker for a process that can only be executed Once.
+/// Marker for a process that can only be executed once.
 ///
 /// In practice, the only way for that to happen is that there is a `FnOnce` somewhere
 #[derive(Clone, Copy)]
 pub struct IsOnce;
 impl Once for IsOnce {}
-
+/// Marker for a process that can only be executed once.
 #[derive(Clone, Copy)]
 pub struct NotOnce;
 impl Once for NotOnce {}
@@ -297,6 +297,8 @@ pub trait Process<'a, In: Val<'a>>: IntProcess<'a, In> + Sized {
         Par(self, q).tobox()
     }
 
+    /// a.present(b) build a present (`PresentD`) construct with a and b.
+    /// this is equivalent to pro!{present{a}{b}}
     fn present<PF, S: Signal<'a>>(
         self,
         process_false: PF,
@@ -313,7 +315,7 @@ pub trait Process<'a, In: Val<'a>>: IntProcess<'a, In> + Sized {
     }
 }
 
-/// puts a lot of processes in parallel.
+/// Puts a lot of processes in parallel, they can take a copy `In` value and must return ().
 pub fn big_join<'a, In: Val<'a>, MarkOnce, PNI, PNO>(
     vp: Vec<ProcessNotIm<'a, In, (), MarkOnce, PNI, PNO>>,
 ) -> ProcessNotIm<'a, In, (), MarkOnce, NSeq<NStore<In>, NBigPar>, Nothing>
@@ -330,18 +332,30 @@ where
     ProcessNotIm(box BigPar(res))
 }
 
-pub trait GraphFiller<'a> {
-    fn fill_graph(self, g: &mut Graph<'a>) -> usize;
+
+/// this trait is implemented by something that be compiled into a full
+/// Control Flow Graph.
+pub trait GraphFiller<'a> : 'a {
+    /// Compile Self to a `Graph` and return the index of starting `Node`
+    fn compile_to_graph(self) -> (Graph<'a>, usize);
 }
 
-impl<'a, T> GraphFiller<'a> for T
+default impl<'a, T> GraphFiller<'a> for T
 where
     T: Process<'a, (), Out = ()>,
 {
-    default fn fill_graph(self, _: &mut Graph<'a>) -> usize {
+    fn compile_to_graph(self) -> (Graph<'a>, usize){
+        // only ProcessIm and ProcessNotIm implement Process
         unreachable!()
     }
 }
+
+//  ___ __  __ ____  _       ____              ___
+// |_ _|  \/  |  _ \| |     |  _ \ _ __ ___   |_ _|_ __ ___
+//  | || |\/| | |_) | |     | |_) | '__/ _ \   | || '_ ` _ \
+//  | || |  | |  __/| |___  |  __/| | | (_) |  | || | | | | |
+// |___|_|  |_|_|   |_____| |_|   |_|  \___/  |___|_| |_| |_|
+
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NIO> IntProcess<'a, In>
@@ -358,20 +372,6 @@ where
     }
 }
 
-impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NI, NO> IntProcess<'a, In>
-    for ProcessNotIm<'a, In, Out, MarkOnce, NI, NO>
-where
-    NI: Node<'a, In, Out = ()>,
-    NO: Node<'a, (), Out = Out>,
-    MarkOnce: Once,
-{
-    type Out = Out;
-    type MarkOnce = MarkOnce;
-
-    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
-        self.0.printDot(curNum)
-    }
-}
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NIO> Process<'a, In>
@@ -387,12 +387,36 @@ impl<'a, MarkOnce, NIO> GraphFiller<'a> for ProcessIm<'a, (), (), MarkOnce, NIO>
     MarkOnce: Once,
     NIO: Node<'a, (), Out = ()>,
 {
-    fn fill_graph(self, g: &mut Graph<'a>) ->usize
-    {
-        let pnio = self.compileIm(g);
-        g.add(box node!(pnio >> NEnd{}))
+    fn compile_to_graph(self) -> (Graph<'a>, usize){
+        let mut g = Graph::new();
+        let pnio = self.compileIm(&mut g);
+        let start = g.add(box node!(pnio >> NEnd{}));
+        (g,start)
     }
 }
+
+
+//  ___ __  __ ____  _       ____              _   _ ___
+// |_ _|  \/  |  _ \| |     |  _ \ _ __ ___   | \ | |_ _|
+//  | || |\/| | |_) | |     | |_) | '__/ _ \  |  \| || |
+//  | || |  | |  __/| |___  |  __/| | | (_) | | |\  || |
+// |___|_|  |_|_|   |_____| |_|   |_|  \___/  |_| \_|___|
+
+impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NI, NO> IntProcess<'a, In>
+    for ProcessNotIm<'a, In, Out, MarkOnce, NI, NO>
+    where
+    NI: Node<'a, In, Out = ()>,
+    NO: Node<'a, (), Out = Out>,
+    MarkOnce: Once,
+{
+    type Out = Out;
+    type MarkOnce = MarkOnce;
+
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
+        self.0.printDot(curNum)
+    }
+}
+
 
 impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NI, NO> Process<'a, In>
     for ProcessNotIm<'a, In, Out, MarkOnce, NI, NO>
@@ -409,10 +433,12 @@ where
     NO: Node<'a, (), Out = ()>,
     MarkOnce: Once,
 {
-    fn fill_graph(self, g: &mut Graph<'a>) -> usize {
-        let (pni, pind, pno) = self.compile(g);
+    fn compile_to_graph(self) -> (Graph<'a>, usize){
+        let mut g = Graph::new();
+        let (pni, pind, pno) = self.compile(&mut g);
         g.set(pind, box node!(pno >> NEnd{}));
-        g.add(box pni)
+        let start = g.add(box pni);
+        (g,start)
     }
 }
 
@@ -424,6 +450,7 @@ where
 // |_|   |_|  |_|_| |_|\__|\____|_|  \__,_| .__/|_| |_|
 //                                        |_|
 
+/// Print a dot code of a nice graph representing the control flow at the process level.
 pub fn print_graph<'a, P>(p: &'a mut P)
 where
     P: Process<'a, (), Out = ()>,

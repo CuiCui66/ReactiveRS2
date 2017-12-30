@@ -8,6 +8,8 @@ use super::*;
 // |_| \_|\___/ \__|_| |_|_|_| |_|\__, |
 //                                |___/
 
+/// A process implementation that does nothing : it just force its input-output
+/// to be ()
 pub struct PNothing {}
 impl<'a> IntProcess<'a, ()> for PNothing {
     type Out = ();
@@ -29,6 +31,7 @@ impl<'a> IntProcessIm<'a, ()> for PNothing {
     }
 }
 
+/// Builds a boxed `PNothing`
 pub fn nothing<'a>() -> ProcessIm<'a, (), (), NotOnce, Nothing> {
     ProcessIm(box PNothing {})
 }
@@ -39,8 +42,10 @@ pub fn nothing<'a>() -> ProcessIm<'a, (), (), NotOnce, Nothing> {
 //   \ V / (_| | | |_| |  __/
 //    \_/ \__,_|_|\__,_|\___|
 
+/// A process implementation that returns always the same value (that must be clone).
 pub struct PValue<V>(pub V);
 
+/// Builds a boxed `PValue`
 pub fn value<'a, V: Val<'a>>(value: V) -> ProcessIm<'a, (), V, NotOnce, NValue<V>>
 where
     V: Clone,
@@ -62,7 +67,6 @@ where
     }
 }
 
-
 impl<'a, V: Val<'a>> IntProcessIm<'a, ()> for PValue<V>
 where
     V: Clone,
@@ -80,9 +84,23 @@ where
 // |  _|| | | | |  | | |_| | |_
 // |_|  |_| |_|_|  |_|\__,_|\__|
 
-impl<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>> IntProcess<'a, In> for F
-where
+
+/// A process implementation that call a FnMut function. (Immediate)
+pub struct PFnMut<F>(pub F);
+
+/// Builds a boxed `PFnMut` from a instance of `FnMut`
+pub fn fnmut2pro<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>>(
+    f: F,
+) -> ProcessIm<'a, In, Out, NotOnce, FnMutN<F>>
+    where
     F: FnMut(In) -> Out,
+{
+    ProcessIm(box PFnMut(f))
+}
+
+impl<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>> IntProcess<'a, In> for PFnMut<F>
+where
+    F: FnMut(In) -> Out
 {
     type Out = Out;
     type MarkOnce = NotOnce;
@@ -95,24 +113,16 @@ where
     }
 }
 
-impl<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>> IntProcessIm<'a, In> for F
+impl<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>> IntProcessIm<'a, In> for PFnMut<F>
 where
     F: FnMut(In) -> Out,
 {
     type NIO = FnMutN<F>;
     fn compileIm(self: Box<Self>, _: &mut Graph) -> Self::NIO {
-        FnMutN(*self)
+        FnMutN(self.0)
     }
 }
 
-pub fn fnmut2pro<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>>(
-    f: F,
-) -> ProcessIm<'a, In, Out, NotOnce, FnMutN<F>>
-where
-    F: FnMut(In) -> Out,
-{
-    ProcessIm(box f)
-}
 
 
 //  _____       ___
@@ -122,8 +132,12 @@ where
 // |_|  |_| |_|\___/|_| |_|\___\___|
 
 
+/// A process implementation that call a FnOnce function. (Immediate)
+/// This process implementation can only be called Once.
+/// The typechecking will normally forbid you to put it into a loop
 pub struct PFnOnce<F>(pub F);
 
+/// Builds a boxed `PFnOnce` from a instance of `FnOnce`
 pub fn fnonce2pro<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>>(
     f: F,
 ) -> ProcessIm<'a, In, Out, IsOnce, NFnOnce<F>>
@@ -165,11 +179,27 @@ impl<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>> IntProcessIm<'a, In> for PFnOnce
 //  \___/ \__,_|_| |_| |_| .__/
 //                       |_|
 
-
+/// An identity process that does nothing on semantics but break static node dependency,
+/// and thus inlining.
+///
+/// If you have a long sequence of immediate process and Rust compile time is too slow,
+/// You can insert some of these to break the sequence into multiple part.
+///
+/// Even if this process is executed in a single instant, it is still marked as non-immediate
+/// in order to allow it to break the static dependency.
 #[derive(Copy, Clone)]
-pub(crate) struct Jump {}
+pub(crate) struct PJump {}
 
-impl<'a, In: Val<'a>> IntProcess<'a, In> for Jump {
+
+/// Builds a boxed `PJump`
+pub fn jump<'a, In: Val<'a>>()
+                             -> ProcessNotIm<'a, In, In, NotOnce, NSeq<NStore<In>, NJump>, NLoad<In>>
+{
+    ProcessNotIm(box PJump {})
+}
+
+
+impl<'a, In: Val<'a>> IntProcess<'a, In> for PJump {
     type Out = In;
     type MarkOnce = NotOnce;
 
@@ -182,7 +212,7 @@ impl<'a, In: Val<'a>> IntProcess<'a, In> for Jump {
 }
 
 
-impl<'a, In: Val<'a>> IntProcessNotIm<'a, In> for Jump {
+impl<'a, In: Val<'a>> IntProcessNotIm<'a, In> for PJump {
     type NI = NSeq<NStore<In>, NJump>;
     type NO = NLoad<In>;
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
@@ -193,22 +223,25 @@ impl<'a, In: Val<'a>> IntProcessNotIm<'a, In> for Jump {
     }
 }
 
-pub fn jump<'a, In: Val<'a>>()
-    -> ProcessNotIm<'a, In, In, NotOnce, NSeq<NStore<In>, NJump>, NLoad<In>>
-{
-    ProcessNotIm(box Jump {})
-}
-
 //  ____
 // |  _ \ __ _ _   _ ___  ___
 // | |_) / _` | | | / __|/ _ \
 // |  __/ (_| | |_| \__ \  __/
 // |_|   \__,_|\__,_|___/\___|
 
+/// A pause process that correspond to the pause construct of RML.
+/// Wait an instant before continuing execution. Any value is passed through without changes.
 #[derive(Copy, Clone)]
-pub(crate) struct Pause {}
+pub(crate) struct PPause {}
 
-impl<'a, In: Val<'a>> IntProcess<'a, In> for Pause {
+/// Builds a boxed `PPause`
+pub fn pause<'a, In: Val<'a>>()
+                              -> ProcessNotIm<'a, In, In, NotOnce, NSeq<NStore<In>, NPause>, NLoad<In>>
+{
+    ProcessNotIm(box PPause {})
+}
+
+impl<'a, In: Val<'a>> IntProcess<'a, In> for PPause {
     type Out = In;
     type MarkOnce = NotOnce;
 
@@ -220,8 +253,7 @@ impl<'a, In: Val<'a>> IntProcess<'a, In> for Pause {
     }
 }
 
-
-impl<'a, In: Val<'a>> IntProcessNotIm<'a, In> for Pause {
+impl<'a, In: Val<'a>> IntProcessNotIm<'a, In> for PPause {
     type NI = NSeq<NStore<In>, NPause>;
     type NO = NLoad<In>;
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
@@ -232,8 +264,3 @@ impl<'a, In: Val<'a>> IntProcessNotIm<'a, In> for Pause {
     }
 }
 
-pub fn pause<'a, In: Val<'a>>()
-    -> ProcessNotIm<'a, In, In, NotOnce, NSeq<NStore<In>, NPause>, NLoad<In>>
-{
-    ProcessNotIm(box Pause {})
-}

@@ -159,8 +159,7 @@ mod runtime {
         where
             GF: GraphFiller<'a>,
         {
-            let mut g = Graph::new();
-            let start = gf.fill_graph(&mut g);
+            let (g,start) = gf.compile_to_graph();
             let mut r = Runtime::fromgraph(g);
             r.sub_runtime.add_current(start);
             r
@@ -513,8 +512,7 @@ mod runtime {
         where
             GF: GraphFiller<'a>,
         {
-            let mut g = Graph::new();
-            let start = gf.fill_graph(&mut g);
+            let (g,start) = gf.compile_to_graph();
             let mut r = Runtime::fromgraph(g);
             r.thread_runtimes[0].sub.add_current(start);
             r

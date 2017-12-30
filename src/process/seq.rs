@@ -1,6 +1,7 @@
 use node::*;
 use super::*;
 
+/// A process implementation representing the sequence of two processes.
 pub struct Seq<P, Q>(pub(crate) P, pub(crate) Q);
 
 impl<'a, P, Q, In: Val<'a>, Mid: Val<'a>, Out: Val<'a>> IntProcess<'a, In> for Seq<P,Q>
