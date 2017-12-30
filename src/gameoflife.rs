@@ -94,7 +94,7 @@ impl Board {
 fn main() {
     let width = 20;
     let height = 10;
-    let board = Board::new(20,10);
+    let board = Board::new(width,height);
     let (board_data, board_values) = BoardData::new(width, height);
     let board_signal = BoardSignal::new(board_data);
     {
@@ -171,12 +171,18 @@ fn main() {
         let rt1 = pro!(big_join(processes));
 
 
-        let signal1 = board.signals[3][3].clone();
-        let signal2 = board.signals[3][4].clone();
-        let signal3 = board.signals[3][5].clone();
-        let signal4 = board.signals[8][4].clone();
-        let signal5 = board.signals[8][5].clone();
-        let signal6 = board.signals[8][6].clone();
+        let signal1 = board.signals[2][1].clone();
+        let signal2 = board.signals[2][2].clone();
+        let signal3 = board.signals[2][3].clone();
+        let signal4 = board.signals[7][1].clone();
+        let signal5 = board.signals[7][2].clone();
+        let signal6 = board.signals[7][3].clone();
+        let signal7 = board.signals[2][16].clone();
+        let signal8 = board.signals[2][17].clone();
+        let signal9 = board.signals[2][18].clone();
+        let signal10 = board.signals[7][16].clone();
+        let signal11 = board.signals[7][17].clone();
+        let signal12 = board.signals[7][18].clone();
 
         let v = vec![
             (signal1.clone(),false),(signal1.clone(),false),(signal1.clone(),false),
@@ -184,7 +190,13 @@ fn main() {
             (signal3.clone(),false),(signal3.clone(),false),(signal3.clone(),false),
             (signal4.clone(),false),(signal4.clone(),false),(signal4.clone(),false),
             (signal5.clone(),false),(signal5.clone(),false),(signal5.clone(),false),
-            (signal6.clone(),false),(signal6.clone(),false),(signal6.clone(),false)];
+            (signal6.clone(),false),(signal6.clone(),false),(signal6.clone(),false),
+            (signal7.clone(),false),(signal7.clone(),false),(signal7.clone(),false),
+            (signal8.clone(),false),(signal8.clone(),false),(signal8.clone(),false),
+            (signal9.clone(),false),(signal9.clone(),false),(signal9.clone(),false),
+            (signal10.clone(),false),(signal10.clone(),false),(signal10.clone(),false),
+            (signal11.clone(),false),(signal11.clone(),false),(signal11.clone(),false),
+            (signal12.clone(),false),(signal12.clone(),false),(signal12.clone(),false)];
 
         let rt2 = pro!(
             |_:()| { () };
