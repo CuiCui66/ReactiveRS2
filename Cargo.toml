@@ -15,9 +15,9 @@ crossbeam = "0.3.0"
 par = [] # Parallel runtime if enabled
 funsafe = [] # Faster unsafe code, may UB
 
-[[bin]]
-name = "gol"
-path = "src/gameoflife.rs"
+# [[bin]]
+# name = "gol"
+# path = "src/gameoflife.rs"
 
 # [[bin]]
 # name = "sb"

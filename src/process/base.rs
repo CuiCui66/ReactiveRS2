@@ -29,9 +29,50 @@ impl<'a> IntProcessIm<'a, ()> for PNothing {
     }
 }
 
-pub fn nothing<'a>() -> ProcessIm<'a,(),(),NotOnce, Nothing>{
+pub fn nothing<'a>() -> ProcessIm<'a, (), (), NotOnce, Nothing> {
     ProcessIm(box PNothing {})
 }
+
+// __     __    _
+// \ \   / /_ _| |_   _  ___
+//  \ \ / / _` | | | | |/ _ \
+//   \ V / (_| | | |_| |  __/
+//    \_/ \__,_|_|\__,_|\___|
+
+pub struct PValue<V>(pub V);
+
+pub fn value<'a, V: Val<'a>>(value: V) -> ProcessIm<'a, (), V, NotOnce, NValue<V>>
+where
+    V: Clone,
+{
+    ProcessIm(box PValue(value))
+}
+
+impl<'a, V: Val<'a>> IntProcess<'a, ()> for PValue<V>
+where
+    V: Clone,
+{
+    type Out = V;
+    type MarkOnce = NotOnce;
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
+        let num = *curNum;
+        *curNum += 1;
+        println!("{} [shape = box, label= \"Value\"];", num);
+        (num, num)
+    }
+}
+
+
+impl<'a, V: Val<'a>> IntProcessIm<'a, ()> for PValue<V>
+where
+    V: Clone,
+{
+    type NIO = NValue<V>;
+    fn compileIm(self :Box<Self>, _: &mut Graph) -> Self::NIO {
+        NValue(self.0)
+    }
+}
+
 
 //  _____      __  __       _
 // |  ___| __ |  \/  |_   _| |_
@@ -64,8 +105,9 @@ where
     }
 }
 
-pub fn fnmut2pro<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>>(f: F)
-    -> ProcessIm<'a, In, Out, NotOnce, FnMutN<F>>
+pub fn fnmut2pro<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>>(
+    f: F,
+) -> ProcessIm<'a, In, Out, NotOnce, FnMutN<F>>
 where
     F: FnMut(In) -> Out,
 {
@@ -82,8 +124,9 @@ where
 
 pub struct PFnOnce<F>(pub F);
 
-pub fn fnonce2pro<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>>(f: F)
-    -> ProcessIm<'a, In, Out, IsOnce, NFnOnce<F>>
+pub fn fnonce2pro<'a, F: Val<'a>, In: Val<'a>, Out: Val<'a>>(
+    f: F,
+) -> ProcessIm<'a, In, Out, IsOnce, NFnOnce<F>>
 where
     F: FnOnce(In) -> Out,
 {
@@ -150,7 +193,9 @@ impl<'a, In: Val<'a>> IntProcessNotIm<'a, In> for Jump {
     }
 }
 
-pub fn jump<'a, In: Val<'a>>() -> ProcessNotIm<'a,In,In,NotOnce,NSeq<NStore<In>, NJump>,NLoad<In>> {
+pub fn jump<'a, In: Val<'a>>()
+    -> ProcessNotIm<'a, In, In, NotOnce, NSeq<NStore<In>, NJump>, NLoad<In>>
+{
     ProcessNotIm(box Jump {})
 }
 
@@ -187,6 +232,8 @@ impl<'a, In: Val<'a>> IntProcessNotIm<'a, In> for Pause {
     }
 }
 
-pub fn pause<'a, In: Val<'a>>() -> ProcessNotIm<'a,In,In,NotOnce,NSeq<NStore<In>, NPause>,NLoad<In>> {
+pub fn pause<'a, In: Val<'a>>()
+    -> ProcessNotIm<'a, In, In, NotOnce, NSeq<NStore<In>, NPause>, NLoad<In>>
+{
     ProcessNotIm(box Pause {})
 }

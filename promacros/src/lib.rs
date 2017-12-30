@@ -60,6 +60,14 @@ fn parse_expr_pro(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree]) -> P<Expr> {
                     let e = parse_expr(cx,sp,args);
                     return cx.expr_call_ident(sp,cx.ident_of("fnmut2pro"),vec![e])
                 }
+                &Token::Ident(id) if id.name.as_str() == "once" => {
+                    let e = parse_expr(cx,sp,&args[1..]);
+                    return cx.expr_call_ident(sp,cx.ident_of("fnonce2pro"),vec![e])
+                }
+                &Token::Ident(id) if id.name.as_str() == "val" => {
+                    let e = parse_expr(cx,sp,&args[1..]);
+                    return cx.expr_call_ident(sp,cx.ident_of("value"),vec![e])
+                }
                 _ => {}
             }
         }

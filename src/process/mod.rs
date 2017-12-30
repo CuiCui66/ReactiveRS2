@@ -15,6 +15,9 @@
 //! To be in concordance with trait names, by "process" we will denote the box (ProcessIm)
 //! or (ProcessNotIm), and we will use "process implementation" to denote the concrete type
 //! behind the virtual interface.
+//!
+//! The available construct may be seen quickly in the method of the `Process` trait and with more
+//! in the `macro` crate
 
 
 
@@ -39,6 +42,7 @@ pub use self::control::*;
 
 /// Contains sequencing structure i.e `;`
 mod seq;
+#[doc(hidden)]
 use self::seq::*;
 
 
@@ -52,15 +56,39 @@ mod signal;
 #[doc(hidden)]
 pub use self::signal::*;
 
+//   ___
+//  / _ \ _ __   ___ ___
+// | | | | '_ \ / __/ _ \
+// | |_| | | | | (_|  __/
+//  \___/|_| |_|\___\___|
 
+/// `Once` is a marker trait for a process being runnable multiple times or not
+///
+/// Normally a type verifying `Once` can have only two values: `IsOnce` and `NotOnce`
+/// whose meanings are trivial
+pub trait Once: Copy + 'static {}
 
-pub trait Once : Copy + 'static {}
-
+/// This trait is implemented by any meta-function whose return value is a type
+/// implementing Once
 pub trait GiveOnce {
     type Once: Once;
 }
 
-pub struct And<O1,O2>
+
+/// Marker for a process that can only be executed Once.
+///
+/// In practice, the only way for that to happen is that there is a `FnOnce` somewhere
+#[derive(Clone, Copy)]
+pub struct IsOnce;
+impl Once for IsOnce {}
+
+#[derive(Clone, Copy)]
+pub struct NotOnce;
+impl Once for NotOnce {}
+
+
+/// Meta-function taking two type implementing Once and giving a result via `GiveOnce`
+pub struct And<O1, O2>
 where
     O1: Once,
     O2: Once,
@@ -69,28 +97,26 @@ where
     o2: PhantomData<O2>,
 }
 
-// default impl, is needded by rust
-default impl<O1,O2> GiveOnce for And<O1,O2>
+/// In the general case of composition of to process the result is `IsOnce`
+default impl<O1, O2> GiveOnce for And<O1, O2>
 where
-O1: Once,
-O2: Once,
+    O1: Once,
+    O2: Once,
 {
     type Once = IsOnce;
 }
 
+/// Except if both process are `NotOnce`
 impl GiveOnce for And<NotOnce, NotOnce> {
     type Once = NotOnce;
 }
 
 
-#[derive(Clone,Copy)]
-pub struct IsOnce;
-impl Once for IsOnce {}
-
-#[derive(Clone,Copy)]
-pub struct NotOnce;
-impl Once for NotOnce {}
-
+//  ___       _   ____
+// |_ _|_ __ | |_|  _ \ _ __ ___   ___ ___  ___ ___
+//  | || '_ \| __| |_) | '__/ _ \ / __/ _ \/ __/ __|
+//  | || | | | |_|  __/| | | (_) | (_|  __/\__ \__ \
+// |___|_| |_|\__|_|   |_|  \___/ \___\___||___/___/
 
 
 /// Common interface for processes and process implementations.
@@ -149,10 +175,21 @@ pub trait IntProcessNotIm<'a, In: Val<'a>>: IntProcess<'a, In> {
     fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO);
 }
 
+//  ____            _
+// | __ )  _____  _(_)_ __   __ _
+// |  _ \ / _ \ \/ / | '_ \ / _` |
+// | |_) | (_) >  <| | | | | (_| |
+// |____/ \___/_/\_\_|_| |_|\__, |
+//                          |___/
+
 /// An immediate process.
 ///
 /// This is simply a virtualization of an immediate process implementation.
-pub struct ProcessIm<'a, In, Out, MarkOnce, NIO>(pub(crate) Box<IntProcessIm<'a, In, Out = Out, MarkOnce = MarkOnce, NIO = NIO>>);
+#[cfg_attr(rustfmt, rustfmt_skip)]
+pub struct ProcessIm<'a, In, Out, MarkOnce, NIO>(
+    pub(crate) Box<IntProcessIm<'a, In, Out = Out, MarkOnce = MarkOnce, NIO = NIO>>
+);
+
 
 impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NIO> ProcessIm<'a, In, Out, MarkOnce, NIO>
 where
@@ -179,18 +216,11 @@ where
     NI: Node<'a, In, Out = ()>,
     NO: Node<'a, (), Out = Out>,
 {
-    /// Compiles a non-immediate process
+/// Compiles a non-immediate process
     pub(crate) fn compile(self, g: &mut Graph<'a>) -> (NI, usize, NO) {
         self.0.compile(g)
     }
 }
-
-//     _         _          ____            _
-//    / \  _   _| |_ ___   | __ )  _____  _(_)_ __   __ _
-//   / _ \| | | | __/ _ \  |  _ \ / _ \ \/ / | '_ \ / _` |
-//  / ___ \ |_| | || (_) | | |_) | (_) >  <| | | | | (_| |
-// /_/   \_\__,_|\__\___/  |____/ \___/_/\_\_|_| |_|\__, |
-//                                                  |___/
 
 /// I cannot use the fact that a type T implemented IntProcessIm or IntProcessNotIm
 /// to dispatch a function on it. so I need a third trait to say whether an implementation
@@ -233,7 +263,7 @@ pub trait Process<'a, In: Val<'a>>: IntProcess<'a, In> + Sized {
     /// If we input False(x), b will run with input x.
     /// a and b must return the same type that will be return by the choice construct.
     /// a.choice(b) is equivalent to pro!{choice{a}{b}}
-    fn choice<PF, InF : Val<'a>>(
+    fn choice<PF, InF: Val<'a>>(
         self,
         p: PF,
     ) -> <PChoice<Self, PF> as ToBoxedProcess<'a, ChoiceData<In, InF>>>::Boxed
@@ -267,16 +297,19 @@ pub trait Process<'a, In: Val<'a>>: IntProcess<'a, In> + Sized {
         Par(self, q).tobox()
     }
 
-    fn present<PF, S: Signal<'a>>(self, process_false: PF) -> <PresentD<Self, PF> as ToBoxedProcess<'a, S>>::Boxed
+    fn present<PF, S: Signal<'a>>(
+        self,
+        process_false: PF,
+    ) -> <PresentD<Self, PF> as ToBoxedProcess<'a, S>>::Boxed
     where
         PF: Process<'a, ()>,
         Self: Process<'a, ()>,
         PresentD<Self, PF>: ToBoxedProcess<'a, S>,
     {
         (PresentD {
-            pt: self,
-            pf: process_false,
-        }).tobox()
+             pt: self,
+             pf: process_false,
+         }).tobox()
     }
 }
 
@@ -311,7 +344,8 @@ where
 }
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NIO> IntProcess<'a, In> for ProcessIm<'a, In, Out, MarkOnce, NIO>
+impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NIO> IntProcess<'a, In>
+    for ProcessIm<'a, In, Out, MarkOnce, NIO>
 where
     NIO: Node<'a, In, Out = Out>,
     MarkOnce: Once,
@@ -324,7 +358,8 @@ where
     }
 }
 
-impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NI, NO> IntProcess<'a, In> for ProcessNotIm<'a, In, Out, MarkOnce, NI, NO>
+impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NI, NO> IntProcess<'a, In>
+    for ProcessNotIm<'a, In, Out, MarkOnce, NI, NO>
 where
     NI: Node<'a, In, Out = ()>,
     NO: Node<'a, (), Out = Out>,
@@ -339,7 +374,8 @@ where
 }
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NIO> Process<'a, In> for ProcessIm<'a, In, Out, MarkOnce, NIO>
+impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NIO> Process<'a, In>
+    for ProcessIm<'a, In, Out, MarkOnce, NIO>
 where
     NIO: Node<'a, In, Out = Out>,
     MarkOnce: Once,
@@ -358,12 +394,14 @@ impl<'a, MarkOnce, NIO> GraphFiller<'a> for ProcessIm<'a, (), (), MarkOnce, NIO>
     }
 }
 
-impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NI,NO> Process<'a, In> for ProcessNotIm<'a, In, Out, MarkOnce, NI,NO>
-    where
+impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, NI, NO> Process<'a, In>
+    for ProcessNotIm<'a, In, Out, MarkOnce, NI, NO>
+where
     MarkOnce: Once,
     NI: Node<'a, In, Out = ()>,
     NO: Node<'a, (), Out = Out>,
-{}
+{
+}
 
 impl<'a, MarkOnce, NI, NO> GraphFiller<'a> for ProcessNotIm<'a, (), (), MarkOnce, NI, NO>
 where
