@@ -9,6 +9,7 @@
 #![feature(arbitrary_self_types)]
 #![feature(conservative_impl_trait)]
 #![feature(associated_type_defaults)]
+#![feature(asm)]
 
 // #[macro_use] extern crate log;
 // extern crate env_logger;
@@ -846,6 +847,42 @@ mod tests {
     }
 
     #[test]
+    fn par_instantn() {
+        let mut r = rt!{
+            |_| (0,0);
+            {
+                loop {
+                    |i : usize|
+                    if i < 21 {
+                        True(i+1)
+                    }
+                    else{
+                        False(i)
+                    };
+                    pause()
+                } || loop {
+                    |i : usize|
+                    if i < 21 {
+                        True(i+1)
+                    }
+                    else{
+                        False(i)
+                    };
+                    pause()
+                }
+            };
+            |(v1,v2)| v1 + v2;
+            pause();
+            |i| {
+                assert_eq!(i,42)
+            }
+        };
+        assert!(r.instantn(23));
+        assert!(!r.instant());
+    }
+
+
+    #[test]
     fn par_half_im() {
         run!{
             |_| (0,0);
@@ -981,9 +1018,7 @@ mod tests {
             }
         };
         bencher.iter(|| {
-            for _ in 0..1000 {
-                rt.instant();
-            }
+            rt.instantn(1000);
         });
     }
 
@@ -1001,9 +1036,7 @@ mod tests {
             }
         };
         bencher.iter(|| {
-            for _ in 0..1000 {
-                rt.instant();
-            }
+            rt.instantn(1000);
         });
     }
 
@@ -1021,9 +1054,8 @@ mod tests {
             }
         };
         bencher.iter(|| {
-            for _ in 0..1000 {
-                rt.instant();
-            }
+
+            rt.instantn(1000);
         });
     }
 
@@ -1041,9 +1073,7 @@ mod tests {
             }
         };
         bencher.iter(|| {
-            for _ in 0..1000 {
-                rt.instant();
-            }
+            rt.instantn(1000);
         });
     }
 

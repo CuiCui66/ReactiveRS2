@@ -89,6 +89,15 @@ mod runtime {
         pub fn execute(&mut self) {
             while self.instant() {}
         }
+        pub fn instantn(&mut self, n: usize) -> bool {
+            for _ in 0..n {
+                if !self.instant(){
+                    return false;
+                }
+            }
+            return true;
+        }
+
 
         /// Executes an single instant of the reactive process loaded in the runtime.
         ///
@@ -318,6 +327,7 @@ mod runtime {
                             self.sub.current.nbf.fetch_add(1, SeqCst);
                         }
                     }
+                    cpu_pause();
                 }
                 break 'instant;
             } // end 'instant
@@ -327,6 +337,15 @@ mod runtime {
                 eoi.on_end_of_instant(&mut self.sub);
             }
 
+        }
+        fn instantn(&mut self, n: usize){
+            for _ in 0..n{
+                if self.sub.aend.load(Relaxed){
+                    self.sub.current.nbf.fetch_add(1, Relaxed);
+                    break;
+                }
+                self.instant();
+            }
         }
         fn execute(&mut self) {
             while !self.sub.aend.load(Relaxed) {
@@ -370,7 +389,13 @@ mod runtime {
             crossbeam::scope(|scope| for tr in self.thread_runtimes.iter_mut() {
                 scope.spawn(move || tr.instant());
             });
-            self.end.load(SeqCst)
+            !self.end.load(SeqCst)
+        }
+        pub fn instantn(&mut self, n: usize) -> bool{
+            crossbeam::scope(|scope| for tr in self.thread_runtimes.iter_mut() {
+                scope.spawn(move || tr.instantn(n));
+            });
+            !self.end.load(SeqCst)
         }
 
         // pub fn printDot(&mut self) {

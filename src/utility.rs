@@ -91,3 +91,22 @@ pub fn swap3<T>(x: &mut T, y: &mut T, z: &mut T){
         mem::forget(t);
     }
 }
+
+//   ____ ____  _   _
+//  / ___|  _ \| | | |_ __   __ _ _   _ ___  ___
+// | |   | |_) | | | | '_ \ / _` | | | / __|/ _ \
+// | |___|  __/| |_| | |_) | (_| | |_| \__ \  __/
+//  \____|_|    \___/| .__/ \__,_|\__,_|___/\___|
+//                   |_|
+
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+pub fn cpu_pause(){
+    unsafe {
+        asm!("pause");
+    }
+}
+
+#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+pub fn cpu_pause(){
+}
+

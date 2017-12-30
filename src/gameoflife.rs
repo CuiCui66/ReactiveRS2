@@ -196,9 +196,7 @@ fn main() {
 
         let n = 100_000;
         let start = SteadyTime::now();
-        for _ in 0..n {
-            rt.instant();
-        }
+        rt.instantn(n);
         println!("{}", (n as f32) / ((SteadyTime::now() - start).num_nanoseconds().unwrap() as f32 / 1_000_000_000.))
     }
 
