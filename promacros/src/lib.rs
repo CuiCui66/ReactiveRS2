@@ -1,6 +1,8 @@
 #![crate_type="dylib"]
 #![feature(plugin_registrar, rustc_private)]
 
+//! All comments about this crate are in `ReactiveRS2::macros`.
+
 extern crate syntax;
 extern crate rustc;
 extern crate rustc_plugin;
