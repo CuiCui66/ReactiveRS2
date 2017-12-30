@@ -77,10 +77,12 @@ mod content {
 #[cfg(all(feature = "par", feature = "funsafe"))]
 mod content {
     use std::sync::Arc;
-    use std::sync::Mutex;
+    use std::cell::UnsafeCell;
     use super::*;
+    struct CustCell<T>(pub(self) UnsafeCell<Option<T>>);
+    unsafe impl<T:Send> Sync for CustCell<T>{}
 
-    pub struct RCell<T>(Arc<Mutex<Option<T>>>);
+    pub struct RCell<T>(Arc<CustCell<T>>);
 
     impl<T: Send> Clone for RCell<T>{
         fn clone(&self) -> Self{
@@ -90,19 +92,20 @@ mod content {
 
     impl<T: Send> RCell<T> {
         pub fn new() -> Self {
-            RCell(Arc::new(Mutex::new(None)))
+            RCell(Arc::new(CustCell(UnsafeCell::new(None))))
         }
         pub fn set(&self, t: T) {
-            (*self.0.lock().unwrap()) = Some(t);
+            *(unsafe{(self.0).0.get().as_mut()}.unwrap()) = Some(t);
         }
         pub fn get(&self) -> T {
-            (*self.0.lock().unwrap()).take().unwrap()
+            let r :&mut Option<T> = unsafe {(self.0).0.get().as_mut().unwrap()};
+            take(r).unwrap()
         }
         pub fn get_copy(&self) -> T
             where
             T: Copy,
         {
-            (*self.0.lock().unwrap()).unwrap()
+            unsafe{(self.0).0.get().as_mut()}.unwrap().unwrap()
         }
         pub fn get_ind(&self, cfgd: &mut CFGDrawer) -> usize {
             cfgd.get_ind(Arc::into_raw(self.0.clone()))
