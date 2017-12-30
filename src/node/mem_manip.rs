@@ -77,7 +77,37 @@ mod content {
 #[cfg(all(feature = "par", feature = "funsafe"))]
 mod content {
     use std::sync::Arc;
-    use std::cell::UnsafeCell;
+    use std::sync::Mutex;
+    use super::*;
+
+    pub struct RCell<T>(Arc<Mutex<Option<T>>>);
+
+    impl<T: Send> Clone for RCell<T>{
+        fn clone(&self) -> Self{
+            RCell(self.0.clone())
+        }
+    }
+
+    impl<T: Send> RCell<T> {
+        pub fn new() -> Self {
+            RCell(Arc::new(Mutex::new(None)))
+        }
+        pub fn set(&self, t: T) {
+            (*self.0.lock().unwrap()) = Some(t);
+        }
+        pub fn get(&self) -> T {
+            (*self.0.lock().unwrap()).take().unwrap()
+        }
+        pub fn get_copy(&self) -> T
+            where
+            T: Copy,
+        {
+            (*self.0.lock().unwrap()).unwrap()
+        }
+        pub fn get_ind(&self, cfgd: &mut CFGDrawer) -> usize {
+            cfgd.get_ind(Arc::into_raw(self.0.clone()))
+        }
+    }
 }
 
 pub use self::content::*;

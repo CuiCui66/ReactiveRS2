@@ -91,7 +91,7 @@ mod runtime {
         }
         pub fn instantn(&mut self, n: usize) -> bool {
             for _ in 0..n {
-                if !self.instant(){
+                if !self.instant() {
                     return false;
                 }
             }
@@ -184,8 +184,18 @@ mod runtime {
     }
 }
 
+//  ____                 _ _      _
+// |  _ \ __ _ _ __ __ _| | | ___| |
+// | |_) / _` | '__/ _` | | |/ _ \ |
+// |  __/ (_| | | | (_| | | |  __/ |
+// |_|   \__,_|_|  \__,_|_|_|\___|_|
+
+
+
 #[cfg(feature = "par")]
 mod runtime {
+
+
     use super::*;
     use crossbeam_deque::{Deque, Stealer, Steal};
     use std::sync::atomic::AtomicUsize;
@@ -197,6 +207,55 @@ mod runtime {
     use std::sync::Arc;
 
     const nb_th: usize = 4;
+
+//  _   _           _       ____     _ _
+// | \ | | ___   __| | ___ / ___|___| | |
+// |  \| |/ _ \ / _` |/ _ \ |   / _ \ | |
+// | |\  | (_) | (_| |  __/ |__|  __/ | |
+// |_| \_|\___/ \__,_|\___|\____\___|_|_|
+
+    #[cfg(not(feature = "funsafe"))]
+    mod node_cell {
+        use super::*;
+        pub struct NodeCell<'a>(pub(crate) Mutex<Box<Node<'a, (), Out = ()>>>);
+
+        impl<'a> NodeCell<'a> {
+            pub fn new(b: Box<Node<'a, (), Out = ()>>) -> Self {
+                NodeCell(Mutex::new(b))
+            }
+            pub fn call(&self, sub: &mut SubRuntime<'a>) {
+                self.0.lock().unwrap().call(sub,());
+            }
+        }
+    }
+    #[cfg(feature = "funsafe")]
+    mod node_cell {
+        use std::cell::UnsafeCell;
+        use super::*;
+        pub struct NodeCell<'a>(pub(crate) UnsafeCell<Box<Node<'a, (), Out = ()>>>);
+
+        impl<'a> NodeCell<'a> {
+            pub fn new(b: Box<Node<'a, (), Out = ()>>) -> Self {
+                NodeCell(UnsafeCell::new(b))
+            }
+            pub fn call(&self, sub: &mut SubRuntime<'a>) {
+                unsafe {self.0.get().as_mut().unwrap()}.call(sub,());
+            }
+        }
+
+        unsafe impl<'a> Sync for NodeCell<'a>{}
+    }
+
+    use self::node_cell::*;
+
+
+
+//  ___           _              _   ____        _
+// |_ _|_ __  ___| |_ __ _ _ __ | |_|  _ \  __ _| |_ __ _
+//  | || '_ \/ __| __/ _` | '_ \| __| | | |/ _` | __/ _` |
+//  | || | | \__ \ || (_| | | | | |_| |_| | (_| | || (_| |
+// |___|_| |_|___/\__\__,_|_| |_|\__|____/ \__,_|\__\__,_|
+
 
     /// Contains reference to all current instant data.
     pub(crate) struct InstantData {
@@ -220,6 +279,14 @@ mod runtime {
         }
     }
 
+
+//  ____        _     ____              _   _
+// / ___| _   _| |__ |  _ \ _   _ _ __ | |_(_)_ __ ___   ___
+// \___ \| | | | '_ \| |_) | | | | '_ \| __| | '_ ` _ \ / _ \
+//  ___) | |_| | |_) |  _ <| |_| | | | | |_| | | | | | |  __/
+// |____/ \__,_|_.__/|_| \_\\__,_|_| |_|\__|_|_| |_| |_|\___|
+
+
     /// The part of the runtime that is passed to Nodes, see
     /// [Node::call](../node/trait.Node.html#tymethod.call).
     pub struct SubRuntime<'a> {
@@ -239,15 +306,6 @@ mod runtime {
         /// When set to true, this is the end of the global process.
         pub(crate) aend: Arc<AtomicBool>,
     }
-
-    /// The part of the runtime that is passed to Nodes, see
-    /// [Node::call](../node/trait.Node.html#tymethod.call).
-    pub struct ThreadRuntime<'a> {
-        pub(super) sub: SubRuntime<'a>,
-        /// The nodes.
-        pub(super) nodes: Arc<Vec<Mutex<Box<Node<'a, (), Out = ()>>>>>,
-    }
-
 
     impl<'a> SubRuntime<'a> {
         fn new(mut ids: Vec<InstantData>, aend: Arc<AtomicBool>) -> Self {
@@ -284,13 +342,24 @@ mod runtime {
         }
     }
 
+//  _____ _                        _ ____              _   _
+// |_   _| |__  _ __ ___  __ _  __| |  _ \ _   _ _ __ | |_(_)_ __ ___   ___
+//   | | | '_ \| '__/ _ \/ _` |/ _` | |_) | | | | '_ \| __| | '_ ` _ \ / _ \
+//   | | | | | | | |  __/ (_| | (_| |  _ <| |_| | | | | |_| | | | | | |  __/
+//   |_| |_| |_|_|  \___|\__,_|\__,_|_| \_\\__,_|_| |_|\__|_|_| |_| |_|\___|
+
+
+    /// The part of the runtime that is passed to Nodes, see
+    /// [Node::call](../node/trait.Node.html#tymethod.call).
+    pub struct ThreadRuntime<'a> {
+        pub(super) sub: SubRuntime<'a>,
+        /// The nodes.
+        pub(super) nodes: Arc<Vec<NodeCell<'a>>>,
+    }
+
 
     impl<'a> ThreadRuntime<'a> {
-        fn new(
-            ids: Vec<InstantData>,
-            end: Arc<AtomicBool>,
-            nodes: Arc<Vec<Mutex<Box<Node<'a, (), Out = ()>>>>>,
-        ) -> Self {
+        fn new(ids: Vec<InstantData>, end: Arc<AtomicBool>, nodes: Arc<Vec<NodeCell<'a>>>) -> Self {
             ThreadRuntime {
                 sub: SubRuntime::new(ids, end),
                 nodes,
@@ -308,7 +377,7 @@ mod runtime {
             self.sub.current_instant += 1;
         }
         fn run_node(&mut self, num: usize) {
-            self.nodes[num].lock().unwrap().call(&mut self.sub, ());
+            self.nodes[num].call(&mut self.sub);
         }
         fn instant(&mut self) {
             'instant: loop {
@@ -338,9 +407,9 @@ mod runtime {
             }
 
         }
-        fn instantn(&mut self, n: usize){
-            for _ in 0..n{
-                if self.sub.aend.load(Relaxed){
+        fn instantn(&mut self, n: usize) {
+            for _ in 0..n {
+                if self.sub.aend.load(Relaxed) {
                     self.sub.current.nbf.fetch_add(1, Relaxed);
                     break;
                 }
@@ -355,6 +424,13 @@ mod runtime {
         }
     }
 
+//  ____              _   _
+// |  _ \ _   _ _ __ | |_(_)_ __ ___   ___
+// | |_) | | | | '_ \| __| | '_ ` _ \ / _ \
+// |  _ <| |_| | | | | |_| | | | | | |  __/
+// |_| \_\\__,_|_| |_|\__|_|_| |_| |_|\___|
+
+
 
     /// Runtime for running reactive graph.
     ///
@@ -363,7 +439,7 @@ mod runtime {
         /// The reactive control-flow graph in non-optional version.
         /// See [`Graph`](struct.Graph.html).
         //TODO remove the mutex on funsafe
-        pub(super) nodes: Arc<Vec<Mutex<Box<Node<'a, (), Out = ()>>>>>,
+        pub(super) nodes: Arc<Vec<NodeCell<'a>>>,
 
         /// The SubRuntime containing all runtime info.
         thread_runtimes: Vec<ThreadRuntime<'a>>,
@@ -391,7 +467,7 @@ mod runtime {
             });
             !self.end.load(SeqCst)
         }
-        pub fn instantn(&mut self, n: usize) -> bool{
+        pub fn instantn(&mut self, n: usize) -> bool {
             crossbeam::scope(|scope| for tr in self.thread_runtimes.iter_mut() {
                 scope.spawn(move || tr.instantn(n));
             });
@@ -417,7 +493,7 @@ mod runtime {
             for n in g.get() {
                 match n {
                     Some(b) => {
-                        r.push(Mutex::new(b));
+                        r.push(NodeCell::new(b));
                     }
                     None => unreachable!(),
                 }
@@ -445,7 +521,7 @@ mod runtime {
         }
 
         /// Creates a new empty runtime.
-        pub(crate) fn fromnodes(nodes: Vec<Mutex<Box<Node<'a, (), Out = ()>>>>) -> Self {
+        fn fromnodes(nodes: Vec<NodeCell<'a>>) -> Self {
             let deques: Vec<Vec<Deque<usize>>> = (0..nb_th)
                 .map(|_| (0..3).map(|_| Deque::new()).collect())
                 .collect();

@@ -1,5 +1,5 @@
 //! crate for small reusable function
-//! most of library unsafe code should be here
+//! unsafe code should be here or behind a funsafe gate
 
 
 //  _____  _    _  _______

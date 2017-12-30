@@ -190,7 +190,34 @@ mod content {
 #[cfg(all(feature = "par", feature = "funsafe"))]
 mod content {
     use std::sync::Arc;
-    use std::cell::UnsafeCell;
+    use std::sync::Mutex;
+    use super::*;
+
+    pub struct Rcjp<T1, T2>(Arc<Mutex<JoinPoint<T1, T2>>>);
+
+    impl<T1: Send,T2: Send> Clone for Rcjp<T1,T2>{
+        fn clone(&self) -> Self{
+            Rcjp(self.0.clone())
+        }
+    }
+
+    impl<T1: Send, T2: Send> Rcjp<T1, T2> {
+        pub fn new() -> Self {
+            Rcjp(Arc::new(Mutex::new(JoinPoint::default())))
+        }
+        pub fn set1(&self, t: T1) -> bool {
+            self.0.lock().unwrap().set1(t)
+        }
+        pub fn set2(&self, t: T2) -> bool {
+            self.0.lock().unwrap().set2(t)
+        }
+        pub fn get(&self) -> (T1, T2) {
+            take(&mut *self.0.lock().unwrap()).get()
+        }
+        pub fn get_ind(&self, cfgd: &mut CFGDrawer) -> usize {
+            cfgd.get_ind(Arc::into_raw(self.0.clone()))
+        }
+    }
 }
 
 pub use self::content::*;
