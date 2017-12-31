@@ -449,7 +449,6 @@ mod runtime {
     pub struct Runtime<'a> {
         /// The reactive control-flow graph in non-optional version.
         /// See [`Graph`](struct.Graph.html).
-        //TODO remove the mutex on funsafe
         #[allow(unused)]
         pub(super) nodes: Arc<Vec<NodeCell<'a>>>,
 

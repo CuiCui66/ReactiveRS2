@@ -14,19 +14,25 @@ use std::borrow::*;
 
 fn main (){
     let mut p = pro!{
-        |_| 0;
-        loop {
-            |i|{
-                if i < 42{
-                    True(i+1)
-                }
-                else {
-                    False(i)
-                }
-            };
-            Pause
+        |_| (0,0);
+        {
+            {
+                |_| 20;
+                pause();
+                |i| i+1;
+                pause()
+            } || {
+                |_| 20;
+                pause();
+                |i| i+1;
+                pause()
+            }
         };
-        |i| ()
+        |(v1,v2)| v1 + v2;
+        pause();
+        |i| {
+            ()
+        }
     };
     print_graph(&mut p);
 

@@ -456,7 +456,7 @@ where
 //                                        |_|
 
 /// Print a dot code of a nice graph representing the control flow at the process level.
-pub fn print_graph<'a, P>(p: &'a mut P)
+pub fn print_graph<'a, P>(p: &mut P)
 where
     P: Process<'a, (), Out = ()>,
 {

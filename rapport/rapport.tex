@@ -128,7 +128,7 @@ syntaxe plus simple, en réduisant l'imbrication. La macro parcours un arbre
 post-lexage (les seule chose qui y sont parsés sont le paires de délimiteurs),
 et en déduit comment générer un code Rust adapté à la bibliothèque.
 
-\subsection{Parallélisation}
+\section{Parallélisation}
 
 Pour paralléliser, on a découpé le \verb!Runtime! en $n$ \verb!ThreadRuntime!,
 chacun tournant sur un worker-thread. La synchronisation entre les worker-thread
@@ -150,10 +150,12 @@ instant. Pour conserver cet invariant, Un thread, lorsqu'il fini sa
 file de noeud va incrémenter de 1 \verb!nbf! mais il le baissera de 1 avant
 toute tentative de vol (on essaie de voler que dans les files non-vide). De cette
 manière lorsque \verb!nbf! atteint $n$, on sait que plus aucun thread ne possède
-de noeud associé à l'instant courant on peut changer d'instant.
+de noeud associé à l'instant courant on peut changer d'instant. On pose donc
+comme définition du changement d'instant le moment ou \verb!nbf! atteint $n$.
 
 Lorsqu'on change d'instant, certain threads qui ont \og vu\fg{} la valeur de $n$
-dans le \verb!nbf! de l'instant $i$, vont commencer à exécuter les noeud de l'instant $i+1$ et
+dans le \verb!nbf! de l'instant $i$, vont commencer à exécuter les end of
+instant de l'instant $n$ et les noeud de l'instant $i+1$ et
 peuvent potentiellement ajouter des noeuds au files des instant $i+1$ et $i+2$ .
 Or les threads qui n'ont pas encore remarqué que l'on avait changé d'instant
 vont continuer a tenter de voler dans le file de l'instant $i$. If faut donc que
@@ -170,15 +172,50 @@ $i+2$ est réinitialisé par tout thread passant de l'instant $i$ à l'instant $
 
 On peut ainsi passer d'un instant à l'autre de manière synchronisé mais lock-free
 
-\paragraph{Deadlock:} Voyons maintenant pourquoi un deadlock ne peut pas se produire
+\paragraph{Deadlock:} Voyons maintenant pourquoi un deadlock ne peut pas se
+produire. Supposons que le programme réactif en amont est bien codé de manière
+déterministe i.e sa sémantique ne dépend pas de l'ordre d'exécution de code dans
+deux branches différente d'un construction parallèle et d'une manière qui assure
+la terminaison de l'instant (pas de boucle infini ou de deadlock dans le code
+utilisateur).
 
+La seule boucle d'attente pouvant donc bloquer est celle du stealing.
 
-\subsection{Optimisation à coup d'invariant satiques}
+Or il y a donc un nombre fini d'exécution de noeud à faire dans un instant.
+Si reste un noeud à exécuter, il est dans la file d'un thread qui finira
+par soit l'exécuter soit se le faire voler. Comme on exécute un noeud
+immédiatement après l'avoir volé, tout noeud restant à exécuter, sera exécuté
+en un temps fini.
 
+Un deadlock ne peut donc se produire que lorsque tout les threads sont dans la
+boucle du stealing et qu'il n'y a plus de noeud à exécuter. Or dans ce cas, tout
+les threads auront incrémenté leur \verb!nbf! de 1 pour dire qu'il sont en
+recherche de noeud à exécuter et donc \verb!nbf! vaut $n$: On passe à l'instant
+suivant.
+
+\paragraph{Structures:} Des structure comme \verb!Par! ou les signaux utilisent
+néanmoins des \verb!Mutex! pour se synchroniser. On ne peut jamais dans un
+thread lock plus d'un \verb!Mutex! à la fois, le deadlock est impossible.
+
+\subsection{Optimisation à coup d'invariants statiques}
+
+\paragraph{Exécution de noeud:} Comme la structure des Processus nous garantit
+qu'un noeud ne peut pas apparaître plusieurs fois, On peut mettre les noeuds
+dans des \verb!UnsafeCell! pour ne pas avoir a payer le coup d'un mutex pour y
+accéder de manière mutable.
+
+\paragraph{Passage de valeur:} Comme un flèche du graphe des processus ne peut
+pas être passer plusieurs fois en même temps (On ne peut pas y re-entrer avant
+d'en être sorti), on peut aussi utiliser des \verb!UnsafeCell! ici. 
+
+\
+
+Ces optimisations nous ont permis de gagner jusqu'à 40\% de performances dans
+certain exécution de notre application.
 \section{Améliorations possibles}
 
-Par manque de temps, du à des complications avec Rust, nous n'avons pas pu
-écrire certaines structure. Nous présentons ici des idées d'implémentation pour
+Par manque de temps nous n'avons pas pu
+écrire certaines structures. Nous présentons ici des idées d'implémentation pour
 ces structures:
 
 \begin{itemize}
@@ -188,12 +225,14 @@ ces structures:
   noeud prenant en entrée un processus, et compilant ce processus, pour contenir
   un sous-graphe. Le noeud contiendrait aussi un runtime, pour savoir quels
   noeuds sont à exécuter.
-\item Structures de controle récatif comme \verb!do until!. On les avait
+\item Structures de contrôle réactif comme \verb!do until!. On les avait
   initialement fait sur une version ancienne, mais après de multiple refactorings
   du système de processus pour atteindre des temps de compilation raisonnables,
-  nous n'avons pas eu le temps et la motivation de leur faire suivre tout les changements.
+  nous n'avons pas eu le temps et la motivation de leur faire suivre tout les
+  changements. L'idée d'encapsuler un noeud, au moment de l'ajouter dans le
+  graphe, dans un structure contrôlant si il a le droit de s'exécuter.
 \end{itemize}
-
+\pagebreak
 \section{Exemple de compilation de structure de contrôle}
 
 \subsection{Branche parallèle :}
@@ -221,10 +260,16 @@ Pause;
 }
 \end{verbatim}
 
-et en voici la compilation en noeud (Rust mettant 12 minutes à compiler cet
-exemple avec 12Go de RAM, Je n'ai pas eu le temps de générer la version processus):
+\pagebreak
+En processus, on a :
 \begin{center}
-\includegraphics[scale=0.8]{test.pdf}
+\includegraphics[scale=0.72]{parp.pdf}
+\end{center}
+
+\pagebreak
+et en voici la compilation en noeud:
+\begin{center}
+\includegraphics[scale=0.72]{parn.pdf}
 \end{center}
 
 
@@ -245,13 +290,13 @@ loop {
 };
 |i| ()
 \end{verbatim}
-
+\pagebreak
 En processus, on a :
 \begin{center}
 \includegraphics[scale=0.72]{loopp.pdf}
 \end{center}
 
-Et un fois compilé vers les noeuds, on a:
+Et une fois compilé vers les noeuds, on a:
 \begin{center}
 \includegraphics[scale=0.72]{loopn.pdf}
 \end{center}
@@ -269,12 +314,14 @@ celle ci ne possède pas de voisins allumés. Pour afficher un état, nous
 utilisons un signal qui est émis pour chaque case allumée. Ce signal contient
 donc l'état du tableau.
 
+
 \section{Liste (non exhaustive) de problèmes avec Rust}
 \subsection{Bug}
 Nous avons rencontré plusieurs fois des crash du compilateur sans message d'erreur
 autre que \og unexpected panic\fg{}. Cela ralentit beaucoup le temps de
 développement de dichotomiser sur des ligne de code en les commentant ou pas
-pour trouver laquelle fait planter le compilateur.
+pour trouver laquelle fait planter le compilateur. Heureusement les bugs
+rencontré ont fini par avoir été corrigés (au moins sur rust-nightly).
 
 
 \subsection{Trait A ou B}
@@ -285,22 +332,53 @@ produit d'interface, cela ne pose pas de problème, il suffit de créer un
 interface demandant \verb!A! et \verb!B! : \verb!trait C : A + B!.
 Malheureusement il n'est pas possible de définir d'interface somme: Un type
 rentre dans l'interface $C$ si il vérifie celle de $A$ ou celle de $B$ et qu'on
-peut lui associer celle des 2 qu'il vérifie (en cas de doublon). Nous avons donc du
+peut lui associer celle des 2 qu'il vérifie (en cas de doublon). Nous avions initialement
 bidouiller le système de type avec des type de marquage et des méthodes
 inactives (qui paniquent quand on les appelle), mais il serait agréable
-que cela soit intégré au langage.
+que cela soit intégré au langage. Durant la semaine supplémentaire après la
+deadline, nous avons reconçu le système de type de manière a encapsuler \verb!A!
+et \verb!B! chacun derrière un type spécial implémentant un troisième trait
+\verb!C!. qui représente la somme des 2. Comme on peut faire du dispatch
+statique sur des type mais pas sur des traits, cela a résolu notre problème (au
+dépend d'ajouter plus de code boilerplate que nous avons factoriser dans des macros).
 
 \subsection{Inférence de type}
--L'algorithme de compilation semple mettre un temps exponentiel en la profondeur
+L'algorithme de compilation semple mettre un temps exponentiel en la profondeur
 des types paramétriques: le système de type générique de Rust semble donc inutilisable
-pour des exemple non triviaux (autre que Vec et Box en gros).
+pour des exemple non triviaux (autre que Vec et Box en gros). Nous avons donc
+fini par Boxer automatiquement \emph{tout} les processus afin de casser la
+profondeur des types paramétriques. Elle ne reste donc plus que sur les noeuds.
+Une fois ce processus de box automatique mis en place, les temps de compilation
+dépassent rarement les 20s, Alors qu'ils pouvaient dépasser les 10 min sans.
 
 \section{Conclusion}
-La difficulté de faire comprendre certain concepts au système de type de Rust et
-l'explosion des temps de compilation qui en a suivi nous a empêché de terminer la
-parallélisation de notre bibliothèque à temps. Nous avons probablement trop
-voulu faire d'optimisation au compile-time sans vérifier si rustc avait la
-capacité de les supporter efficacement.
+Finalement nous avons fini par avoir le temps de paralléliser notre
+bibliothèque. Nous avons fait quelques test de performance sur le jeu de la vie
+(avec environ 10-12 \% de remplissage):
+
+\begin{itemize}
+\item Sur des petites grilles ($20 \times 10$) le séquentiel bas largement le
+  parallèle avec:
+  \begin{itemize}
+  \item  En séquentiel 450000 itérations par secondes
+  \item  En parallèle safe 180000 itérations par secondes
+  \item  En parallèle unsafe 210000 itérations par secondes
+  \end{itemize}
+\item Sur des grande grilles ($1000 \times 1000$) le parallèle commence à battre le séquentiel
+  \begin{itemize}
+  \item  En séquentiel 8.8 itérations par secondes
+  \item  En parallèle safe 7.3 itérations par secondes
+  \item  En parallèle unsafe 10.5 itérations par secondes
+  \end{itemize}
+\end{itemize}
+
+Le jeu de la vie étant un système hautement interdépendant avec beaucoup de
+signaux et peu de code pour chaque branche parallèle dans chaque instant, il
+parait normal que le code parallèle batte difficilement le code séquentiel. Le
+résultat sera probablement différent avec un système ou les branche sont plus
+grosses, et moins interdépendantes.
+
+
 
 
 \end{document}
