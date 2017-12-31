@@ -314,10 +314,6 @@ impl CFGDrawer {
         ind
     }
 
-    /// Get the main node index
-    fn get_node(&mut self) -> usize{
-        self.node_ind
-    }
     /// Get the next internal node index (not all internal node will require an index)
     fn get_node_ind(&mut self) -> usize{
         let ind = self.internal_node_ind;

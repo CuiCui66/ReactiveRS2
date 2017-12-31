@@ -1,11 +1,13 @@
 use engine::*;
-use std::rc::Rc;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::cell::*;
 use utility::take;
 use super::*;
 
+#[cfg(not(feature = "par"))]
+use std::rc::Rc;
+#[cfg(not(feature = "par"))]
+use std::cell::{Cell,RefCell};
+#[cfg(feature = "par")]
+use std::sync::Arc;
 
 //  ___
 // |_ _|__ _ _ __   ___  _ __ ___

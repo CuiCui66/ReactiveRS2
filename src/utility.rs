@@ -75,6 +75,7 @@ macro_rules! vec2array {
 
 
 // left circular permutation
+#[allow(unused)]
 pub fn swap3<T>(x: &mut T, y: &mut T, z: &mut T){
     // from https://doc.rust-lang.org/std/ptr/fn.copy_nonoverlapping.html.
     unsafe {
@@ -100,6 +101,7 @@ pub fn swap3<T>(x: &mut T, y: &mut T, z: &mut T){
 //                   |_|
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[allow(unused)]
 pub fn cpu_pause(){
     unsafe {
         asm!("pause");

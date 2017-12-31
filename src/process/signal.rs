@@ -5,7 +5,6 @@
 //! the signal it operates on, during its construction at compile time
 
 use super::*;
-use signal::*;
 use std::marker::PhantomData;
 
 

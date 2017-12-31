@@ -104,7 +104,7 @@ mod tests {
 
 
     #[cfg(feature = "par")]
-    use std::sync::{Arc,Mutex};
+    use std::sync::{Arc};
 
     #[cfg(feature = "par")]
     mod cell {

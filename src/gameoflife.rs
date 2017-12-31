@@ -9,9 +9,6 @@ use ReactiveRS2::process::*;
 use ReactiveRS2::signal::*;
 use ReactiveRS2::engine::*;
 use ReactiveRS2::node::ChoiceData::*;
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::sync::{Arc, Mutex};
 use time::SteadyTime;
 
 /// The type of the cell signal
@@ -64,10 +61,6 @@ impl SignalValue for BoardData {
 
 /// The board, containing the signals representing the cells
 struct Board {
-    /// The width of the board
-    width: usize,
-    /// The height of the board
-    height: usize,
     /// The signals, each one representing one cell
     signals: Vec<Vec<CellSignal>>,
 }
@@ -86,8 +79,6 @@ impl Board {
             signals.push(vec![]);
         }
         Board {
-            width,
-            height,
             signals,
         }
     }

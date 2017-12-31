@@ -1,16 +1,13 @@
-use std::vec::Vec;
-use crossbeam;
-
 use node::*;
 use graph::*;
 use process::*;
-#[macro_use]
-use utility;
 use utility::*;
 
 use super::*;
-use std::ops::DerefMut;
 
+
+#[cfg(feature = "par")]
+use crossbeam;
 
 
 pub trait EndOfInstantCallback<'a>: Val<'a> {
@@ -22,6 +19,7 @@ pub trait EndOfInstantCallback<'a>: Val<'a> {
 #[cfg(not(feature = "par"))]
 mod runtime {
     use super::*;
+    use std::ops::DerefMut;
 
     /// Contains the remaining node to be executed
     pub(crate) struct Tasks {
@@ -53,7 +51,6 @@ mod runtime {
     }
 
 
-    use super::*;
     impl<'a> SubRuntime<'a> {
         /// Add a new main node to be executed on current instant
         pub fn add_current(&mut self, ind: usize) {
@@ -202,13 +199,12 @@ mod runtime {
     use crossbeam_deque::{Deque, Stealer, Steal};
     use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::AtomicBool;
-    use std::sync::Mutex;
     use std::sync::atomic::Ordering::*;
     use std::mem;
     use std::ptr;
     use std::sync::Arc;
 
-    const nb_th: usize = 4;
+    const NB_THREADS: usize = 4;
 
 //  _   _           _       ____     _ _
 // | \ | | ___   __| | ___ / ___|___| | |
@@ -219,6 +215,8 @@ mod runtime {
     #[cfg(not(feature = "funsafe"))]
     mod node_cell {
         use super::*;
+        use std::sync::Mutex;
+
         pub struct NodeCell<'a>(pub(crate) Mutex<Box<Node<'a, (), Out = ()>>>);
 
         impl<'a> NodeCell<'a> {
@@ -269,14 +267,14 @@ mod runtime {
     /// Contains access to the work-stealing system of a given instant.
     pub(crate) struct WorkStealing {
         pub(crate) deque: Deque<usize>,
-        pub(crate) stealers: [Stealer<usize>; nb_th - 1],
+        pub(crate) stealers: [Stealer<usize>; NB_THREADS - 1],
     }
 
     impl WorkStealing {
         fn new(deque: Deque<usize>, vstealers: Vec<Stealer<usize>>) -> WorkStealing {
             WorkStealing {
                 deque,
-                stealers: vec2array!(vstealers, nb_th - 1),
+                stealers: vec2array!(vstealers, NB_THREADS - 1),
             }
         }
     }
@@ -373,9 +371,9 @@ mod runtime {
         }
 
         /// Change formally of instant (switch previous, current and next)
-        /// The synchronization signal is when current.nbf gets to nb_th.
-        /// It cannot go down if it reaches nb_th at any point of time because
-        /// reaching nb_th means
+        /// The synchronization signal is when current.nbf gets to NB_THREADS.
+        /// It cannot go down if it reaches NB_THREADS at any point of time because
+        /// reaching NB_THREADS means
         fn step(&mut self) {
             self.sub.previous.nbf.store(0, Relaxed);
             swap3(
@@ -398,9 +396,9 @@ mod runtime {
                     self.run_node(nb);
                 }
                 self.sub.current.nbf.fetch_add(1, SeqCst);
-                while (self.sub.current.nbf.load(SeqCst) < nb_th) {
-                    for i in 0..nb_th - 1 {
-                        if (!self.sub.current.ws.stealers[i].is_empty()) {
+                while self.sub.current.nbf.load(SeqCst) < NB_THREADS {
+                    for i in 0..NB_THREADS - 1 {
+                        if !self.sub.current.ws.stealers[i].is_empty() {
                             self.sub.current.nbf.fetch_sub(1, SeqCst);
                             if let Steal::Data(nb) = self.sub.current.ws.stealers[i].steal() {
                                 self.run_node(nb);
@@ -452,6 +450,7 @@ mod runtime {
         /// The reactive control-flow graph in non-optional version.
         /// See [`Graph`](struct.Graph.html).
         //TODO remove the mutex on funsafe
+        #[allow(unused)]
         pub(super) nodes: Arc<Vec<NodeCell<'a>>>,
 
         /// The SubRuntime containing all runtime info.
@@ -534,15 +533,15 @@ mod runtime {
 
         /// Creates a new empty runtime.
         fn fromnodes(nodes: Vec<NodeCell<'a>>) -> Self {
-            let deques: Vec<Vec<Deque<usize>>> = (0..nb_th)
+            let deques: Vec<Vec<Deque<usize>>> = (0..NB_THREADS)
                 .map(|_| (0..3).map(|_| Deque::new()).collect())
                 .collect();
 
-            let stealers: Vec<Vec<Vec<Stealer<usize>>>> = (0..nb_th)
+            let stealers: Vec<Vec<Vec<Stealer<usize>>>> = (0..NB_THREADS)
                 .map(|th| {
                     (0..3)
                         .map(|inst| {
-                            (0..nb_th)
+                            (0..NB_THREADS)
                                 .filter(|sth| *sth != th)
                                 .map(|sth| deques[sth][inst].stealer())
                                 .collect()
@@ -568,7 +567,7 @@ mod runtime {
                 Arc::new(AtomicUsize::new(0)),
             ];
 
-            let nb_finishs: Vec<Vec<Arc<AtomicUsize>>> = (0..nb_th)
+            let nb_finishs: Vec<Vec<Arc<AtomicUsize>>> = (0..NB_THREADS)
                 .map(|_| {
                     (0..3).map(|inst| nb_finish_base[inst].clone()).collect()
                 })
