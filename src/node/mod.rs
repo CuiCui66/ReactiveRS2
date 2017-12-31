@@ -37,9 +37,6 @@ pub use self::par::*;
 mod signal;
 #[doc(hidden)] // for private doc remove for public doc
 pub use self::signal::*;
-pub mod sig_control;
-#[doc(hidden)]
-pub use self::sig_control::*;
 
 /// Trait for a Node In -> Out
 ///

@@ -3,7 +3,6 @@ use crossbeam;
 
 use node::*;
 use graph::*;
-use node::sig_control::ControlSignal;
 use process::*;
 #[macro_use]
 use utility;

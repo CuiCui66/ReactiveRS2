@@ -922,9 +922,11 @@ mod tests {
                         value.set(21);
                     }}
             };
-            rt.instant();
+            /*rt.instant();
             assert_eq!(value.get(), 0);
             rt.instant();
+            assert_eq!(value.get(), 21);*/
+            rt.execute();
             assert_eq!(value.get(), 21);
         }
     }

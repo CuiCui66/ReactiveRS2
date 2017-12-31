@@ -13,6 +13,7 @@ use super::*;
 //          |___/
 
 /// Structure representing a signal runtime
+#[cfg(not(feature = "par"))]
 pub(crate) struct SignalRuntime<SV> {
     /// The last instant where the signal was set
     pub(crate) last_set: usize,
@@ -36,10 +37,36 @@ pub(crate) struct SignalRuntime<SV> {
     pub(crate) values: SV,
 }
 
+///Structure representing a signal runtime
+#[cfg(feature = "par")]
+pub(crate) struct SignalRuntime<SV> {
+    /// The last instant where the signal was set
+    pub(crate) last_set: usize,
 
+    /// The before last instant where the signal was set
+    pub(crate) pre_last_set: usize,
+
+    /// The last instant where the values were updated
+    pub(crate) last_update: usize,
+
+    /// Contains the ids of the nodes that await the signal
+    pub(crate) pending_await: Vec<usize>,
+
+    /// Contains the ids of the nodes that await_immediate the signal
+    pub(crate) pending_await_immediate: Vec<usize>,
+
+    /// Contains the ids of the nodes that present the signal
+    pub(crate) pending_present: [Vec<(usize, usize)>; 2],
+
+    /// Contains the values of the signal
+    pub(crate) values: SV,
+}
+
+
+#[cfg(not(feature = "par"))]
 impl<SV> SignalRuntime<SV>
 where
-    SV: SignalValue,
+   SV: SignalValue,
 {
     /// Create a new signal runtime, given a structure representing its value
     pub(crate) fn new(signal_value: SV) -> Self {
@@ -54,6 +81,92 @@ where
         }
     }
 
+    /// Process pending present nodes on signal emission
+    fn process_pending_present<'a>(&mut self, sub_runtime: &mut SubRuntime<'a>) {
+        let nodes = take(&mut self.pending_present);
+        for node in nodes {
+            sub_runtime.add_current(node.0);
+        }
+    }
+
+    /// If the signal is present at the current instant, execute node_true.
+    /// Otherwise, execute node_false at the next instant.
+    fn present<'a>(
+        &mut self,
+        sub_runtime: &mut SubRuntime<'a>,
+        node_true: usize,
+        node_false: usize,
+    ) {
+        if self.last_set == sub_runtime.get_current_instant() {
+            sub_runtime.add_current(node_true);
+        } else {
+            self.pending_present.push((node_true, node_false));
+        }
+    }
+
+    fn on_end_of_instant(&mut self, sub_runtime: &mut SubRuntime) {
+        let nodes = take(&mut self.pending_present);
+        for node in nodes {
+            sub_runtime.add_current(node.1);
+        }
+    }
+}
+
+
+#[cfg(feature = "par")]
+impl<SV> SignalRuntime<SV>
+where
+    SV: SignalValue,
+{
+    /// Create a new signal runtime, given a structure representing its value
+    pub(crate) fn new(signal_value: SV) -> Self {
+        SignalRuntime {
+            last_set: 0,
+            pre_last_set: 0,
+            last_update: 3,
+            pending_await: vec![],
+            pending_await_immediate: vec![],
+            pending_present: [vec![], vec![]],
+            values: signal_value,
+        }
+    }
+
+    /// Process pending present nodes on signal emission
+    fn process_pending_present<'a>(&mut self, sub_runtime: &mut SubRuntime<'a>) {
+        let nodes = take(&mut self.pending_present[sub_runtime.get_current_instant() % 2]);
+        for node in nodes {
+            sub_runtime.add_current(node.0);
+        }
+    }
+
+    /// If the signal is present at the current instant, execute node_true.
+    /// Otherwise, execute node_false at the next instant.
+    fn present<'a>(
+        &mut self,
+        sub_runtime: &mut SubRuntime<'a>,
+        node_true: usize,
+        node_false: usize,
+    ) {
+        if self.last_set == sub_runtime.get_current_instant() {
+            sub_runtime.add_current(node_true);
+        } else {
+            self.pending_present[sub_runtime.get_current_instant() % 2].push((node_true, node_false));
+        }
+    }
+
+    fn on_end_of_instant(&mut self, sub_runtime: &mut SubRuntime) {
+        let nodes = take(&mut self.pending_present[(sub_runtime.get_current_instant() + 1) % 2]);
+        for node in nodes {
+            sub_runtime.add_current(node.1);
+        }
+    }
+}
+
+impl<SV> SignalRuntime<SV>
+where
+    SV: SignalValue,
+{
+
     /// Process pending await nodes on signal emission
     fn process_pending_await<'a>(&mut self, sub_runtime: &mut SubRuntime<'a>) {
         let nodes = take(&mut self.pending_await);
@@ -67,14 +180,6 @@ where
         let nodes = take(&mut self.pending_await_immediate);
         for node in nodes {
             sub_runtime.add_current(node);
-        }
-    }
-
-    /// Process pending present nodes on signal emission
-    fn process_pending_present<'a>(&mut self, sub_runtime: &mut SubRuntime<'a>) {
-        let nodes = take(&mut self.pending_present);
-        for node in nodes {
-            sub_runtime.add_current(node.0);
         }
     }
 
@@ -108,26 +213,9 @@ where
         }
     }
 
-    /// If the signal is present at the current instant, execute node_true.
-    /// Otherwise, execute node_false at the next instant.
-    fn present<'a>(
-        &mut self,
-        sub_runtime: &mut SubRuntime<'a>,
-        node_true: usize,
-        node_false: usize,
-    ) {
-        if self.last_set == sub_runtime.get_current_instant() {
-            sub_runtime.add_current(node_true);
-        } else {
-            self.pending_present.push((node_true, node_false));
-
-            /*if self.pending_present.len() == 1 {
-                sub_runtime.eoi.pending.push(box (*self).clone());
-            }*/
-        }
-    }
-
     /// Return true if the signal was set at the last instant
+    /// This function should not be used in user mode, but Rust do not allow us to put
+    /// this function in pub(crate), since it is part of a public trait
     fn pre_set(&self, current_instant: usize) -> bool {
         self.pre_last_set + 1 == current_instant
     }
@@ -165,13 +253,6 @@ where
     fn get_pre_value(&mut self, current_instant: usize) -> SV::V {
         self.update_values(current_instant);
         self.values.get_pre_value()
-    }
-
-    fn on_end_of_instant(&mut self, sub_runtime: &mut SubRuntime) {
-        let nodes = take(&mut self.pending_present);
-        for node in nodes {
-            sub_runtime.add_current(node.1);
-        }
     }
 }
 
@@ -605,7 +686,7 @@ mod content {
             let mut signal_runtime = self.signal_runtime.lock().unwrap();
             signal_runtime.present(sub_runtime, node_true, node_false);
 
-            if signal_runtime.pending_present.len() == 1 {
+            if signal_runtime.pending_present[sub_runtime.get_current_instant() % 2].len() == 1 {
                 sub_runtime.add_eoi(box (*self).clone());
             }
         }
