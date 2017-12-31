@@ -5,12 +5,8 @@
 #![feature(test)]
 #![plugin(promacros)]
 #![feature(core_intrinsics)]
-//#![feature(conservative_impl_trait)]
-//#![feature(associated_type_defaults)]
 #![feature(asm)]
 
-// #[macro_use] extern crate log;
-// extern crate env_logger;
 extern crate test;
 extern crate core;
 extern crate crossbeam_deque;
@@ -24,7 +20,6 @@ pub mod macros;
 mod utility;
 
 
-//#[cfg(not(feature = "par"))]
 pub mod engine;
 pub mod graph;
 
@@ -37,17 +32,8 @@ mod all{
 }
 
 
-// #[cfg(feature = "par")]
-// mod engine_par;
-// #[cfg(feature = "par")]
-// pub use engine_par as engine;
-
 #[cfg(feature = "par")]
 mod all {
-
-    // pub trait OptSend{}
-    // impl<T> OptSend for T{}
-
     pub trait OptSend : Send{}
     impl<T : Send> OptSend for T{}
 
@@ -61,9 +47,7 @@ pub use all::*;
 
 pub mod node;
 pub mod process;
-//pub mod process_par;
 pub mod signal;
-//pub mod signal_par;
 
 
 
@@ -73,7 +57,6 @@ mod tests {
     use process::*;
     use node::ChoiceData::*;
     use signal::*;
-    // use signal_par::*;
     use test::test::Bencher;
 
 
