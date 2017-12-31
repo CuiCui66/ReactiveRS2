@@ -181,5 +181,6 @@ fn main() {
     let n = 10;
     let start = SteadyTime::now();
     rt.instantn(n);
-    println!("{}", (n as f32) / ((SteadyTime::now() - start).num_nanoseconds().unwrap() as f32 / 1_000_000_000.))
+    let frequency = (n as f32) / ((SteadyTime::now() - start).num_nanoseconds().unwrap() as f32 / 1_000_000_000.);
+    println!("{} iterations of the Game of Life can be executed each second.", frequency);
 }
