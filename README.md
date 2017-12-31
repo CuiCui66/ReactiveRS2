@@ -12,4 +12,4 @@ To compile the library, use the command `cargo build`, and give the options with
 To run the game of life example, use the command `cargo run --bin gol`,
 with any option flags.
 
-To build the documentation, use the command `cargo doc`.
+To build the documentation, use the command `cargo rustdoc --features="option1,..." -- --document-private-items`.
