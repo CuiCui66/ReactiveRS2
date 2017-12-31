@@ -38,6 +38,13 @@ mod signal;
 #[doc(hidden)] // for private doc remove for public doc
 pub use self::signal::*;
 
+
+//  _   _           _
+// | \ | | ___   __| | ___
+// |  \| |/ _ \ / _` |/ _ \
+// | |\  | (_) | (_| |  __/
+// |_| \_|\___/ \__,_|\___|
+
 /// Trait for a Node In -> Out
 ///
 /// A Node<'a,In> must live 'a, and be Send when run in parallel

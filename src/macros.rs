@@ -13,8 +13,8 @@
 //! * E in any other case : `E` must be a rust expression whose type implements `Process` :
 //!   The macro returns `E`.
 //!
-//! All of these expressions must not contain any `;` or `||` directly i.e not encapsulate in `()` or
-//! `[]` or `{}`.
+//! All of these expressions must not contain any `;` or `||` directly i.e
+//! not encapsulate in `()`, `[]` or `{}`.
 //! from the basic expression we build the grammar with :
 //!
 //! * `P ; Q`: transformed to `P.seq(Q)`
@@ -22,6 +22,9 @@
 //! * `choice {P}{Q}`: transformed to `P.choice(Q)`
 //! * `present {P}{Q}`: transformed to `P.present(Q)`
 //! * `loop {P}`: transformed to `P.ploop()`
+//!
+//! `once`, `val`, `choice` and `present` are considered as keyword in the macro `pro!` and thus
+//! should not be used if not encapsulated in `()`, `[]` or `{}`.
 //!
 //! A `;` with nothing behind add a PNothing and thus force the output type to be ();
 //!

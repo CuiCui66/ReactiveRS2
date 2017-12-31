@@ -56,7 +56,7 @@ dans les TP.
 Cependant, nous avons ensuite décidé de changer la structure de la bibliothèque.
 Nous pensons que cette nouvelle structure permet d'être plus efficace, et offre
 une représentation des programmes réactifs plus intuitive. Cependant, cette
-nouvelle structure est plus difficile à programmer (en Rust), beaucoup plus
+nouvelle structure est plus difficile à programmer (en Rust), plus
 lente à compiler, et pose quelques
 problèmes pour l'écriture des fonctions and\_then et flatten (que nous n'avons
 pas codés par souci de temps).
@@ -70,9 +70,11 @@ graphe de flot de contrôle.
 
 Un noeud de ce graphe est essentiellement une opération élémentaire
 réactive. L'exécution d'un noeud peut être l'exécution d'une fonction non
-réactive (comme un FnMut ou un FnOnce), une pause, une émission d'un signal, un
+réactive (comme une FnMut ou une FnOnce), une pause, une émission d'un signal, un
 await d'un signal, etc... Un noeud possède une entrée et une sortie, afin de
-passer des valeurs dans le programme.
+passer des valeurs dans le programme. L'exécution d'un noeud est toujours
+instantanée, par exemple le noeud \verb!NPause! se contant de mettre le numéro
+du noeud suivant dans la liste des noeuds à exécuter à l'instant suivant.
 
 Pour stocker des noeuds dans le graphe, il faut qu'ils aient le même type. Pour
 cela, nous ne stockons que des noeuds prenant en entrée () et en sortie ().
@@ -85,12 +87,14 @@ g(x) dans un Rc/Arc, pour le passer au noeud contenant f.
 Pour savoir quels noeuds sont exécutés, nous stockons simplement dans un tableau
 la liste des noeuds à exécuter à l'instant courant, et à l'instant suivant.
 
-Pour simplifier l'écriture de ce graphe, l'utilisateur n'a pas à utiliser les
-noeuds directement, et utilise une autre structure: les processus.
+Pour simplifier l'écriture de ce graphe et garantir statiquement certain
+invariant dessus (par exemple qu'une FnOnce n'est appelé qu'une seule fois),
+l'utilisateur n'a pas à utiliser les noeuds directement, et utilise une autre
+structure: les processus.
 
 \subsection{Processus}
-Un processus permet à l'utilisateur de compiler une opération
-réactive en plusieurs noeuds. Cela permet de ne pas toujours réécrire les mêmes
+Un processus permet à l'utilisateur de manipuler des opération réactive
+non-instantanée en un seul bloc. Cela permet de ne pas toujours réécrire les mêmes
 blocs, et d'avoir une compilation efficace vers le graphe de noeuds.
 
 Un processus possède aussi une entrée, et une sortie et contrairement à un
@@ -124,6 +128,53 @@ syntaxe plus simple, en réduisant l'imbrication. La macro parcours un arbre
 post-lexage (les seule chose qui y sont parsés sont le paires de délimiteurs),
 et en déduit comment générer un code Rust adapté à la bibliothèque.
 
+\subsection{Parallélisation}
+
+Pour paralléliser, on a découpé le \verb!Runtime! en $n$ \verb!ThreadRuntime!,
+chacun tournant sur un worker-thread. La synchronisation entre les worker-thread
+se fait de manière totalement lock-free:
+
+Chaque worker-thread a 3 files de work-stealing (chase-lev) qui correspond aux
+instants congrus a 0,1 et 2 modulo 3. Il a de la même façon 3 nombres atomiques \verb!nbf! qui
+représentent le nombre de threads qui ont fini l'instant.
+
+Dans un instant, on garde la notion d'ownership d'un noeud qui est passé à
+travers les file de work-stealing. De par la structure de graphe générée par les
+processus, on a la garantie qu'un numéro de noeud ne peut jamais être plusieurs
+fois dans dans les file d'attente. On a donc bien la notion d'ownership.
+
+\paragraph{Synchronisation :} On maintient donc l'invariant suivant: à tout
+moment notre thread n'est pas compté comme
+fini dans \verb!nbf! si il possède au moins un noeud devant être exécuter à cet
+instant. Pour conserver cet invariant, Un thread, lorsqu'il fini sa
+file de noeud va incrémenter de 1 \verb!nbf! mais il le baissera de 1 avant
+toute tentative de vol (on essaie de voler que dans les files non-vide). De cette
+manière lorsque \verb!nbf! atteint $n$, on sait que plus aucun thread ne possède
+de noeud associé à l'instant courant on peut changer d'instant.
+
+Lorsqu'on change d'instant, certain threads qui ont \og vu\fg{} la valeur de $n$
+dans le \verb!nbf! de l'instant $i$, vont commencer à exécuter les noeud de l'instant $i+1$ et
+peuvent potentiellement ajouter des noeuds au files des instant $i+1$ et $i+2$ .
+Or les threads qui n'ont pas encore remarqué que l'on avait changé d'instant
+vont continuer a tenter de voler dans le file de l'instant $i$. If faut donc que
+les files de l'instant $i$, $i+1$, $i+2$ soient différentes.
+
+De même un thread qui est dans l'instant $i+1$ peut atteindre le moment où il
+doit incrémenter le \verb!nbf! de l'instant $i+1$ avant que tout les thread se
+soit rendu compte qu'on ait commencé l'instant $i+1$, et vont bien se baser sur
+le fait que le \verb!nbf! de l'instant $i$ vale $n$ pour changer d'instant. Il
+faut donc au moins 2 \verb!nbf! différent. Il reste donc le problème de
+réinitialiser \verb!nbf! à un moment où cela ne pose pas de problème. Je garde
+donc 3 \verb!nbf! différent et le \verb!nbf! de l'instant $i-1$ i.e de l'instant
+$i+2$ est réinitialisé par tout thread passant de l'instant $i$ à l'instant $i+1$.
+
+On peut ainsi passer d'un instant à l'autre de manière synchronisé mais lock-free
+
+\paragraph{Deadlock:} Voyons maintenant pourquoi un deadlock ne peut pas se produire
+
+
+\subsection{Optimisation à coup d'invariant satiques}
+
 \section{Améliorations possibles}
 
 Par manque de temps, du à des complications avec Rust, nous n'avons pas pu
@@ -137,13 +188,10 @@ ces structures:
   noeud prenant en entrée un processus, et compilant ce processus, pour contenir
   un sous-graphe. Le noeud contiendrait aussi un runtime, pour savoir quels
   noeuds sont à exécuter.
-\item Passage de valeur en unsafe : Beaucoup des mutex utilisés, notamment pour
-  passer des valeurs entre des noeuds sont inutiles (on peut prouver manuellement
-  qu'il n y a pas de data-race). On pourrait donc les supprimer (nécessite du
-  unsafe Rust)
-\item Optimization du compile-time: On ne sait pas trop pourquoi mais le temps
-  de compilation est exponentiel en la longueur d'un processus réactif. Notre
-  example de jeu de la vie est a la limite de ce qu'il est possible de faire.
+\item Structures de controle récatif comme \verb!do until!. On les avait
+  initialement fait sur une version ancienne, mais après de multiple refactorings
+  du système de processus pour atteindre des temps de compilation raisonnables,
+  nous n'avons pas eu le temps et la motivation de leur faire suivre tout les changements.
 \end{itemize}
 
 \section{Exemple de compilation de structure de contrôle}
