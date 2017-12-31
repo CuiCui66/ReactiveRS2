@@ -145,8 +145,8 @@ fois dans dans les file d'attente. On a donc bien la notion d'ownership.
 
 \paragraph{Synchronisation :} On maintient donc l'invariant suivant: à tout
 moment notre thread n'est pas compté comme
-fini dans \verb!nbf! si il possède au moins un noeud devant être exécuter à cet
-instant. Pour conserver cet invariant, Un thread, lorsqu'il fini sa
+fini dans \verb!nbf! si il possède au moins un noeud devant être exécuté à cet
+instant. Pour conserver cet invariant, un thread, lorsqu'il fini sa
 file de noeud va incrémenter de 1 \verb!nbf! mais il le baissera de 1 avant
 toute tentative de vol (on essaie de voler que dans les files non-vide). De cette
 manière lorsque \verb!nbf! atteint $n$, on sait que plus aucun thread ne possède
@@ -243,18 +243,18 @@ Voici un exemple de petit processus parallèle:
 {
     {
         |_| 20;
-        Pause;
+        pause();
         |i| i+1;
-        Pause
+        pause()
     } || {
         |_| 20;
-        Pause;
+        pause();
         |i| i+1;
-        Pause
+        pause()
     }
 };
 |(v1,v2)| v1 + v2;
-Pause;
+pause();
 |i| {
     ()
 }
@@ -286,7 +286,7 @@ loop {
             False(i)
         }
     };
-    Pause
+    pause()
 };
 |i| ()
 \end{verbatim}
@@ -307,7 +307,7 @@ Et une fois compilé vers les noeuds, on a:
 En idée d'application simple hautement parallèle, nous avons pensé au jeu de la
 vie. Pour utiliser au maximum l'aspect réactif, nous avons utilisé des signaux
 pour faire communiquer les cases entre elles. Chaque case contient un signal, et
-lorsque la case est allumée, elle envoie un signal a toute ses cases voisines.
+lorsque la case est allumée, elle envoie un signal à toutes ses cases voisines.
 La réception des signaux permet alors de calculer l'étape suivante. La
 structure, étant sparse, n'a pas besoin de calculer la valeur d'une case lorsque
 celle ci ne possède pas de voisins allumés. Pour afficher un état, nous
@@ -349,15 +349,16 @@ pour des exemple non triviaux (autre que Vec et Box en gros). Nous avons donc
 fini par Boxer automatiquement \emph{tout} les processus afin de casser la
 profondeur des types paramétriques. Elle ne reste donc plus que sur les noeuds.
 Une fois ce processus de box automatique mis en place, les temps de compilation
-dépassent rarement les 20s, Alors qu'ils pouvaient dépasser les 10 min sans.
+dépassent rarement les 20s, Alors qu'ils pouvaient dépasser les 10 min sans, en
+utilisant 10Go de RAM.
 
 \section{Conclusion}
 Finalement nous avons fini par avoir le temps de paralléliser notre
 bibliothèque. Nous avons fait quelques test de performance sur le jeu de la vie
-(avec environ 10-12 \% de remplissage):
+(avec environ 10-12 \% de remplissage), sur des états bistationnaires:
 
 \begin{itemize}
-\item Sur des petites grilles ($20 \times 10$) le séquentiel bas largement le
+\item Sur des petites grilles ($20 \times 10$) le séquentiel bat largement le
   parallèle avec:
   \begin{itemize}
   \item  En séquentiel 450000 itérations par secondes
