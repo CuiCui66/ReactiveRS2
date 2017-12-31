@@ -181,7 +181,7 @@ utilisateur).
 
 La seule boucle d'attente pouvant donc bloquer est celle du stealing.
 
-Or il y a donc un nombre fini d'exécution de noeud à faire dans un instant.
+Il y a donc un nombre fini d'exécution de noeud à faire dans un instant.
 Si reste un noeud à exécuter, il est dans la file d'un thread qui finira
 par soit l'exécuter soit se le faire voler. Comme on exécute un noeud
 immédiatement après l'avoir volé, tout noeud restant à exécuter, sera exécuté
@@ -211,7 +211,7 @@ d'en être sorti), on peut aussi utiliser des \verb!UnsafeCell! ici.
 \
 
 Ces optimisations nous ont permis de gagner jusqu'à 40\% de performances dans
-certain exécution de notre application.
+certaines exécutions de notre application.
 \section{Améliorations possibles}
 
 Par manque de temps nous n'avons pas pu
@@ -317,11 +317,11 @@ donc l'état du tableau.
 
 \section{Liste (non exhaustive) de problèmes avec Rust}
 \subsection{Bug}
-Nous avons rencontré plusieurs fois des crash du compilateur sans message d'erreur
+Nous avons rencontré plusieurs fois des crashs du compilateur sans message d'erreur
 autre que \og unexpected panic\fg{}. Cela ralentit beaucoup le temps de
 développement de dichotomiser sur des ligne de code en les commentant ou pas
 pour trouver laquelle fait planter le compilateur. Heureusement les bugs
-rencontré ont fini par avoir été corrigés (au moins sur rust-nightly).
+rencontrés ont finis par être corrigés (au moins sur rust-nightly).
 
 
 \subsection{Trait A ou B}
@@ -343,7 +343,7 @@ statique sur des type mais pas sur des traits, cela a résolu notre problème (a
 dépend d'ajouter plus de code boilerplate que nous avons factoriser dans des macros).
 
 \subsection{Inférence de type}
-L'algorithme de compilation semple mettre un temps exponentiel en la profondeur
+L'algorithme de compilation semble mettre un temps exponentiel en la profondeur
 des types paramétriques: le système de type générique de Rust semble donc inutilisable
 pour des exemple non triviaux (autre que Vec et Box en gros). Nous avons donc
 fini par Boxer automatiquement \emph{tout} les processus afin de casser la
