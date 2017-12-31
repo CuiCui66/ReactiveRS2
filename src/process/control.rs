@@ -1,6 +1,4 @@
 use node::*;
-// use node::rcmanip::*;
-// use node::control::*;
 use super::*;
 
 //   ____ _           _
@@ -9,170 +7,176 @@ use super::*;
 // | |___| | | | (_) | | (_|  __/
 //  \____|_| |_|\___/|_|\___\___|
 
+/// A basic branching struct that takes a `ChoiceData` and call PT or PF depending of
+/// its value.
+pub struct PChoice<PT, PF>(pub(crate) PT, pub(crate) PF);
 
-pub struct PChoice<PT, PF> {
-    pub(crate) pt: PT,
-    pub(crate) pf: PF,
-}
-impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
-    for PChoice<MarkedProcess<PT, NotIm>, MarkedProcess<PF, NotIm>>
+
+impl<'a, PT, PF, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>> IntProcess<'a, ChoiceData<InT, InF>>
+    for PChoice<PT, PF>
 where
     PT: Process<'a, InT, Out = Out>,
     PF: Process<'a, InF, Out = Out>,
 {
     type Out = Out;
-    type NI = NChoice<PT::NI, PF::NI>;
-    type NO = RcLoad<Out>;
-    type NIO = DummyN<Out>;
-    type Mark = NotIm;
-    type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
+    type MarkOnce = <And<PT::MarkOnce, PF::MarkOnce> as GiveOnce>::Once;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let (ptni, ptind, ptno) = self.pt.p.compile(g);
-        let (pfni, pfind, pfno) = self.pf.p.compile(g);
-        let rct = new_rcell();
-        let rcf = rct.clone();
-        let rcout = rct.clone();
-        let out = g.reserve();
-        g.set(ptind, box node!(ptno >> store(rct) >> jump(out)));
-        g.set(pfind, box node!(pfno >> store(rcf) >> jump(out)));
-        (node!(choice ptni pfni), out, load(rcout))
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begt,endt) = self.pt.p.printDot(curNum);
-        let (begf,endf) = self.pf.p.printDot(curNum);
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
+        let (begt, endt) = self.0.printDot(curNum);
+        let (begf, endf) = self.1.printDot(curNum);
         let numbeg = *curNum;
-        let numend = numbeg +1;
+        let numend = numbeg + 1;
         *curNum += 2;
-        println!("{} [shape=diamond, label=\"if\"]",numbeg);
-        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
-        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
-        println!("{} [size = 0.1]",numend);
-        println!("{} -> {}:w",endt,numend);
-        println!("{} -> {}:e",endf,numend);
-        (numbeg,numend)
+        println!("{} [shape=diamond, label=\"if\"]", numbeg);
+        println!(
+            "{}:w -> {} [label = \"True:{}\"];",
+            numbeg,
+            begt,
+            tname::<InT>()
+        );
+        println!(
+            "{}:e -> {} [label = \"False:{}\"];",
+            numbeg,
+            begf,
+            tname::<InF>()
+        );
+        println!("{} [size = 0.1]", numend);
+        println!("{} -> {}:w", endt, numend);
+        println!("{} -> {}:e", endf, numend);
+        (numbeg, numend)
     }
 }
 
-impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
-    for PChoice<MarkedProcess<PT, IsIm>, MarkedProcess<PF, NotIm>>
-where
-    PT: Process<'a, InT, Out = Out>,
-    PF: Process<'a, InF, Out = Out>,
-{
-    type Out = Out;
-    type NI = NChoice<NSeq<PT::NIO, NSeq<RcStore<Out>, NJump>>, PF::NI>;
-    type NO = RcLoad<Out>;
-    type NIO = DummyN<Out>;
-    type Mark = NotIm;
-    type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
+// NI - NI
+implNI!{
+    ChoiceData<InT,InF>,
+    impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, PTNI, PTNO, PFNI, PFNO, MarkOnceT, MarkOnceF>
+        for PChoice<ProcessNotIm<'a, InT, Out, MarkOnceT, PTNI, PTNO>,
+                    ProcessNotIm<'a, InF, Out, MarkOnceF, PFNI, PFNO>>
+        where
+        MarkOnceT: Once,
+        MarkOnceF: Once,
+        PTNI: Node<'a, InT, Out = ()>,
+        PTNO: Node<'a, (), Out = Out>,
+        PFNI: Node<'a, InF, Out = ()>,
+        PFNO: Node<'a, (), Out = Out>,
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let ptnio = self.pt.p.compileIm(g);
-        let (pfni, pfind, pfno) = self.pf.p.compile(g);
-        let rct = new_rcell();
-        let rcf = rct.clone();
-        let rcout = rct.clone();
-        let out = g.reserve();
-        g.set(pfind, box node!(pfno >> store(rcf) >> jump(out)));
-        (
-            node!(choice {ptnio >> store(rct)>>jump(out)} pfni),
-            out,
-            load(rcout),
-        )
-
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begt,endt) = self.pt.p.printDot(curNum);
-        let (begf,endf) = self.pf.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape=diamond, label=\"if\"]",numbeg);
-        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
-        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
-        println!("{} [size = 0.1]",numend);
-        println!("{} -> {}:w",endt,numend);
-        println!("{} -> {}:e",endf,numend);
-        (numbeg,numend)
+    trait IntProcessNotIm<'a, ChoiceData<InT,InF>>
+    {
+        type NI = NChoice<PTNI, PFNI>;
+        type NO = NLoad<Out>;
+        fn compile(self :Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+            let s = *self;
+            let PChoice(pt, pf) = s;
+            let (ptni, ptind, ptno) = pt.compile(g);
+            let (pfni, pfind, pfno) = pf.compile(g);
+            let rct = RCell::new();
+            let rcf = rct.clone();
+            let rcout = rct.clone();
+            let out = g.reserve();
+            g.set(ptind, box node!(ptno >> store(rct) >> njump(out)));
+            g.set(pfind, box node!(pfno >> store(rcf) >> njump(out)));
+            (node!(choice ptni pfni), out, load(rcout))
+        }
     }
 }
 
+// NI - Im
+implNI!{
+    ChoiceData<InT,InF>,
+    impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, MarkOnceT, MarkOnceF, PTNI, PTNO, PFNIO>
+        for PChoice<ProcessNotIm<'a, InT, Out, MarkOnceT, PTNI, PTNO>,
+                    ProcessIm<'a, InF, Out, MarkOnceF, PFNIO>>
+        where
+        MarkOnceT: Once,
+        MarkOnceF: Once,
+        PTNI: Node<'a, InT, Out = ()>,
+        PTNO: Node<'a, (), Out = Out>,
+        PFNIO: Node<'a, InF, Out = Out>,
 
-impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
-    for PChoice<MarkedProcess<PT, NotIm>, MarkedProcess<PF, IsIm>>
-where
-    PT: Process<'a, InT, Out = Out>,
-    PF: Process<'a, InF, Out = Out>,
-{
-    type Out = Out;
-    type NI = NChoice<PT::NI, NSeq<PF::NIO, NSeq<RcStore<Out>, NJump>>>;
-    type NO = RcLoad<Out>;
-    type NIO = DummyN<Out>;
-    type Mark = NotIm;
-    type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
-
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
-        let (ptni, ptind, ptno) = self.pt.p.compile(g);
-        let pfnio = self.pf.p.compileIm(g);
-        let rct = new_rcell();
-        let rcf = rct.clone();
-        let rcout = rct.clone();
-        let out = g.reserve();
-        g.set(ptind, box node!(ptno >> store(rct) >> jump(out)));
-        (
-            node!(choice ptni {pfnio >> store(rcf) >> jump(out)}),
-            out,
-            load(rcout),
-        )
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begt,endt) = self.pt.p.printDot(curNum);
-        let (begf,endf) = self.pf.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape=diamond, label=\"if\"]",numbeg);
-        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
-        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
-        println!("{} [size = 0.1]",numend);
-        println!("{} -> {}:w",endt,numend);
-        println!("{} -> {}:e",endf,numend);
-        (numbeg,numend)
+    trait IntProcessNotIm<'a, ChoiceData<InT,InF>>
+    {
+        type NI = NChoice<PTNI, NSeq<PFNIO, NSeq<NStore<Out>, NJump>>>;
+        type NO = NLoad<Out>;
+        fn compile(self :Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+            let s = *self;
+            let PChoice(pt, pf) = s;
+            let (ptni, ptind, ptno) = pt.compile(g);
+            let pfnio = pf.compileIm(g);
+            let rct = RCell::new();
+            let rcf = rct.clone();
+            let rcout = rct.clone();
+            let out = g.reserve();
+            g.set(ptind, box node!(ptno >> store(rct) >> njump(out)));
+            (
+                node!(choice ptni {pfnio >> store(rcf) >> njump(out)}),
+                out,
+                load(rcout),
+            )
+        }
     }
 }
 
-impl<'a, PT, PF, InT: 'a, InF: 'a, Out: 'a> Process<'a, ChoiceData<InT, InF>>
-    for PChoice<MarkedProcess<PT, IsIm>, MarkedProcess<PF, IsIm>>
-where
-    PT: Process<'a, InT, Out = Out>,
-    PF: Process<'a, InF, Out = Out>,
-{
-    type Out = Out;
-    type NI = DummyN<()>;
-    type NO = DummyN<Out>;
-    type NIO = NChoice<PT::NIO, PF::NIO>;
-    type Mark = IsIm;
-    type MarkOnce = And<PT::MarkOnce, PF::MarkOnce>;
+// Im - NI
+implNI!{
+    ChoiceData<InT,InF>,
+    impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, MarkOnceT, MarkOnceF, PTNIO, PFNI, PFNO>
+        for PChoice<ProcessIm<'a, InT, Out, MarkOnceT, PTNIO>,
+                    ProcessNotIm<'a, InF, Out, MarkOnceF, PFNI, PFNO>>
+        where
+        MarkOnceT: Once,
+        MarkOnceF: Once,
+        PTNIO: Node<'a, InT, Out = Out>,
+        PFNI: Node<'a, InF, Out = ()>,
+        PFNO: Node<'a, (), Out = Out>,
 
-    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO {
-        let ptnio = self.pt.p.compileIm(g);
-        let pfnio = self.pf.p.compileIm(g);
-        node!(choice ptnio pfnio)
+    trait IntProcessNotIm<'a, ChoiceData<InT,InF>>
+    {
+        type NI = NChoice<NSeq<PTNIO, NSeq<NStore<Out>, NJump>>, PFNI>;
+        type NO = NLoad<Out>;
+        fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI, usize, Self::NO) {
+            let s = *self;
+            let PChoice(pt, pf) = s;
+            let ptnio = pt.compileIm(g);
+            let (pfni, pfind, pfno) = pf.compile(g);
+            let rct = RCell::new();
+            let rcf = rct.clone();
+            let rcout = rct.clone();
+            let out = g.reserve();
+            g.set(pfind, box node!(pfno >> store(rcf) >> njump(out)));
+            (
+                node!(choice {ptnio >> store(rct) >> njump(out)} pfni),
+                out,
+                load(rcout),
+            )
+
+        }
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (begt,endt) = self.pt.p.printDot(curNum);
-        let (begf,endf) = self.pf.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [shape=diamond, label=\"if\"]",numbeg);
-        println!("{}:w -> {} [label = \"True:{}\"];",numbeg,begt,tname::<InT>());
-        println!("{}:e -> {} [label = \"False:{}\"];",numbeg,begf,tname::<InF>());
-        println!("{} [size = 0.1]",numend);
-        println!("{} -> {}:w",endt,numend);
-        println!("{} -> {}:e",endf,numend);
-        (numbeg,numend)
+}
+
+// Im - Im
+implIm!{
+    ChoiceData<InT,InF>,
+    impl<'a, InT: Val<'a>, InF: Val<'a>, Out: Val<'a>, MarkOnceT, MarkOnceF, PTNIO, PFNIO>
+        for PChoice<ProcessIm<'a, InT, Out, MarkOnceT, PTNIO>,
+                    ProcessIm<'a, InF, Out, MarkOnceF, PFNIO>>
+        where
+        MarkOnceT: Once,
+        MarkOnceF: Once,
+        PTNIO: Node<'a, InT, Out = Out>,
+        PFNIO: Node<'a, InF, Out = Out>,
+
+    trait IntProcessIm<'a, ChoiceData<InT,InF>>
+    {
+        type NIO = NChoice<PTNIO, PFNIO>;
+        fn compileIm(self :Box<Self>, g: &mut Graph<'a>) -> Self::NIO {
+            let s = *self;
+            let PChoice(pt, pf) = s;
+            let ptnio = pt.compileIm(g);
+            let pfnio = pf.compileIm(g);
+            node!(choice ptnio pfnio)
+        }
+
     }
 }
 
@@ -185,88 +189,96 @@ where
 // |_____\___/ \___/| .__/
 //                  |_|
 
-pub struct PLoop<P> {
-    pub(crate) p: P,
-}
+/// A basic looping construct that run a process `NotOnce` returning a `ChoiceData`
+/// And relauch it while it return the `True` constructor.
+pub struct PLoop<P>(pub(crate) P);
 
-impl<'a, P, In: 'a, Out: 'a, OnceStruct> Process<'a, In>
-    for PLoop<MarkedProcess<P,NotIm>>
-    where
-    OnceStruct: NotOnce,
-    P: Process<'a, In, Out = ChoiceData<In,Out>, MarkOnce = OnceStruct>,
+impl<'a, P, In: Val<'a>, Out: Val<'a>> IntProcess<'a, In> for PLoop<P>
+where
+    P: Process<
+        'a,
+        In,
+        Out = ChoiceData<
+            In,
+            Out,
+        >,
+    >,
 {
     type Out = Out;
-    type NI = NSeq<RcStore<In>,NJump>;
-    type NO = RcLoad<Out>;
-    type NIO = DummyN<Out>;
-    type Mark = NotIm;
-    type MarkOnce = SNotOnce;
+    type MarkOnce = NotOnce;
 
-    fn compile(self, g: &mut Graph<'a>) -> (Self::NI,usize,Self::NO){
-        trace!("");
-        let (pni, pind, pno) = self.p.p.compile(g);
-        let rcextin = new_rcell();
-        let rcbegin = rcextin.clone();
-        let rcendin = rcextin.clone();
-        let rcendout = new_rcell();
-        let rcextout = rcendout.clone();
-        let in_id = g.add(box node!(load(rcbegin) >> pni));
-        let out_id = g.reserve();
-        g.set(pind,box node!(
-            pno >> choice {
-                store(rcendin) >> jump(in_id)
-            }{
-                store(rcendout) >> jump(out_id)
-            }));
-        (
-            node!(store(rcextin) >> jump(in_id)),
-            out_id,
-            node!(load(rcextout))
-        )
-    }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (beg,end) = self.p.p.printDot(curNum);
+    fn printDot(&mut self, curNum: &mut usize) -> (usize, usize) {
+        let (beg, end) = self.0.printDot(curNum);
         let numbeg = *curNum;
-        let numend = numbeg +1;
+        let numend = numbeg + 1;
         *curNum += 2;
-        println!("{} [label = \"loop\"]",numbeg);
-        println!("{}:s -> {} [label = \"{}\"]",numbeg,beg,tname::<In>());
-        println!("{} [shape=diamond]",numend);
-        println!("{} -> {}:n [label = \"{}\"]",end,numend,tname::<ChoiceData<In,Out>>());
-        println!("{}:w -> {}:w [label = \"Continue: {}\"];",numend,numbeg,tname::<In>());
-        (numbeg,numend)
+        println!("{} [label = \"loop\"]", numbeg);
+        println!("{}:s -> {} [label = \"{}\"]", numbeg, beg, tname::<In>());
+        println!("{} [shape=diamond]", numend);
+        println!(
+            "{} -> {}:n [label = \"{}\"]",
+            end,
+            numend,
+            tname::<ChoiceData<In, Out>>()
+        );
+        println!(
+            "{}:w -> {}:w [label = \"Continue: {}\"];",
+            numend,
+            numbeg,
+            tname::<In>()
+        );
+        (numbeg, numend)
     }
 }
 
-impl<'a, P, In: 'a, Out: 'a, OnceStruct> Process<'a, In>
-    for PLoop<MarkedProcess<P,IsIm>>
-    where
-    OnceStruct: NotOnce,
-    P: Process<'a, In, Out = ChoiceData<In,Out>, MarkOnce = OnceStruct>,
-{
-    type Out = Out;
-    type NI = DummyN<()>;
-    type NO = DummyN<Out>;
-    type NIO = LoopIm<P::NIO>;
-    type Mark = IsIm;
-    type MarkOnce = SNotOnce;
 
-    fn compileIm(self, g: &mut Graph<'a>) -> Self::NIO{
-
-        trace!("");
-        let pnio = self.p.p.compileIm(g);
-        LoopIm(pnio)
+implNI!{
+    In,
+    impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, PNI, PNO>
+        for PLoop<ProcessNotIm<'a, In, ChoiceData<In,Out>, MarkOnce, PNI, PNO>>
+        where
+        MarkOnce: Once,
+        PNI: Node<'a, In, Out = ()>,
+        PNO: Node<'a, (), Out = ChoiceData<In,Out>>,
+    trait IntProcessNotIm<'a, In> {
+        type NI = NSeq<NStore<In>,NJump>;
+        type NO = NLoad<Out>;
+        fn compile(self: Box<Self>, g: &mut Graph<'a>) -> (Self::NI,usize,Self::NO){
+            let (pni, pind, pno) = self.0.compile(g);
+            let rcextin = RCell::new();
+            let rcbegin = rcextin.clone();
+            let rcendin = rcextin.clone();
+            let rcendout = RCell::new();
+            let rcextout = rcendout.clone();
+            let in_id = g.add(box node!(load(rcbegin) >> pni));
+            let out_id = g.reserve();
+            g.set(pind,box node!(
+                pno >> choice {
+                    store(rcendin) >> njump(in_id)
+                }{
+                    store(rcendout) >> njump(out_id)
+                }));
+            (
+                node!(store(rcextin) >> njump(in_id)),
+                out_id,
+                node!(load(rcextout))
+            )
+        }
     }
-    fn printDot(&mut self,curNum : &mut usize) -> (usize,usize){
-        let (beg,end) = self.p.p.printDot(curNum);
-        let numbeg = *curNum;
-        let numend = numbeg +1;
-        *curNum += 2;
-        println!("{} [label = \"loop\"]",numbeg);
-        println!("{}:s -> {} [label = \"{}\"]",numbeg,beg,tname::<In>());
-        println!("{} [shape=diamond]",numend);
-        println!("{} -> {}:n [label = \"{}\"]",end,numend,tname::<ChoiceData<In,Out>>());
-        println!("{}:w -> {}:w [label = \"Continue: {}\"];",numend,numbeg,tname::<In>());
-        (numbeg,numend)
+}
+
+implIm!{
+    In,
+    impl<'a, In: Val<'a>, Out: Val<'a>, MarkOnce, PNIO>
+        for PLoop<ProcessIm<'a,In,ChoiceData<In,Out>, MarkOnce, PNIO>>
+        where
+        MarkOnce: Once,
+        PNIO: Node<'a, In, Out = ChoiceData<In,Out>>,
+    trait IntProcessIm<'a, In> {
+        type NIO = LoopIm<PNIO>;
+        fn compileIm(self: Box<Self>, g: &mut Graph<'a>) -> Self::NIO{
+            LoopIm(self.0.compileIm(g))
+        }
+
     }
 }

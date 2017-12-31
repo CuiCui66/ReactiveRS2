@@ -9,35 +9,35 @@ use super::*;
 // | |___| | | | | | | |_| |_| |
 // |_____|_| |_| |_|_|\__|____/
 
-/// Node emitting a signal,
-/// where the signal and the emission value is given as input of the node
+/// Node emitting a signal.
+/// The signal and the emission value is given as input of the node.
 /// Also, a vector of (signal,value) can be given.
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct NEmitD {}
 
 
-impl<'a, SV: 'a, E: 'a> Node<'a, (SignalRuntimeRef<SV>, E)> for NEmitD
+impl<'a, S, E: Val<'a>> Node<'a, (S, E)> for NEmitD
 where
-    SV: SignalValue<E = E>,
+    S: Signal<'a, E = E>,
 {
     type Out = ();
 
-    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, (sr, e): (SignalRuntimeRef<SV>, E)) -> () {
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, (sr, e): (S, E)) -> () {
         sr.emit(e, sub_runtime);
         ()
     }
 }
 
-impl<'a, SV: 'a, E: 'a, In: 'a> Node<'a, ((SignalRuntimeRef<SV>, E), In)> for NEmitD
-    where
-        SV: SignalValue<E=E>,
+impl<'a, S, E: Val<'a>, In: Val<'a>> Node<'a, ((S, E), In)> for NEmitD
+where
+    S: Signal<'a, E = E>,
 {
     type Out = In;
 
     fn call(
         &mut self,
         sub_runtime: &mut SubRuntime<'a>,
-        ((sr,e),val): ((SignalRuntimeRef<SV>, E), In)
+        ((sr, e), val): ((S, E), In),
     ) -> Self::Out {
         sr.emit(e, sub_runtime);
         val
@@ -45,13 +45,13 @@ impl<'a, SV: 'a, E: 'a, In: 'a> Node<'a, ((SignalRuntimeRef<SV>, E), In)> for NE
 }
 
 
-impl<'a, SV: 'a, E: 'a> Node<'a, Vec<(SignalRuntimeRef<SV>, E)>> for NEmitD
-    where
-        SV: SignalValue<E = E>,
+impl<'a, S, E: Val<'a>> Node<'a, Vec<(S, E)>> for NEmitD
+where
+    S: Signal<'a, E = E>,
 {
     type Out = ();
 
-    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, vec: Vec<(SignalRuntimeRef<SV>, E)>) -> () {
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, vec: Vec<(S, E)>) -> () {
         for (sr, emit_value) in vec {
             sr.emit(emit_value, sub_runtime);
         }
@@ -60,18 +60,18 @@ impl<'a, SV: 'a, E: 'a> Node<'a, Vec<(SignalRuntimeRef<SV>, E)>> for NEmitD
 }
 
 
-impl<'a, SV: 'a, E: 'a, In: 'a> Node<'a, (Vec<(SignalRuntimeRef<SV>, E)>, In)> for NEmitD
-    where
-        SV: SignalValue<E=E>,
+impl<'a, S, E: Val<'a>, In: Val<'a>> Node<'a, (Vec<(S, E)>, In)> for NEmitD
+where
+    S: Signal<'a, E = E>,
 {
     type Out = In;
 
     fn call(
         &mut self,
         sub_runtime: &mut SubRuntime<'a>,
-        (vec,val): (Vec<(SignalRuntimeRef<SV>, E)>, In)
+        (vec, val): (Vec<(S, E)>, In),
     ) -> Self::Out {
-        for (sr,emit_value) in vec {
+        for (sr, emit_value) in vec {
             sr.emit(emit_value, sub_runtime);
         }
         val
@@ -85,14 +85,15 @@ impl<'a, SV: 'a, E: 'a, In: 'a> Node<'a, (Vec<(SignalRuntimeRef<SV>, E)>, In)> f
 // |_____|_| |_| |_|_|\__|____/
 
 
-/// Node emitting a signal, where the signal is fixed,
+/// Node emitting a signal.
+/// The signal is known at the node creation,
 /// and the emission value is given as input of the node.
 #[derive(Clone)]
-pub struct NEmitS<SV, E>(pub SignalRuntimeRef<SV>, pub PhantomData<E>);
+pub struct NEmitS<S, E>(pub S, pub PhantomData<E>);
 
-impl<'a, SV: 'a, E: 'a> Node<'a, E> for NEmitS<SV, E>
+impl<'a, S, E: Val<'a>> Node<'a, E> for NEmitS<S, E>
 where
-    SV: SignalValue<E = E>,
+    S: Signal<'a, E = E>,
 {
     type Out = ();
 
@@ -103,9 +104,9 @@ where
 }
 
 
-impl<'a, In: 'a, SV: 'a, E: 'a> Node<'a, (E, In)> for NEmitS<SV, E>
+impl<'a, In: Val<'a>, S, E: Val<'a>> Node<'a, (E, In)> for NEmitS<S, E>
 where
-    SV: SignalValue<E = E>,
+    S: Signal<'a, E = E>,
 {
     type Out = In;
 
@@ -122,40 +123,44 @@ where
 // |_____|_| |_| |_|_|\__| \_/ \___|\___|____/
 
 
-/// Node emitting multiple signals, where the signals are fixed,
+/// Node emitting multiple signals.
+/// The signals are known at the creation at the node,
 /// and the emission values are given as input of the node.
 #[derive(Clone)]
-pub struct NEmitVecS<SV>(pub Vec<SignalRuntimeRef<SV>>);
+pub struct NEmitVecS<S>(pub Vec<S>);
 
-impl<'a, SV: 'a, E: 'a> Node<'a, Vec<E>> for NEmitVecS<SV>
+impl<'a, S, E: Val<'a>> Node<'a, Vec<E>> for NEmitVecS<S>
 where
-    SV: SignalValue<E = E>,
+    S: Signal<'a, E = E>,
 {
     type Out = ();
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, emit_values: Vec<E>) -> () {
         if emit_values.len() != self.0.len() {
-            panic!("The vector given to the EmitVecS process should have the same size as the signal vector.")
+            panic!(
+                "The vector given to the EmitVecS process should have the same size as the signal vector."
+            )
         }
 
-        for (sr,emit_value) in self.0.iter().zip(emit_values.into_iter()) {
+        for (sr, emit_value) in self.0.iter().zip(emit_values.into_iter()) {
             sr.emit(emit_value, sub_runtime);
         }
-        ()
     }
 }
 
-impl<'a, SV: 'a, E: 'a, In: 'a> Node<'a, (Vec<E>, In)> for NEmitVecS<SV>
+impl<'a, S, E: Val<'a>, In: Val<'a>> Node<'a, (Vec<E>, In)> for NEmitVecS<S>
 where
-    SV: SignalValue<E = E>,
+    S: Signal<'a, E = E>,
 {
     type Out = In;
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, (emit_values, val): (Vec<E>, In)) -> In {
         if emit_values.len() != self.0.len() {
-            panic!("The vector given to the EmitVecS process should have the same size as the signal vector.")
+            panic!(
+                "The vector given to the EmitVecS process should have the same size as the signal vector."
+            )
         }
-        for (sr,emit_value) in self.0.iter().zip(emit_values.into_iter()) {
+        for (sr, emit_value) in self.0.iter().zip(emit_values.into_iter()) {
             sr.emit(emit_value, sub_runtime);
         }
         val
@@ -169,15 +174,15 @@ where
 // |_____|_| |_| |_|_|\__| \_/  |____/
 
 
-/// Node emitting a signal,
-/// where the signal and the emission value is fixed.
+/// Node emitting a signal.
+/// The signal and the emission value is known at the creation of the node.
 #[derive(Clone)]
-pub struct NEmitVS<SV, E>(pub SignalRuntimeRef<SV>, pub E);
+pub struct NEmitVS<S, E>(pub S, pub E);
 
-impl<'a, In: 'a, SV: 'a, E: 'a> Node<'a, In> for NEmitVS<SV, E>
+impl<'a, In: Val<'a>, S, E: Val<'a>> Node<'a, In> for NEmitVS<S, E>
 where
-    SV: SignalValue<E = E>,
-    E: Clone
+    S: Signal<'a, E = E>,
+    E: Clone,
 {
     type Out = In;
 
@@ -194,20 +199,20 @@ where
 // | |___| | | | | | | |_ \ V /    \ V /  __/ (__ ___) |
 // |_____|_| |_| |_|_|\__| \_/      \_/ \___|\___|____/
 
-/// Node emitting multiple signals,
-/// where the signals and the values are fixed.
+/// Node emitting multiple signals.
+/// The signals and the values are known at the creation of the node.
 #[derive(Clone)]
-pub struct NEmitVVecS<SV,E>(pub Vec<(SignalRuntimeRef<SV>,E)>);
+pub struct NEmitVVecS<S, E>(pub Vec<(S, E)>);
 
-impl<'a, In: 'a, SV: 'a, E: 'a> Node<'a, In> for NEmitVVecS<SV, E>
-    where
-        SV: SignalValue<E = E>,
-        E: Clone,
+impl<'a, In: Val<'a>, S, E: Val<'a>> Node<'a, In> for NEmitVVecS<S, E>
+where
+    S: Signal<'a, E = E>,
+    E: Clone,
 {
     type Out = In;
 
     fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, val: In) -> In {
-        for &(ref sr,ref emit_value) in &self.0 {
+        for &(ref sr, ref emit_value) in &self.0 {
             sr.emit(emit_value.clone(), sub_runtime);
         }
         val
@@ -222,38 +227,30 @@ impl<'a, In: 'a, SV: 'a, E: 'a> Node<'a, In> for NEmitVVecS<SV, E>
 //  \____|\___|\__|____/
 
 
-/// Node getting the last value of a signal,
-/// where the signal is given as input of the node.
+/// Node getting the value of the signal at the last instant.
+/// The signal is given as the node input.
 #[derive(Clone, Copy)]
 pub struct NGetD {}
 
-impl<'a, SV: 'a, V: 'a, In: 'a> Node<'a, (SignalRuntimeRef<SV>, In)> for NGetD
+impl<'a, S, V: Val<'a>, In: Val<'a>> Node<'a, (S, In)> for NGetD
 where
-    SV: SignalValue<V = V>,
+    S: Signal<'a, V = V>,
 {
     type Out = (V, In);
 
-    fn call(
-        &mut self,
-        sub_runtime: &mut SubRuntime<'a>,
-        (sr, val): (SignalRuntimeRef<SV>, In),
-    ) -> Self::Out {
-        let mut signal_runtime = sr.signal_runtime.borrow_mut();
-        sr.update_values(sub_runtime.current_instant, &mut signal_runtime);
-        (sr.signal_runtime.borrow().values.get_pre_value(), val)
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, (sr, val): (S, In)) -> Self::Out {
+        (sr.get_pre_value(sub_runtime.get_current_instant()), val)
     }
 }
 
-impl<'a, SV: 'a, V: 'a> Node<'a, SignalRuntimeRef<SV>> for NGetD
+impl<'a, S, V: Val<'a>> Node<'a, S> for NGetD
 where
-    SV: SignalValue<V = V>,
+    S: Signal<'a, V = V>,
 {
     type Out = V;
 
-    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: SignalRuntimeRef<SV>) -> Self::Out {
-        let mut signal_runtime = sr.signal_runtime.borrow_mut();
-        sr.update_values(sub_runtime.current_instant, &mut signal_runtime);
-        signal_runtime.values.get_pre_value()
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: S) -> Self::Out {
+        sr.get_pre_value(sub_runtime.get_current_instant())
     }
 }
 
@@ -265,25 +262,33 @@ where
 //  \____|\___|\__|____/
 
 
-/// Node getting the last value of a signal,
-/// where the signal is fixed.
+/// Node getting the value of the signal at the last instant.
+/// The signal is known at the node creation.
 #[derive(Clone)]
-pub struct NGetS<SV>(pub SignalRuntimeRef<SV>);
+pub struct NGetS<S>(pub S);
 
-impl<'a, SV: 'a, V: 'a> Node<'a, ()> for NGetS<SV>
+impl<'a, S, V: Val<'a>> Node<'a, ()> for NGetS<S>
 where
-    SV: SignalValue<V = V>,
+    S: Signal<'a, V = V>,
 {
     type Out = V;
 
-    fn call(
-        &mut self,
-        sub_runtime: &mut SubRuntime<'a>,
-        _: (),
-    ) -> Self::Out {
-        let mut signal_runtime = self.0.signal_runtime.borrow_mut();
-        self.0.update_values(sub_runtime.current_instant, &mut signal_runtime);
-        signal_runtime.values.get_pre_value()
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, _: ()) -> Self::Out {
+        self.0.get_pre_value(sub_runtime.get_current_instant())
+    }
+}
+
+#[derive(Clone)]
+pub struct NGetSIn<S>(pub S);
+
+impl<'a, S, V: Val<'a>, In: Val<'a>> Node<'a, In> for NGetSIn<S>
+where
+    S: Signal<'a, V = V>,
+{
+    type Out = (V, In);
+
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, val: In) -> Self::Out {
+        (self.0.get_pre_value(sub_runtime.get_current_instant()), val)
     }
 }
 
@@ -294,18 +299,19 @@ where
 //  / ___ \ V  V / (_| | | |_| |_| |
 // /_/   \_\_/\_/ \__,_|_|\__|____/
 
-/// Node awaiting a signal to be emitted, and jumping to the next node at the next instant,
-/// where the signal is given as the node input.
+/// Node awaiting a signal to be emitted,
+/// and jumping to the next node at the instant following the emission.
+/// The signal is given as the node input.
 #[derive(Clone, Copy)]
 pub struct NAwaitD(pub usize);
 
-impl<'a, SV: 'a> Node<'a, SignalRuntimeRef<SV>> for NAwaitD
+impl<'a, S> Node<'a, S> for NAwaitD
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
-    type Out = SignalRuntimeRef<SV>;
+    type Out = S;
 
-    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: SignalRuntimeRef<SV>) -> Self::Out {
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: S) -> Self::Out {
         sr.await(sub_runtime, self.0);
         sr
     }
@@ -318,14 +324,15 @@ where
 //  / ___ \ V  V / (_| | | |_ ___) |
 // /_/   \_\_/\_/ \__,_|_|\__|____/
 
-/// Node awaiting a signal to be emitted, and jumping to the next node at the next instant,
-/// where the signal is fixed by the node.
+/// Node awaiting a signal to be emitted,
+/// and jumping to the next node at the next instant following the emission.
+/// The signal is fixed by the node.
 #[derive(Clone)]
-pub struct NAwaitS<SV>(pub SignalRuntimeRef<SV>, pub usize);
+pub struct NAwaitS<S>(pub S, pub usize);
 
-impl<'a, SV: 'a> Node<'a, ()> for NAwaitS<SV>
+impl<'a, S> Node<'a, ()> for NAwaitS<S>
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
     type Out = ();
 
@@ -341,18 +348,19 @@ where
 //  / ___ \ V  V / (_| | | |_ | || | | | | | | | | | |  __/ (_| | | (_| | ||  __/ |_| |
 // /_/   \_\_/\_/ \__,_|_|\__|___|_| |_| |_|_| |_| |_|\___|\__,_|_|\__,_|\__\___|____/
 
-/// Node awaiting a signal to be emitted, and jumping to the next node at the current instant,
-/// where the signal is given as the node input
+/// Node awaiting a signal to be emitted,
+/// and jumping to the next node at the same instant than the emission.
+/// The signal is given as the node input.
 #[derive(Clone, Copy)]
 pub struct NAwaitImmediateD(pub usize);
 
-impl<'a, SV: 'a> Node<'a, SignalRuntimeRef<SV>> for NAwaitImmediateD
-    where
-        SV: SignalValue,
+impl<'a, S> Node<'a, S> for NAwaitImmediateD
+where
+    S: Signal<'a>,
 {
     type Out = ();
 
-    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: SignalRuntimeRef<SV>) -> Self::Out {
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: S) -> Self::Out {
         sr.await_immediate(sub_runtime, self.0);
     }
 }
@@ -363,14 +371,15 @@ impl<'a, SV: 'a> Node<'a, SignalRuntimeRef<SV>> for NAwaitImmediateD
 //  / ___ \ V  V / (_| | | |_ | || | | | | | | | | | |  __/ (_| | | (_| | ||  __/___) |
 // /_/   \_\_/\_/ \__,_|_|\__|___|_| |_| |_|_| |_| |_|\___|\__,_|_|\__,_|\__\___|____/
 
-/// Node awaiting a signal to be emitted, and jumping to the next node at the current instant,
-/// where the signal is fixed
+/// Node awaiting a signal to be emitted,
+/// and jumping to the next node at the same instant than the emission.
+/// The signal is known at the node creation.
 #[derive(Clone)]
-pub struct NAwaitImmediateS<SV>(pub SignalRuntimeRef<SV>, pub usize);
+pub struct NAwaitImmediateS<S>(pub S, pub usize);
 
-impl<'a, SV: 'a> Node<'a, ()> for NAwaitImmediateS<SV>
+impl<'a, S> Node<'a, ()> for NAwaitImmediateS<S>
 where
-    SV: SignalValue,
+    S: Signal<'a>,
 {
     type Out = ();
 
@@ -388,21 +397,21 @@ where
 
 
 /// Node jumping to node_true if the signal is emitted in the current instant,
-/// and jumping to node_false at the next instant otherwise,
-/// where the signal is given as the node input
+/// and jumping to node_false at the next instant otherwise.
+/// The signal is given as the node input
 #[derive(Clone, Copy)]
 pub struct NPresentD {
     pub node_true: usize,
     pub node_false: usize,
 }
 
-impl<'a, SV: 'a> Node<'a, SignalRuntimeRef<SV>> for NPresentD
+impl<'a, S> Node<'a, S> for NPresentD
 where
-    SV: SignalValue
+    S: Signal<'a>,
 {
     type Out = ();
 
-    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: SignalRuntimeRef<SV>) -> Self::Out {
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, sr: S) -> Self::Out {
         sr.present(sub_runtime, self.node_true, self.node_false);
     }
 }
@@ -415,22 +424,26 @@ where
 // |_|   |_|  \___||___/\___|_| |_|\__|____/
 
 /// Node jumping to node_true if the signal is emitted in the current instant,
-/// and jumping to node_false at the next instant otherwise,
-/// where the signal is fixed
+/// and jumping to node_false at the next instant otherwise.
+/// The signal is known at the node creation.
 #[derive(Clone)]
-pub struct NPresentS<SV> {
+pub struct NPresentS<S> {
     pub node_true: usize,
     pub node_false: usize,
-    pub signal_runtime: SignalRuntimeRef<SV>,
+    pub signal_runtime: S,
 }
 
-impl<'a, SV: 'a> Node<'a, ()> for NPresentS<SV>
+impl<'a, S> Node<'a, ()> for NPresentS<S>
 where
-    SV: SignalValue
+    S: Signal<'a>,
 {
     type Out = ();
 
-    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, _:()) -> Self::Out {
-        self.signal_runtime.present(sub_runtime, self.node_true, self.node_false);
+    fn call(&mut self, sub_runtime: &mut SubRuntime<'a>, _: ()) -> Self::Out {
+        self.signal_runtime.present(
+            sub_runtime,
+            self.node_true,
+            self.node_false,
+        );
     }
 }
