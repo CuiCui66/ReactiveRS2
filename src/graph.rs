@@ -12,7 +12,6 @@ use node::*;
 /// see [Runtime::fromgraph](struct.Runtime.html#method.fromgraph).
 pub struct Graph<'a> {
     nodes: Vec<Option<Box<Node<'a, (), Out = ()>>>>,
-    control_signals: Vec<ControlSignal<'a>>,
 }
 
 impl<'a> Graph<'a> {
@@ -21,7 +20,6 @@ impl<'a> Graph<'a> {
     pub(crate) fn new() -> Self {
         Graph {
             nodes: vec![],
-            control_signals: vec![],
         }
     }
 
@@ -39,17 +37,7 @@ impl<'a> Graph<'a> {
         if let Some(_) = self.nodes[pos] {
             panic!("v[pos] != None in Graph::set")
         }
-
-        if !self.control_signals.is_empty() {
-            let node = ControlNode {
-                id: pos,
-                node: val,
-                control_sig: self.control_signals.clone()
-            };
-            self.nodes[pos] = Some(box node);
-        } else {
-            self.nodes[pos] = Some(val);
-        }
+        self.nodes[pos] = Some(val);
     }
 
     /// Adds a new node to the graph
@@ -58,32 +46,12 @@ impl<'a> Graph<'a> {
     /// Returns the id of the added node.
     pub(crate) fn add(&mut self, val: Box<Node<'a, (), Out = ()>>) -> usize {
         let pos = self.nodes.len();
-        if !self.control_signals.is_empty() {
-            let node = ControlNode {
-                id: pos,
-                node: val,
-                control_sig: self.control_signals.clone()
-            };
-            self.nodes.push(Some(box node));
-        } else {
-            self.nodes.push(Some(val));
-        }
+        self.nodes.push(Some(val));
         pos
     }
 
     /// Return the underlying data structure
     pub(crate) fn get(self) -> Vec<Option<Box<Node<'a, (), Out = ()>>>> {
         self.nodes
-    }
-
-    /// Add a control signal
-    /// This will wrap nodes with signal checking, as long as the control signal is not pop
-    pub(crate) fn push_control_signal(&mut self, control_signal: ControlSignal<'a>) {
-        self.control_signals.push(control_signal);
-    }
-
-    /// Remove the last pushed control signal
-    pub(crate) fn pop_control_signal(&mut self) {
-        self.control_signals.pop();
     }
 }

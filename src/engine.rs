@@ -56,18 +56,22 @@ mod runtime {
 
     use super::*;
     impl<'a> SubRuntime<'a> {
+        /// Add a new main node to be executed on current instant
         pub fn add_current(&mut self, ind: usize) {
             self.tasks.current.push(ind);
         }
+        /// Add a new main node to be executed on next instant
         pub fn add_next(&mut self, ind: usize) {
             self.tasks.next.push(ind);
         }
+        /// Add a new en of instant object
         pub fn add_eoi(&mut self, box_eoi: Box<EndOfInstantCallback<'a>>) {
             self.eoi.pending.push(box_eoi);
         }
         pub fn get_current_instant(&mut self) -> usize {
             self.current_instant
         }
+        /// Ask for ending the execution, useless in sequential mode.
         pub fn end(&mut self) {}
     }
 
@@ -323,18 +327,22 @@ mod runtime {
             }
 
         }
+        /// Add a new main node to be executed on current instant
         pub fn add_current(&mut self, ind: usize) {
             self.current.ws.deque.push(ind);
         }
+        /// Add a new main node to be executed on next instant
         pub fn add_next(&mut self, ind: usize) {
             self.next.ws.deque.push(ind);
         }
+        /// Add a new en of instant object
         pub fn add_eoi(&mut self, box_eoi: Box<EndOfInstantCallback<'a>>) {
             self.eoi.push(box_eoi);
         }
         pub fn get_current_instant(&mut self) -> usize {
             self.current_instant
         }
+        /// Ask for ending the execution, all threads will stop at the end of this instant.
         pub fn end(&mut self) {
             //println!("END\n");
             self.aend.store(true, Relaxed);
@@ -352,7 +360,6 @@ mod runtime {
     /// [Node::call](../node/trait.Node.html#tymethod.call).
     pub struct ThreadRuntime<'a> {
         pub(super) sub: SubRuntime<'a>,
-        /// The nodes.
         pub(super) nodes: Arc<Vec<NodeCell<'a>>>,
     }
 
@@ -366,6 +373,10 @@ mod runtime {
 
         }
 
+        /// Change formally of instant (switch previous, current and next)
+        /// The synchronization signal is when current.nbf gets to nb_th.
+        /// It cannot go down if it reaches nb_th at any point of time because
+        /// reaching nb_th means
         fn step(&mut self) {
             self.sub.previous.nbf.store(0, Relaxed);
             swap3(
@@ -375,9 +386,13 @@ mod runtime {
             );
             self.sub.current_instant += 1;
         }
+        /// run a node by id
         fn run_node(&mut self, num: usize) {
             self.nodes[num].call(&mut self.sub);
         }
+
+        /// Runs the nodes of an instant by work stealing, then synchronize with other threads,
+        /// for changing instant then run the eoi routines.
         fn instant(&mut self) {
             'instant: loop {
                 while let Some(nb) = self.sub.current.ws.deque.pop() {
@@ -406,6 +421,7 @@ mod runtime {
             }
 
         }
+        /// Runs `n` instant or until end flag is raised
         fn instantn(&mut self, n: usize) {
             for _ in 0..n {
                 if self.sub.aend.load(Relaxed) {
@@ -415,6 +431,7 @@ mod runtime {
                 self.instant();
             }
         }
+        /// Runs instants until end flag is raised.
         fn execute(&mut self) {
             while !self.sub.aend.load(Relaxed) {
                 self.instant();
@@ -428,8 +445,6 @@ mod runtime {
 // | |_) | | | | '_ \| __| | '_ ` _ \ / _ \
 // |  _ <| |_| | | | | |_| | | | | | |  __/
 // |_| \_\\__,_|_| |_|\__|_|_| |_| |_|\___|
-
-
 
     /// Runtime for running reactive graph.
     ///
