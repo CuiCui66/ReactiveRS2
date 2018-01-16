@@ -10,6 +10,7 @@ env_logger = "0.3"
 time = "0.1.38"
 crossbeam-deque = "0.1.0"
 crossbeam = "0.3.0"
+rand = "0.4"
 
 [features]
 par = [] # Parallel runtime if enabled
@@ -22,3 +23,7 @@ path = "src/gameoflife.rs"
 [[bin]]
 name = "sb"
 path = "src/sandbox.rs"
+
+[[bin]]
+name = "planets"
+path = "src/planets.rs"

@@ -153,6 +153,7 @@ fn main() {
         }
     }
 
+
     // We join all the processes
     let rt1 = pro!(big_join(processes));
     let mut v = vec![];
@@ -174,8 +175,8 @@ fn main() {
         emit_vec_vs(v)
     );
 
-
-    let mut rt = rt!(rt2; rt1);
+    let mut process = pro!(rt2; rt1);
+    let mut rt = rt!(process);
 
     // We do n iterations, and we compute the average time needed to compute one iteration
     let n = 10;
