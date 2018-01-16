@@ -131,4 +131,4 @@ let process sun =
 (* #exec (for i = 1 to 50 dopar run planet done);; *)
 
 let _ =
-  (run sun) || (for i = 1 to 500 dopar run planet done)
+  (run sun) || (for i = 1 to 1000 dopar run planet done)

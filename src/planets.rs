@@ -115,7 +115,7 @@ fn main() {
 
     let mut planet_processes = vec![];
 
-    for i in 0..500 {
+    for i in 0..1000 {
         let mut planet = Planet::new(&mut rng);
         let planet_process = pro!(
         value(planet);
@@ -137,7 +137,7 @@ fn main() {
     let planets_process = pro!(big_join(planet_processes));
     let mut runtime = rt!(value(((),())); (planets_process || sun_process); |_| {});
 
-    let n = 100;
+    let n = 1000;
     let start = SteadyTime::now();
     runtime.instantn(n);
     let frequency = (SteadyTime::now() - start).num_nanoseconds().unwrap() as f32 / 1_000_000_000.;
